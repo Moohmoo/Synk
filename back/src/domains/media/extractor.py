@@ -38,9 +38,7 @@ class MediaExtractor:
             if extractor.can_handle(cleaned_url):
                 info = extractor.extract(cleaned_url)
                 if info:
-                    logger.debug(
-                        f"Média extrait [{info.provider}] ID: {info.media_id}"
-                    )
+                    logger.debug(f"Média extrait [{info.provider}] ID: {info.media_id}")
                     return info
         return None
 

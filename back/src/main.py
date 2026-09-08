@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 from typing import Any
 
+import socketio
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from redis.exceptions import RedisError
@@ -11,10 +12,11 @@ from core.config import settings
 from core.error_handlers import register_exception_handlers
 from core.logger import logger
 from db.database import DatabaseService
+from domains.room.websocket import sio
 
 
 @asynccontextmanager
-async def lifespan(_app: FastAPI):
+async def lifespan(_app: Any):
     """
     Gestionnaire de cycle de vie de l'application FastAPI.
     Initialise le pool Redis au démarrage et libère les connexions à l'arrêt.
@@ -36,7 +38,7 @@ async def lifespan(_app: FastAPI):
     )
 
 
-app = FastAPI(
+fastapi_app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
     lifespan=lifespan,
@@ -44,10 +46,10 @@ app = FastAPI(
 )
 
 # Enregistrement du gestionnaire d'exceptions global (Single Responsibility)
-register_exception_handlers(app)
+register_exception_handlers(fastapi_app)
 
 # Configuration Middleware CORS (Supporte localhost et le frontend configuré)
-app.add_middleware(
+fastapi_app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
@@ -55,12 +57,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Routeur unifié pour le domaine des salons (REST et WebSocket /ws)
-app.include_router(room.router, prefix="/api/v1/rooms")
+# Routeur REST pour le domaine des salons
+fastapi_app.include_router(room.router, prefix="/api/v1/rooms")
 
 
-@app.get("/health", tags=["Health"])
-@app.get("/healthz", tags=["Health"], include_in_schema=False)
+@fastapi_app.get("/health", tags=["Health"])
+@fastapi_app.get("/healthz", tags=["Health"], include_in_schema=False)
 async def health_check() -> JSONResponse:
     """
     Endpoint de santé (Health Check) pour Docker, reverse proxy et monitoring.
@@ -88,7 +90,7 @@ async def health_check() -> JSONResponse:
     return JSONResponse(content=health, status_code=status_code)
 
 
-@app.get("/", tags=["Root"])
+@fastapi_app.get("/", tags=["Root"])
 async def root() -> dict[str, str]:
     """Route racine pour vérification rapide et diagnostic."""
     logger.info("Route racine accédée")
@@ -97,3 +99,7 @@ async def root() -> dict[str, str]:
         "version": settings.VERSION,
         "status": "online",
     }
+
+
+# Application ASGI unifiée : Socket.IO pour le temps réel et FastAPI pour l'API REST
+app = socketio.ASGIApp(sio, other_asgi_app=fastapi_app)

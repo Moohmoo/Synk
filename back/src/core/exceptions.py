@@ -108,4 +108,3 @@ class RateLimitExceededError(SynkError):
             status_code=429,
         )
         self.retry_after = retry_after
-

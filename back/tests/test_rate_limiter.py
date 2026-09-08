@@ -125,6 +125,7 @@ async def test_http_rate_limiter_triggers_429():
 
         # 2. Test direct de l'exception levée
         with pytest.raises(RateLimitExceededError) as exc_info:
+
             class DummyRequest:
                 def __init__(self):
                     self.headers = {}
@@ -138,4 +139,3 @@ async def test_http_rate_limiter_triggers_429():
         assert exc.status_code == 429
         assert exc.code == "RATE_LIMIT_EXCEEDED"
         assert exc.retry_after >= 1
-

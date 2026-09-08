@@ -1,22 +1,26 @@
-import asyncio
+"""Gestionnaire temps réel Socket.IO pour les salons Synk.
+
+Ce module implémente la couche événementielle temps réel au-dessus de python-socketio.
+Il assure la synchronisation vidéo, le chat, la télémétrie de latence et les permissions
+en exploitant Redis Pub/Sub pour la distribution multi-workers.
+"""
+
 import html
-import json
 import math
 import secrets
 import time
-from collections import defaultdict
+import urllib.parse
 from typing import Any
 
-from fastapi import WebSocket, WebSocketDisconnect, status
-from pydantic import ValidationError
-from redis.asyncio import Redis
+import socketio
+from pydantic import BaseModel, ValidationError
 
 from core.config import settings
 from core.logger import logger
 from core.rate_limiter import WebSocketRateLimiter
+from db.manager import DatabaseManager
 from domains.media.extractor import media_extractor
-from domains.room.crud import RoomService
-from domains.room.schemas.room import Participant, Room
+from domains.room.schemas.room import Participant
 from domains.room.schemas.websocket import (
     ChangeMediaPayload,
     ChatMessagePayload,
@@ -30,748 +34,427 @@ from domains.room.schemas.websocket import (
 )
 from domains.room.sync import SyncService
 
+# Gestionnaire Redis Pub/Sub pour le clustering multi-instances transparent
+_redis_manager = (
+    socketio.AsyncRedisManager(settings.REDIS_URL) if settings.REDIS_URL else None
+)
 
-class RoomWebSocketManager:
-    """
-    Gestionnaire temps réel WebSocket et relais Redis Pub/Sub pour les salons Synk.
-    Chaque méthode a une responsabilité unique et un périmètre restreint (< 20 lignes).
-    """
+# Serveur Socket.IO ASGI principal
+sio = socketio.AsyncServer(
+    async_mode="asgi",
+    client_manager=_redis_manager,
+    cors_allowed_origins="*",
+    max_http_buffer_size=settings.WS_MAX_PAYLOAD_SIZE,
+)
 
-    def __init__(self):
-        # Sockets locales de ce worker : room_id -> { user_id: WebSocket }
-        self._local_rooms: dict[str, dict[str, WebSocket]] = defaultdict(dict)
-        # Tâches d'écoute Pub/Sub par salon pour ce worker : room_id -> asyncio.Task
-        self._pubsub_tasks: dict[str, asyncio.Task] = {}
-        self._lock = asyncio.Lock()
-        # Limiteur de débit et protection anti-flood en mémoire
-        self._rate_limiter = WebSocketRateLimiter(
-            global_rate=settings.WS_RATE_LIMIT_PER_SEC,
-            global_capacity=settings.WS_RATE_LIMIT_BURST,
+# Limiteur de débit et protection anti-flood en mémoire
+rate_limiter = WebSocketRateLimiter(
+    global_rate=settings.WS_RATE_LIMIT_PER_SEC,
+    global_capacity=settings.WS_RATE_LIMIT_BURST,
+)
+
+
+def _extract_auth(environ: dict[str, Any], auth: Any) -> dict[str, str | None]:
+    """Extrait les identifiants depuis le payload auth ou les paramètres URL."""
+    params: dict[str, Any] = auth.copy() if isinstance(auth, dict) else {}
+    if "QUERY_STRING" in environ:
+        for key, val in urllib.parse.parse_qs(environ["QUERY_STRING"]).items():
+            if val and key not in params:
+                params[key] = val[0]
+    return {
+        "room_id": params.get("room_id") or params.get("roomId"),
+        "username": params.get("username"),
+        "token": params.get("token"),
+        "user_id": params.get("user_id") or params.get("userId"),
+    }
+
+
+def _validate_payload[T: BaseModel](model_cls: type[T], data: Any) -> T | None:
+    """Valide les données entrantes avec le modèle Pydantic spécifié."""
+    if not isinstance(data, dict):
+        return None
+    try:
+        return model_cls.model_validate(data)
+    except (ValidationError, ValueError, TypeError):
+        return None
+
+
+async def _send_error(sid: str, code: str, message: str) -> None:
+    """Envoie un événement d'erreur normalisé au client."""
+    await sio.emit(
+        ServerEventType.ERROR,
+        {"code": code, "message": message},
+        to=sid,
+    )
+
+
+async def _check_rate_limit(sid: str, session: dict[str, Any], action: str) -> bool:
+    """Vérifie le quota d'actions autorisées pour la session courante."""
+    conn_key = f"{session['room_id']}:{session['user_id']}"
+    allowed, reason, wait = rate_limiter.check(conn_key, action)
+    if not allowed:
+        if action != ClientEventType.HEARTBEAT:
+            wait_sec = max(1, math.ceil(wait))
+            msg = f"Trop d'actions rapides ({reason}). Veuillez patienter {wait_sec}s."
+            await _send_error(sid, "RATE_LIMITED", msg)
+        return False
+    return True
+
+
+async def _update_and_broadcast_player(
+    sid: str,
+    session: dict[str, Any],
+    action: str,
+    updates: dict[str, Any],
+    extra_broadcast: dict[str, Any] | None = None,
+) -> None:
+    """Met à jour l'état du lecteur en base et diffuse la modification au salon."""
+    room_id = session["room_id"]
+    with DatabaseManager() as db:
+        room = await db.room_service.get_room(room_id)
+        if not room:
+            await _send_error(sid, "ROOM_NOT_FOUND", "Salon introuvable")
+            return
+
+        participant = Participant(
+            id=session["user_id"],
+            username=session["username"],
+            is_host=(room.host_id == session["user_id"]),
+        )
+        updated_room, err = await db.room_service.update_player_safe(
+            room_id, participant, **updates
         )
 
-    @staticmethod
-    def _channel_name(room_id: str) -> str:
-        return f"channel:room:{room_id}"
+    if err == "LOCKED":
+        await _send_error(sid, "LOCKED", "Le salon est verrouillé par l'hôte")
+        return
+    if err == "NOOP" or not updated_room:
+        return
 
-    # ------------------------------------------------------------------
-    # 1. Transport & Relais Redis Pub/Sub
-    # ------------------------------------------------------------------
+    payload = {
+        "action": action,
+        "triggered_by": session["username"],
+        "player": updated_room.player.model_dump(),
+        **(extra_broadcast or {}),
+    }
+    await sio.emit(ServerEventType.PLAYER_UPDATED, payload, room=room_id)
 
-    async def _start_pubsub_listener_if_needed(
-        self, room_id: str, redis: Redis
-    ) -> None:
-        """Démarre une tâche d'écoute Pub/Sub sur le canal Redis du salon."""
-        async with self._lock:
-            if room_id in self._pubsub_tasks:
-                return
-            pubsub = redis.pubsub()
-            await pubsub.subscribe(self._channel_name(room_id))
-            task = asyncio.create_task(self._listen_to_channel(room_id, pubsub))
-            self._pubsub_tasks[room_id] = task
-            logger.info(f"[PUBSUB:START] Écoute démarrée pour le salon {room_id}")
 
-    @staticmethod
-    def _parse_pubsub_message(
-        raw_data: Any,
-    ) -> tuple[str, dict, int, str | None, str | None] | None:
-        """Décode un message JSON provenant de Redis Pub/Sub."""
-        try:
-            d = json.loads(raw_data)
-            return (
-                d["event"],
-                d.get("payload", {}),
-                d.get("timestamp", int(time.time() * 1000)),
-                d.get("exclude_user_id"),
-                d.get("target_user_id"),
-            )
-        except (json.JSONDecodeError, TypeError, KeyError):
-            return None
+# ----------------------------------------------------------------------
+# Cycle de vie des connexions
+# ----------------------------------------------------------------------
 
-    async def _listen_to_channel(self, room_id: str, pubsub: Any) -> None:
-        """Boucle de réception Pub/Sub pour diffusion aux sockets locales."""
-        try:
-            async for msg in pubsub.listen():
-                if msg["type"] != "message":
-                    continue
-                parsed = self._parse_pubsub_message(msg["data"])
-                if parsed:
-                    event, payload, ts, exclude_id, target_user_id = parsed
-                    if target_user_id:
-                        await self.send_to_user_locally(
-                            room_id, target_user_id, event, payload, ts
-                        )
-                    else:
-                        await self._broadcast_locally(
-                            room_id, event, payload, ts, exclude_id
-                        )
-        except asyncio.CancelledError:
-            logger.info(f"[PUBSUB:CANCEL] Écoute arrêtée pour le salon {room_id}")
-        finally:
-            await pubsub.unsubscribe(self._channel_name(room_id))
-            await pubsub.aclose()
 
-    async def _stop_pubsub_listener_if_empty(self, room_id: str) -> None:
-        """Arrête la tâche d'écoute si plus aucun utilisateur local n'est connecté."""
-        async with self._lock:
-            if room_id not in self._local_rooms or not self._local_rooms[room_id]:
-                task = self._pubsub_tasks.pop(room_id, None)
-                if task and not task.done():
-                    task.cancel()
-                logger.info(f"[PUBSUB:STOP] Écoute terminée pour le salon {room_id}")
+@sio.event
+async def connect(sid: str, environ: dict[str, Any], auth: Any = None) -> None:
+    """Authentifie le participant, initialise sa session et synchronise le salon."""
+    creds = _extract_auth(environ, auth)
+    room_id, username = creds["room_id"], creds["username"]
+    if not room_id or not username:
+        raise socketio.exceptions.ConnectionRefusedError("Identifiants manquants")
 
-    async def _broadcast_locally(
-        self,
-        room_id: str,
-        event_name: str,
-        payload: dict[str, Any],
-        timestamp: int,
-        exclude_user_id: str | None = None,
-    ) -> None:
-        """Diffuse un message aux websockets locales de ce worker."""
-        msg = json.dumps(
-            {"event": event_name, "payload": payload, "timestamp": timestamp}
+    with DatabaseManager() as db:
+        if not await db.room_service.room_exists(room_id):
+            raise socketio.exceptions.ConnectionRefusedError("Salon introuvable")
+
+        is_host = (
+            await db.room_service.verify_host_token(room_id, creds["token"])
+            if creds["token"]
+            else False
         )
-        async with self._lock:
-            sockets = [
-                ws
-                for uid, ws in self._local_rooms.get(room_id, {}).items()
-                if uid != exclude_user_id
-            ]
-        for ws in sockets:
-            await self._safe_send(ws, msg)
-
-    async def broadcast_distributed(
-        self,
-        redis: Redis,
-        room_id: str,
-        event_name: str,
-        payload: dict[str, Any],
-        timestamp: int,
-        exclude_user_id: str | None = None,
-    ) -> None:
-        """Publie un événement sur Redis Pub/Sub pour tous les workers."""
-        msg = json.dumps(
-            {
-                "event": event_name,
-                "payload": payload,
-                "timestamp": timestamp,
-                "exclude_user_id": exclude_user_id,
-            }
-        )
-        await redis.publish(self._channel_name(room_id), msg)
-
-    async def send_to_user_distributed(
-        self,
-        redis: Redis,
-        room_id: str,
-        target_user_id: str,
-        event_name: str,
-        payload: dict[str, Any],
-        timestamp: int,
-    ) -> None:
-        """Publie un événement privé ciblé sur Redis Pub/Sub pour un utilisateur spécifique."""
-        msg = json.dumps(
-            {
-                "event": event_name,
-                "payload": payload,
-                "timestamp": timestamp,
-                "target_user_id": target_user_id,
-            }
-        )
-        await redis.publish(self._channel_name(room_id), msg)
-
-    async def send_to_user_locally(
-        self,
-        room_id: str,
-        user_id: str,
-        event_name: str,
-        payload: dict[str, Any],
-        timestamp: int,
-    ) -> None:
-        """Envoie un événement direct à un utilisateur connecté sur ce worker."""
-        async with self._lock:
-            ws = self._local_rooms.get(room_id, {}).get(user_id)
-        if ws:
-            msg = json.dumps(
-                {"event": event_name, "payload": payload, "timestamp": timestamp}
-            )
-            await self._safe_send(ws, msg)
-
-    @staticmethod
-    async def _safe_send(websocket: WebSocket, text: str) -> None:
-        """Envoie sécurisé d'un texte sans crasher sur socket fermée."""
-        try:
-            await websocket.send_text(text)
-        except (WebSocketDisconnect, RuntimeError):
-            pass
-
-    async def _send_error(
-        self, room_id: str, user_id: str, code: str, message: str
-    ) -> None:
-        """Envoie une erreur applicative normalisée au client."""
-        now_ms = int(time.time() * 1000)
-        await self.send_to_user_locally(
-            room_id,
-            user_id,
-            ServerEventType.ERROR,
-            {"code": code, "message": message},
-            now_ms,
-        )
-
-    # ------------------------------------------------------------------
-    # 2. Cycle de vie de la connexion (Orchestration & Échelons)
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def _resolve_crud(crud: RoomService | None) -> RoomService:
-        """Résout le service CRUD depuis DatabaseManager si non fourni."""
-        if crud is not None:
-            return crud
-        from db.manager import DatabaseManager
-
-        with DatabaseManager() as db:
-            return db.room_service
-
-    async def _authenticate_participant(
-        self,
-        websocket: WebSocket,
-        crud: RoomService,
-        room_id: str,
-        username: str,
-        token: str | None,
-        user_id: str | None,
-    ) -> tuple[Room, Participant] | None:
-        """Valide l'accès et enregistre le participant en base."""
-        if not await crud.room_exists(room_id):
-            await websocket.close(
-                code=status.WS_1008_POLICY_VIOLATION, reason="Salon introuvable"
-            )
-            return None
-
-        is_host = await crud.verify_host_token(room_id, token) if token else False
-        result = await crud.add_participant(
-            room_id, username, user_id=user_id, is_host=is_host
+        result = await db.room_service.add_participant(
+            room_id, username, user_id=creds["user_id"], is_host=is_host
         )
         if not result:
-            await websocket.close(
-                code=status.WS_1008_POLICY_VIOLATION, reason="Impossible de rejoindre"
+            raise socketio.exceptions.ConnectionRefusedError(
+                "Impossible de rejoindre le salon"
             )
-            return None
+        room, participant = result
 
-        return result
+    await sio.enter_room(sid, room_id)
+    await sio.enter_room(sid, f"user:{participant.id}")
+    await sio.save_session(
+        sid,
+        {
+            "room_id": room_id,
+            "user_id": participant.id,
+            "username": participant.username,
+            "ping_ms": 0,
+        },
+    )
 
-    async def _register_socket(
-        self, room_id: str, participant: Participant, websocket: WebSocket, redis: Redis
-    ) -> None:
-        """Accepte la connexion WebSocket et l'enregistre localement."""
-        await websocket.accept()
-        async with self._lock:
-            self._local_rooms[room_id][participant.id] = websocket
-        await self._start_pubsub_listener_if_needed(room_id, redis)
+    now_ms = int(time.time() * 1000)
+    room_dict = room.model_dump()
+    if room.player.is_playing:
+        ref_pos = SyncService.calculate_reference_position(room.player, now_ms=now_ms)
+        room_dict["player"]["current_time"] = ref_pos
+        room_dict["player"]["last_updated_at"] = now_ms
 
-    async def _notify_initial_join(
-        self, room_id: str, participant: Participant, room: Room, redis: Redis
-    ) -> None:
-        """Envoie l'état complet initial à l'utilisateur et informe le salon de son arrivée."""
-        now_ms = int(time.time() * 1000)
-        room_dict = room.model_dump()
-        if room.player.is_playing:
-            ref_pos = SyncService.calculate_reference_position(room.player, now_ms=now_ms)
-            room_dict["player"]["current_time"] = ref_pos
-            room_dict["player"]["last_updated_at"] = now_ms
+    await sio.emit(
+        ServerEventType.ROOM_SYNC,
+        {
+            "room": room_dict,
+            "your_id": participant.id,
+            "your_username": participant.username,
+        },
+        to=sid,
+    )
+    await sio.emit(
+        ServerEventType.PARTICIPANT_JOINED,
+        {"user": participant.model_dump()},
+        room=room_id,
+        skip_sid=sid,
+    )
+    logger.info(f"[SIO:JOIN] {participant.username} ({participant.id}) -> {room_id}")
 
-        await self.send_to_user_locally(
-            room_id,
-            participant.id,
-            ServerEventType.ROOM_SYNC,
+
+@sio.event
+async def disconnect(sid: str) -> None:
+    """Traite la déconnexion, réassigne l'hôte si nécessaire et prévient le salon."""
+    session = await sio.get_session(sid)
+    if not session:
+        return
+    room_id = session.get("room_id")
+    user_id = session.get("user_id")
+    username = session.get("username")
+    if not room_id or not user_id:
+        return
+
+    rate_limiter.cleanup(f"{room_id}:{user_id}")
+
+    with DatabaseManager() as db:
+        (
+            updated_room,
+            new_host_id,
+            new_host_token,
+        ) = await db.room_service.remove_participant(room_id, user_id)
+
+    if updated_room and updated_room.participants:
+        await sio.emit(
+            ServerEventType.PARTICIPANT_LEFT,
             {
-                "room": room_dict,
-                "your_id": participant.id,
-                "your_username": participant.username,
+                "user_id": user_id,
+                "username": username,
+                "new_host_id": new_host_id,
             },
-            now_ms,
+            room=room_id,
         )
-        await self.broadcast_distributed(
-            redis,
-            room_id,
-            ServerEventType.PARTICIPANT_JOINED,
-            {"user": participant.model_dump()},
-            now_ms,
-            exclude_user_id=participant.id,
-        )
-
-    async def _message_loop(
-        self,
-        websocket: WebSocket,
-        room_id: str,
-        participant: Participant,
-        crud: RoomService,
-    ) -> None:
-        """Boucle de réception des trames texte du client avec protection de taille."""
-        while True:
-            text_data = await websocket.receive_text()
-            if len(text_data) > settings.WS_MAX_PAYLOAD_SIZE:
-                await self._send_error(
-                    room_id,
-                    participant.id,
-                    "PAYLOAD_TOO_LARGE",
-                    "Taille de message trop volumineuse",
-                )
-                continue
-            try:
-                raw_event = json.loads(text_data)
-            except json.JSONDecodeError:
-                await self._send_error(
-                    room_id, participant.id, "INVALID_JSON", "Format JSON invalide"
-                )
-                continue
-            await self._process_event(raw_event, room_id, participant, crud)
-
-    async def _cleanup_disconnect(
-        self,
-        room_id: str,
-        participant: Participant,
-        crud: RoomService,
-        websocket: WebSocket,
-    ) -> None:
-        """Nettoie la socket locale, purge les buckets de rate limiting, met à jour Redis et notifie le départ."""
-        self._rate_limiter.cleanup(f"{room_id}:{participant.id}")
-
-        async with self._lock:
-            current_ws = self._local_rooms.get(room_id, {}).get(participant.id)
-            if current_ws is not None and current_ws != websocket:
-                logger.info(
-                    f"[WS:RECONNECTED] Socket obsolète fermée pour {participant.username} ({participant.id}), nouvelle connexion préservée"
-                )
-                return
-
-            if room_id in self._local_rooms:
-                self._local_rooms[room_id].pop(participant.id, None)
-                if not self._local_rooms[room_id]:
-                    del self._local_rooms[room_id]
-
-        await self._stop_pubsub_listener_if_empty(room_id)
-        updated_room, new_host_id, new_host_token = await crud.remove_participant(
-            room_id, participant.id
-        )
-
-        if updated_room and updated_room.participants:
-            now_ms = int(time.time() * 1000)
-            await self.broadcast_distributed(
-                crud.redis,
-                room_id,
-                ServerEventType.PARTICIPANT_LEFT,
-                {
-                    "user_id": participant.id,
-                    "username": participant.username,
-                    "new_host_id": new_host_id,
-                },
-                now_ms,
+        if new_host_id and new_host_token:
+            await sio.emit(
+                ServerEventType.HOST_PROMOTED,
+                {"host_token": new_host_token},
+                room=f"user:{new_host_id}",
             )
+    logger.info(f"[SIO:LEAVE] {username} ({user_id}) <- {room_id}")
 
-            # Transmettre le nouveau token d'hôte exclusivement au nouveau chef de salon
-            if new_host_id and new_host_token:
-                await self.send_to_user_distributed(
-                    crud.redis,
-                    room_id,
-                    new_host_id,
-                    ServerEventType.HOST_PROMOTED,
-                    {"host_token": new_host_token},
-                    now_ms,
-                )
 
-    async def handle_connection(
-        self,
-        websocket: WebSocket,
-        room_id: str,
-        username: str,
-        token: str | None = None,
-        user_id: str | None = None,
-        crud: RoomService | None = None,
-    ) -> None:
-        """
-        Point d'entrée principal : orchestre la session en 5 étapes claires.
-        """
-        crud = self._resolve_crud(crud)
-        auth = await self._authenticate_participant(
-            websocket, crud, room_id, username, token, user_id
+# ----------------------------------------------------------------------
+# Gestionnaires d'événements multimédia et salon
+# ----------------------------------------------------------------------
+
+
+@sio.on(ClientEventType.PLAY)
+async def on_play(sid: str, data: Any) -> None:
+    """Gère la reprise de lecture vidéo."""
+    session = await sio.get_session(sid)
+    if not session:
+        return
+    payload = _validate_payload(PlayPayload, data)
+    if not payload:
+        await _send_error(sid, "INVALID_PLAY_PAYLOAD", "Payload de lecture invalide")
+        return
+    if not await _check_rate_limit(sid, session, "PLAY"):
+        return
+
+    await _update_and_broadcast_player(
+        sid,
+        session,
+        action="PLAY",
+        updates={"is_playing": True, "current_time": payload.current_time},
+        extra_broadcast={"current_time": payload.current_time},
+    )
+
+
+@sio.on(ClientEventType.PAUSE)
+async def on_pause(sid: str, data: Any) -> None:
+    """Gère la mise en pause de la vidéo."""
+    session = await sio.get_session(sid)
+    if not session:
+        return
+    payload = _validate_payload(PausePayload, data)
+    if not payload:
+        await _send_error(sid, "INVALID_PAUSE_PAYLOAD", "Payload de pause invalide")
+        return
+    if not await _check_rate_limit(sid, session, "PAUSE"):
+        return
+
+    await _update_and_broadcast_player(
+        sid,
+        session,
+        action="PAUSE",
+        updates={"is_playing": False, "current_time": payload.current_time},
+        extra_broadcast={"current_time": payload.current_time},
+    )
+
+
+@sio.on(ClientEventType.SEEK)
+async def on_seek(sid: str, data: Any) -> None:
+    """Gère le saut temporel dans la vidéo (Seek)."""
+    session = await sio.get_session(sid)
+    if not session:
+        return
+    payload = _validate_payload(SeekPayload, data)
+    if not payload:
+        await _send_error(
+            sid, "INVALID_SEEK_PAYLOAD", "Payload de saut temporel invalide"
         )
-        if not auth:
+        return
+    if not await _check_rate_limit(sid, session, "SEEK"):
+        return
+
+    await _update_and_broadcast_player(
+        sid,
+        session,
+        action="SEEK",
+        updates={"current_time": payload.target_time},
+        extra_broadcast={"target_time": payload.target_time},
+    )
+
+
+@sio.on(ClientEventType.CHANGE_MEDIA)
+async def on_change_media(sid: str, data: Any) -> None:
+    """Gère le chargement d'un nouveau média."""
+    session = await sio.get_session(sid)
+    if not session:
+        return
+    payload = _validate_payload(ChangeMediaPayload, data)
+    if not payload:
+        await _send_error(sid, "INVALID_MEDIA_URL", "URL de média invalide")
+        return
+    if not await _check_rate_limit(sid, session, "CHANGE_MEDIA"):
+        return
+
+    media = media_extractor.extract(payload.url)
+    if not media:
+        await _send_error(
+            sid, "INVALID_MEDIA_URL", "Format ou plateforme de média non supporté"
+        )
+        return
+
+    media_info = {
+        "media_url": media.url,
+        "media_id": media.media_id,
+        "provider": media.provider,
+        "media_type": media.media_type.value,
+    }
+    await _update_and_broadcast_player(
+        sid,
+        session,
+        action="CHANGE_MEDIA",
+        updates={"is_playing": False, "current_time": 0.0, **media_info},
+        extra_broadcast=media_info,
+    )
+
+
+@sio.on(ClientEventType.CHAT_MESSAGE)
+async def on_chat_message(sid: str, data: Any) -> None:
+    """Gère la diffusion d'un message de chat avec échappement HTML."""
+    session = await sio.get_session(sid)
+    if not session:
+        return
+    payload = _validate_payload(ChatMessagePayload, data)
+    if not payload:
+        await _send_error(sid, "INVALID_CHAT_PAYLOAD", "Message de chat invalide")
+        return
+    if not await _check_rate_limit(sid, session, "CHAT_MESSAGE"):
+        return
+
+    clean_content = html.escape(payload.content.strip())
+    message_data = {
+        "id": f"msg_{secrets.token_hex(4)}",
+        "user_id": session["user_id"],
+        "username": session["username"],
+        "content": clean_content,
+        "time": time.strftime("%H:%M"),
+    }
+    await sio.emit(
+        ServerEventType.CHAT_BROADCAST, message_data, room=session["room_id"]
+    )
+
+
+@sio.on(ClientEventType.HEARTBEAT)
+async def on_heartbeat(sid: str, data: Any) -> None:
+    """Mesure la latence du client et renvoie un acquittement."""
+    session = await sio.get_session(sid)
+    if not session:
+        return
+    payload = _validate_payload(HeartbeatPayload, data)
+    if not payload:
+        await _send_error(sid, "INVALID_HEARTBEAT", "Heartbeat invalide")
+        return
+
+    now_ms = int(time.time() * 1000)
+    latency = max(0, now_ms - payload.client_sent_at)
+    prev_ping = session.get("ping_ms", 0)
+    session["ping_ms"] = latency
+    await sio.save_session(sid, session)
+
+    await sio.emit(
+        ServerEventType.HEARTBEAT_ACK,
+        {
+            "client_sent_at": payload.client_sent_at,
+            "server_received_at": now_ms,
+            "ping_ms": latency,
+        },
+        to=sid,
+    )
+
+    if prev_ping == 0 or abs(prev_ping - latency) >= 15:
+        await sio.emit(
+            ServerEventType.PING_UPDATED,
+            {"user_id": session["user_id"], "ping_ms": latency},
+            room=session["room_id"],
+            skip_sid=sid,
+        )
+
+
+@sio.on(ClientEventType.UPDATE_SETTINGS)
+async def on_update_settings(sid: str, data: Any) -> None:
+    """Gère la modification du verrouillage du salon par l'hôte."""
+    session = await sio.get_session(sid)
+    if not session:
+        return
+    payload = _validate_payload(UpdateSettingsPayload, data)
+    if not payload:
+        await _send_error(sid, "INVALID_SETTINGS", "Paramètres invalides")
+        return
+    if not await _check_rate_limit(sid, session, "UPDATE_SETTINGS"):
+        return
+
+    room_id = session["room_id"]
+    with DatabaseManager() as db:
+        room = await db.room_service.get_room(room_id)
+        if not room:
+            await _send_error(sid, "ROOM_NOT_FOUND", "Salon introuvable")
             return
 
-        room, participant = auth
-        await self._register_socket(room_id, participant, websocket, crud.redis)
-        await self._notify_initial_join(room_id, participant, room, crud.redis)
-
-        try:
-            await self._message_loop(websocket, room_id, participant, crud)
-        except WebSocketDisconnect:
-            logger.info(f"[WS:DISCONNECT] {participant.username} ({participant.id})")
-        except Exception as e:  # noqa: BLE001
-            logger.warning(f"[WS:EXCEPTION] {participant.id} : {e}")
-        finally:
-            await self._cleanup_disconnect(room_id, participant, crud, websocket)
-
-    # ------------------------------------------------------------------
-    # 3. Dispatching et Handlers Métier
-    # ------------------------------------------------------------------
-
-    async def _process_event(
-        self,
-        raw_event: dict[str, Any],
-        room_id: str,
-        participant: Participant,
-        crud: RoomService,
-    ) -> None:
-        """Aiguille l'événement vers son gestionnaire dédié après contrôle anti-spam."""
-        event_name = raw_event.get("event")
-        payload = raw_event.get("payload", {})
-        now_ms = int(time.time() * 1000)
-
-        # Contrôle anti-flood global & anti-spam par action
-        conn_key = f"{room_id}:{participant.id}"
-        allowed, reason, wait_seconds = self._rate_limiter.check(conn_key, event_name)
-        if not allowed:
-            if event_name == ClientEventType.HEARTBEAT:
-                return
-            await self._send_error(
-                room_id,
-                participant.id,
-                "RATE_LIMITED",
-                f"Trop d'actions rapides ({reason}). Veuillez patienter {max(1, math.ceil(wait_seconds))}s.",
-            )
-            return
-
-        match event_name:
-            case ClientEventType.PLAY:
-                await self._on_play(payload, room_id, participant, crud, now_ms)
-            case ClientEventType.PAUSE:
-                await self._on_pause(payload, room_id, participant, crud, now_ms)
-            case ClientEventType.SEEK:
-                await self._on_seek(payload, room_id, participant, crud, now_ms)
-            case ClientEventType.CHANGE_MEDIA:
-                await self._on_change_media(payload, room_id, participant, crud, now_ms)
-            case ClientEventType.CHAT_MESSAGE:
-                await self._on_chat(payload, room_id, participant, crud, now_ms)
-            case ClientEventType.HEARTBEAT:
-                await self._on_heartbeat(payload, room_id, participant, crud, now_ms)
-            case ClientEventType.UPDATE_SETTINGS:
-                await self._on_update_settings(
-                    payload, room_id, participant, crud, now_ms
-                )
-            case _:
-                await self._send_error(
-                    room_id,
-                    participant.id,
-                    "UNKNOWN_EVENT",
-                    f"Événement inconnu : {event_name}",
-                )
-
-    async def _validate(
-        self,
-        model_cls: type,
-        payload: dict[str, Any],
-        room_id: str,
-        user_id: str,
-        error_msg: str,
-        error_code: str = "INVALID_PAYLOAD",
-    ) -> Any | None:
-        """Valide un payload Pydantic et envoie une erreur au client en cas d'échec."""
-        try:
-            return model_cls.model_validate(payload)
-        except (ValidationError, ValueError):
-            await self._send_error(room_id, user_id, error_code, error_msg)
-            return None
-
-    async def _apply_player_update(
-        self,
-        room_id: str,
-        participant: Participant,
-        crud: RoomService,
-        action: str,
-        updates: dict[str, Any],
-        extra_broadcast: dict[str, Any],
-        now_ms: int,
-    ) -> None:
-        """Applique une modification du lecteur multimédia et diffuse le résultat."""
-        room, err = await crud.update_player_safe(room_id, participant, **updates)
-        if err == "LOCKED":
-            await self._send_error(
-                room_id, participant.id, "LOCKED", "Le salon est verrouillé par l'hôte"
-            )
-            return
-        if err == "NOOP":
-            return
-        if room:
-            player_dict = room.player.model_dump()
-            data = {
-                "action": action,
-                "triggered_by": participant.username,
-                "player": player_dict,
-                **extra_broadcast,
-            }
-            await self.broadcast_distributed(
-                crud.redis, room_id, ServerEventType.PLAYER_UPDATED, data, now_ms
-            )
-
-    async def _on_play(
-        self,
-        payload: dict,
-        room_id: str,
-        participant: Participant,
-        crud: RoomService,
-        now_ms: int,
-    ) -> None:
-        """Gère l'action Play."""
-        data = await self._validate(
-            PlayPayload,
-            payload,
-            room_id,
-            participant.id,
-            "Payload de lecture invalide",
-            error_code="INVALID_PLAY_PAYLOAD",
+        participant = Participant(
+            id=session["user_id"],
+            username=session["username"],
+            is_host=(room.host_id == session["user_id"]),
         )
-        if not data:
-            return
-        await self._apply_player_update(
-            room_id,
-            participant,
-            crud,
-            "PLAY",
-            {"is_playing": True, "current_time": data.current_time},
-            {"current_time": data.current_time},
-            now_ms,
+        updated_room, err = await db.room_service.update_settings_safe(
+            room_id, participant, payload.is_locked
         )
 
-    async def _on_pause(
-        self,
-        payload: dict,
-        room_id: str,
-        participant: Participant,
-        crud: RoomService,
-        now_ms: int,
-    ) -> None:
-        """Gère l'action Pause."""
-        data = await self._validate(
-            PausePayload,
-            payload,
-            room_id,
-            participant.id,
-            "Payload de pause invalide",
-            error_code="INVALID_PAUSE_PAYLOAD",
-        )
-        if not data:
-            return
-        await self._apply_player_update(
-            room_id,
-            participant,
-            crud,
-            "PAUSE",
-            {"is_playing": False, "current_time": data.current_time},
-            {"current_time": data.current_time},
-            now_ms,
-        )
+    if err == "FORBIDDEN":
+        await _send_error(sid, "FORBIDDEN", "Seul l'hôte peut modifier les paramètres")
+        return
+    if err == "NOOP" or not updated_room:
+        return
 
-    async def _on_seek(
-        self,
-        payload: dict,
-        room_id: str,
-        participant: Participant,
-        crud: RoomService,
-        now_ms: int,
-    ) -> None:
-        """Gère le saut temporel (Seek)."""
-        data = await self._validate(
-            SeekPayload,
-            payload,
-            room_id,
-            participant.id,
-            "Payload de saut temporel invalide",
-            error_code="INVALID_SEEK_PAYLOAD",
-        )
-        if not data:
-            return
-        await self._apply_player_update(
-            room_id,
-            participant,
-            crud,
-            "SEEK",
-            {"current_time": data.target_time},
-            {"target_time": data.target_time},
-            now_ms,
-        )
-
-    async def _on_change_media(
-        self,
-        payload: dict,
-        room_id: str,
-        participant: Participant,
-        crud: RoomService,
-        now_ms: int,
-    ) -> None:
-        """Gère le changement de source multimédia via le MediaExtractor."""
-        data = await self._validate(
-            ChangeMediaPayload,
-            payload,
-            room_id,
-            participant.id,
-            "URL de média invalide",
-            error_code="INVALID_MEDIA_URL",
-        )
-        if not data:
-            return
-
-        media = media_extractor.extract(data.url)
-        if not media:
-            await self._send_error(
-                room_id,
-                participant.id,
-                "INVALID_MEDIA_URL",
-                "Format ou plateforme de média non supporté",
-            )
-            return
-
-        await self._apply_player_update(
-            room_id,
-            participant,
-            crud,
-            "CHANGE_MEDIA",
-            {
-                "is_playing": False,
-                "current_time": 0.0,
-                "media_url": media.url,
-                "media_id": media.media_id,
-                "provider": media.provider,
-                "media_type": media.media_type.value,
-            },
-            {
-                "media_url": media.url,
-                "media_id": media.media_id,
-                "provider": media.provider,
-                "media_type": media.media_type.value,
-            },
-            now_ms,
-        )
-
-    async def _on_chat(
-        self,
-        payload: dict,
-        room_id: str,
-        participant: Participant,
-        crud: RoomService,
-        now_ms: int,
-    ) -> None:
-        """Gère la diffusion d'un message dans le chat."""
-        data = await self._validate(
-            ChatMessagePayload,
-            payload,
-            room_id,
-            participant.id,
-            "Message de chat invalide",
-            error_code="INVALID_CHAT_PAYLOAD",
-        )
-        if not data:
-            return
-        clean_content = html.escape(data.content.strip())
-        await self.broadcast_distributed(
-            crud.redis,
-            room_id,
-            ServerEventType.CHAT_BROADCAST,
-            {
-                "id": f"msg_{secrets.token_hex(4)}",
-                "user_id": participant.id,
-                "username": participant.username,
-                "content": clean_content,
-                "time": time.strftime("%H:%M"),
-            },
-            now_ms,
-        )
-
-    async def _on_heartbeat(
-        self,
-        payload: dict,
-        room_id: str,
-        participant: Participant,
-        crud: RoomService,
-        now_ms: int,
-    ) -> None:
-        """Gère le Heartbeat et mesure la latence ping."""
-        data = await self._validate(
-            HeartbeatPayload,
-            payload,
-            room_id,
-            participant.id,
-            "Heartbeat invalide",
-            error_code="INVALID_HEARTBEAT",
-        )
-        if not data:
-            return
-        latency = max(0, now_ms - data.client_sent_at)
-        prev_ping = participant.ping_ms
-        participant.ping_ms = latency
-        await self.send_to_user_locally(
-            room_id,
-            participant.id,
-            ServerEventType.HEARTBEAT_ACK,
-            {
-                "client_sent_at": data.client_sent_at,
-                "server_received_at": now_ms,
-                "ping_ms": latency,
-            },
-            now_ms,
-        )
-        # N'envoyer PING_UPDATED que si premier ping ou variation significative (> 15ms)
-        if prev_ping == 0 or abs(prev_ping - latency) >= 15:
-            await self.broadcast_distributed(
-                crud.redis,
-                room_id,
-                "PING_UPDATED",
-                {"user_id": participant.id, "ping_ms": latency},
-                now_ms,
-                exclude_user_id=participant.id,
-            )
-
-    async def _on_update_settings(
-        self,
-        payload: dict,
-        room_id: str,
-        participant: Participant,
-        crud: RoomService,
-        now_ms: int,
-    ) -> None:
-        """Gère la modification des permissions par l'hôte."""
-        data = await self._validate(
-            UpdateSettingsPayload,
-            payload,
-            room_id,
-            participant.id,
-            "Paramètres invalides",
-            error_code="INVALID_SETTINGS",
-        )
-        if not data:
-            return
-        room, err = await crud.update_settings_safe(
-            room_id, participant, data.is_locked
-        )
-        if err == "FORBIDDEN":
-            await self._send_error(
-                room_id,
-                participant.id,
-                "FORBIDDEN",
-                "Seul l'hôte peut modifier les paramètres",
-            )
-            return
-        if err == "NOOP":
-            return
-        if room:
-            await self.broadcast_distributed(
-                crud.redis,
-                room_id,
-                ServerEventType.SETTINGS_UPDATED,
-                {"settings": room.settings.model_dump()},
-                now_ms,
-            )
-
-
-# Instance partagée pour la gestion des sockets en mémoire du worker
-room_ws = RoomWebSocketManager()
+    await sio.emit(
+        ServerEventType.SETTINGS_UPDATED,
+        {"settings": updated_room.settings.model_dump()},
+        room=room_id,
+    )

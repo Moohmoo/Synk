@@ -372,4 +372,3 @@ class RoomService:
         room.settings.is_locked = is_locked
         await self.save_room(room, ttl=settings.ROOM_TTL_SECONDS)
         return room, None
-

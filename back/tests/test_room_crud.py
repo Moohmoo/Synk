@@ -91,7 +91,7 @@ async def test_duplicate_username_allowed(redis_client):
     service = RoomService(redis_client)
 
     # 1. Création avec "Alex"
-    room, host_token = await service.create_room("Alex")
+    room, _host_token = await service.create_room("Alex")
     assert len(room.participants) == 1
     assert room.participants[0].username == "Alex"
     host_id = room.host_id
@@ -204,5 +204,3 @@ async def test_update_settings_safe_idempotence(redis_client):
 
     # Nettoyage
     await service.delete_room(room.room_id)
-
-

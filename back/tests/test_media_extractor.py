@@ -1,4 +1,3 @@
-
 from domains.media.extractor import MediaExtractor
 from domains.media.extractors.base import BaseExtractor
 from domains.media.extractors.youtube import YouTubeExtractor

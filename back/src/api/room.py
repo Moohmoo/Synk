@@ -2,8 +2,6 @@ from fastapi import (
     APIRouter,
     Depends,
     Header,
-    Query,
-    WebSocket,
     status,
 )
 from pydantic import BaseModel, ConfigDict, Field
@@ -15,9 +13,8 @@ from domains.room.index import (
     create_room,
     delete_room,
 )
-from domains.room.websocket import room_ws
 
-# Routeur unifié pour les salons (préfixé par /api/v1/rooms dans main.py)
+# Routeur REST pour les salons (préfixé par /api/v1/rooms dans main.py)
 router = APIRouter(tags=["Rooms"])
 
 # Dépendances de limitation de débit HTTP (Anti-Spam / Anti-Flood)
@@ -38,6 +35,7 @@ rate_limit_check_room = create_http_rate_limiter(
 # ======================================================================
 # Schémas Pydantic pour les requêtes et réponses
 # ======================================================================
+
 
 class RoomCreateRequest(BaseModel):
     """Payload pour la création d'un salon (POST /api/v1/rooms)."""
@@ -76,9 +74,11 @@ class RoomCheckResponse(BaseModel):
         description="Nombre de participants actuellement connectés",
     )
 
+
 # ======================================================================
 # Endpoints HTTP REST
 # ======================================================================
+
 
 @router.post(
     "",
@@ -132,30 +132,3 @@ async def delete_room_endpoint(
     automatiquement interceptées par le gestionnaire d'exceptions global.
     """
     await delete_room(room_id, x_host_token)
-
-
-# ======================================================================
-# Endpoint Temps Réel WebSocket (Sous-ressource du Salon)
-# ======================================================================
-
-
-@router.websocket("/{room_id}/ws")
-async def room_websocket_endpoint(
-    websocket: WebSocket,
-    room_id: str,
-    username: str = Query(..., min_length=2, max_length=20),
-    token: str | None = Query(None),
-    user_id: str | None = Query(None),
-) -> None:
-    """
-    Point d'entrée WebSocket canonique : délègue le cycle de vie
-    de la session au gestionnaire temps réel du domaine.
-    Accessible sur : /api/v1/rooms/{room_id}/ws
-    """
-    await room_ws.handle_connection(
-        websocket=websocket,
-        room_id=room_id,
-        username=username,
-        token=token,
-        user_id=user_id,
-    )

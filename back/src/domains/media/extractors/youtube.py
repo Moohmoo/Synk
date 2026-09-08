@@ -34,7 +34,12 @@ class YouTubeExtractor(BaseExtractor):
         hostname = (parsed.hostname or "").lower().removeprefix("www.")
 
         # Domaines autorisés
-        if hostname not in ("youtube.com", "m.youtube.com", "music.youtube.com", "youtu.be"):
+        if hostname not in (
+            "youtube.com",
+            "m.youtube.com",
+            "music.youtube.com",
+            "youtu.be",
+        ):
             return None
 
         video_id = None
