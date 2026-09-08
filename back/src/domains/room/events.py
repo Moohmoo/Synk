@@ -26,7 +26,7 @@ from domains.room.schemas.websocket import (
     ServerEventType,
     UpdateSettingsPayload,
 )
-from domains.room.sync import SyncService
+from domains.room.sync import calculate_reference_position
 
 
 def _extract_auth(environ: dict[str, Any], auth: Any) -> dict[str, str | None]:
@@ -168,7 +168,7 @@ async def _send_initial_sync(sid: str, room: Room, participant: Participant) -> 
     now_ms = int(time.time() * 1000)
     room_dict = room.model_dump()
     if room.player.is_playing:
-        ref_pos = SyncService.calculate_reference_position(room.player, now_ms=now_ms)
+        ref_pos = calculate_reference_position(room.player, now_ms=now_ms)
         room_dict["player"]["current_time"] = ref_pos
         room_dict["player"]["last_updated_at"] = now_ms
 
