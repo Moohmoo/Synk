@@ -7,14 +7,6 @@ from core.exceptions import (
 from db.manager import DatabaseManager
 from domains.room.schemas.room import Room
 
-__all__ = [
-    "InvalidHostTokenError",
-    "RoomNotFoundError",
-    "check_room",
-    "create_room",
-    "delete_room",
-]
-
 
 async def create_room(username: str) -> tuple[Room, str]:
     """
