@@ -11,6 +11,7 @@ from redis.exceptions import RedisError
 from core.config import settings
 from core.exceptions import RateLimitExceededError
 from core.logger import logger
+from db.database import DatabaseService
 
 
 def get_client_ip(request: Request) -> str:
@@ -42,8 +43,6 @@ class RateLimiter:
         if self._custom_redis is not None:
             return self._custom_redis
         try:
-            from db.database import DatabaseService
-
             return DatabaseService().get_redis_client()
         except (RuntimeError, OSError):
             return Redis.from_url(
