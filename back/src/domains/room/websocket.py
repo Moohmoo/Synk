@@ -6,7 +6,6 @@ en exploitant Redis Pub/Sub pour la distribution multi-workers.
 """
 
 import html
-import math
 import secrets
 import time
 import urllib.parse
@@ -17,7 +16,7 @@ from pydantic import BaseModel, ValidationError
 
 from core.config import settings
 from core.logger import logger
-from core.rate_limiter import WebSocketRateLimiter
+from core.rate_limiter import rate_limiter
 from db.manager import DatabaseManager
 from domains.media.extractor import media_extractor
 from domains.room.schemas.room import Participant
@@ -47,11 +46,16 @@ sio = socketio.AsyncServer(
     max_http_buffer_size=settings.WS_MAX_PAYLOAD_SIZE,
 )
 
-# Limiteur de débit et protection anti-flood en mémoire
-rate_limiter = WebSocketRateLimiter(
-    global_rate=settings.WS_RATE_LIMIT_PER_SEC,
-    global_capacity=settings.WS_RATE_LIMIT_BURST,
-)
+# Quotas WebSocket par action : (max_requêtes, fenêtre_secondes)
+WS_ACTION_LIMITS: dict[str, tuple[int, int]] = {
+    "UPDATE_SETTINGS": (2, 2),
+    "CHANGE_MEDIA": (2, 4),
+    "PLAY": (3, 2),
+    "PAUSE": (3, 2),
+    "SEEK": (4, 2),
+    "CHAT_MESSAGE": (5, 5),
+    "HEARTBEAT": (2, 4),
+}
 
 
 def _extract_auth(environ: dict[str, Any], auth: Any) -> dict[str, str | None]:
@@ -90,14 +94,28 @@ async def _send_error(sid: str, code: str, message: str) -> None:
 
 async def _check_rate_limit(sid: str, session: dict[str, Any], action: str) -> bool:
     """Vérifie le quota d'actions autorisées pour la session courante."""
-    conn_key = f"{session['room_id']}:{session['user_id']}"
-    allowed, reason, wait = rate_limiter.check(conn_key, action)
+    user_id = session["user_id"]
+
+    # 1. Protection globale anti-flood
+    allowed, wait_sec = await rate_limiter.check(
+        user_id, "global", settings.WS_RATE_LIMIT_BURST, 1
+    )
     if not allowed:
-        if action != ClientEventType.HEARTBEAT:
-            wait_sec = max(1, math.ceil(wait))
-            msg = f"Trop d'actions rapides ({reason}). Veuillez patienter {wait_sec}s."
-            await _send_error(sid, "RATE_LIMITED", msg)
+        msg = f"Trop d'actions rapides. Veuillez patienter {wait_sec}s."
+        await _send_error(sid, "RATE_LIMITED", msg)
         return False
+
+    # 2. Quota par type d'action
+    limit_cfg = WS_ACTION_LIMITS.get(action)
+    if limit_cfg:
+        max_req, window = limit_cfg
+        allowed, wait_sec = await rate_limiter.check(user_id, action, max_req, window)
+        if not allowed:
+            if action != ClientEventType.HEARTBEAT:
+                msg = f"Trop d'actions rapides ({action}). Veuillez patienter {wait_sec}s."
+                await _send_error(sid, "RATE_LIMITED", msg)
+            return False
+
     return True
 
 
@@ -219,8 +237,6 @@ async def disconnect(sid: str) -> None:
     username = session.get("username")
     if not room_id or not user_id:
         return
-
-    rate_limiter.cleanup(f"{room_id}:{user_id}")
 
     with DatabaseManager() as db:
         (
