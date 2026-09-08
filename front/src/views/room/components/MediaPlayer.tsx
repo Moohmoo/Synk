@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import ReactPlayer from "react-player";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { PlayerState, RoomSettings } from "@/types/room";
 import { Tv, AlertCircle, Play } from "lucide-react";
 
@@ -14,8 +15,8 @@ interface MediaPlayerProps {
   isFullscreen?: boolean;
   onLocalPlay?: (time: number) => void;
   onLocalPause?: (time: number) => void;
-  onLocalSeek?: (time: number) => void;
   onDurationChange?: (duration: number) => void;
+  onToggleFullscreen?: () => void;
 }
 
 function resolveMediaUrl(player: PlayerState): string {
@@ -42,8 +43,8 @@ export function MediaPlayer({
   isFullscreen = false,
   onLocalPlay,
   onLocalPause,
-  onLocalSeek,
   onDurationChange,
+  onToggleFullscreen,
 }: MediaPlayerProps) {
   const { t } = useTranslation("room");
   const playerRef = useRef<HTMLVideoElement | null>(null);
@@ -73,8 +74,8 @@ export function MediaPlayer({
     const currentLocalTime = playerRef.current.currentTime || 0;
     const drift = Math.abs(currentLocalTime - targetTime);
 
-    // Si le décalage dépasse la tolérance de 1.5s, recaler la tête de lecture
-    if (drift > 1.5) {
+    // Si le décalage dépasse la tolérance de 2s, recaler la tête de lecture
+    if (drift > 2.0) {
       playerRef.current.currentTime = targetTime;
     }
   }, [player.current_time, player.last_updated_at, player.is_playing, isReady]);
@@ -112,13 +113,19 @@ export function MediaPlayer({
     }
   };
 
-  // Clic direct sur le lecteur pour basculer play/pause
+  // Clic direct sur l'écran cinéma pour basculer play/pause
   const handlePlayerClick = () => {
-    if (isLockedForGuest) return;
+    if (isLockedForGuest) {
+      toast.warning(t("controls.hostOnly", { defaultValue: "CONTRÔLES HÔTE EXCLUSIFS" }), {
+        id: "room-lock-host-only",
+      });
+      return;
+    }
+    const currentTime = playerRef.current?.currentTime ?? player.current_time;
     if (player.is_playing) {
-      onLocalPause?.(playerRef.current?.currentTime || player.current_time);
+      onLocalPause?.(currentTime);
     } else {
-      onLocalPlay?.(playerRef.current?.currentTime || player.current_time);
+      onLocalPlay?.(currentTime);
     }
   };
 
@@ -154,41 +161,48 @@ export function MediaPlayer({
           </div>
         </div>
       ) : (
-        <div
-          onClick={handlePlayerClick}
-          className={`w-full h-full relative flex items-center justify-center cursor-pointer ${
-            isLockedForGuest ? "pointer-events-none" : ""
-          }`}
-        >
-          <ReactPlayer
-            key={mediaUrl}
-            ref={playerRef}
-            src={mediaUrl}
-            playing={player.is_playing}
-            volume={isMuted ? 0 : volume / 100}
-            muted={isMuted}
-            controls={false}
-            width="100%"
-            height="100%"
-            style={{ width: "100%", height: "100%", display: "block" }}
-            onReady={handleReady}
-            onEnded={handleEnded}
-            onDurationChange={handleDuration}
-            onLoadedMetadata={handleDuration}
-            onError={() => {
-              if (player.is_playing) {
-                setNeedsAutoplayUnlock(true);
-              } else {
-                setHasError(true);
-              }
-            }}
-            config={{
-              youtube: {
-                color: "white",
-                rel: 0,
-                iv_load_policy: 3,
-              },
-            }}
+        <div className="w-full h-full relative flex items-center justify-center select-none overflow-hidden">
+          {/* Moteur de rendu vidéo (purement visuel, clics protégés de tout piratage d'iframe) */}
+          <div className="w-full h-full pointer-events-none">
+            <ReactPlayer
+              key={mediaUrl}
+              ref={playerRef}
+              src={mediaUrl}
+              playing={player.is_playing}
+              volume={isMuted ? 0 : volume / 100}
+              muted={isMuted}
+              controls={false}
+              width="100%"
+              height="100%"
+              style={{ width: "100%", height: "100%", display: "block" }}
+              onReady={handleReady}
+              onEnded={handleEnded}
+              onDurationChange={handleDuration}
+              onLoadedMetadata={handleDuration}
+              onError={() => {
+                if (player.is_playing) {
+                  setNeedsAutoplayUnlock(true);
+                } else {
+                  setHasError(true);
+                }
+              }}
+              config={{
+                youtube: {
+                  color: "white",
+                  rel: 0,
+                  iv_load_policy: 3,
+                },
+              }}
+            />
+          </div>
+
+          {/* Surface d'interaction unifiée : capture les clics pour piloter Synk en temps réel */}
+          <div
+            onClick={handlePlayerClick}
+            onDoubleClick={onToggleFullscreen}
+            className={`absolute inset-0 z-10 ${
+              isLockedForGuest ? "cursor-not-allowed" : "cursor-pointer"
+            }`}
           />
 
           {/* Indicateur d'initialisation */}

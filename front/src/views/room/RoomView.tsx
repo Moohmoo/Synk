@@ -252,8 +252,8 @@ export function RoomView() {
             isFullscreen={isFullscreen}
             onLocalPlay={(time) => sendPlay(time)}
             onLocalPause={(time) => sendPause(time)}
-            onLocalSeek={(time) => sendSeek(time)}
             onDurationChange={(d) => setMediaDuration(d)}
+            onToggleFullscreen={toggleFullscreen}
           />
 
           {/* Barre de Contrôle du Lecteur & Verrou d'hôte */}
