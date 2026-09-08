@@ -18,33 +18,22 @@ export function HomeView() {
 
   const [mode, setMode] = useState<"create" | "join">("create");
   const [joinStep, setJoinStep] = useState<"code" | "username">("code");
-  const [createUsername, setCreateUsername] = useState("");
+  const [createUsername, setCreateUsername] = useState(() => sessionManager.getLastUsername());
+  const [joinUsername, setJoinUsername] = useState(() => sessionManager.getLastUsername());
   const [roomCode, setRoomCode] = useState("");
   const [validatedRoomCode, setValidatedRoomCode] = useState("");
-  const [joinUsername, setJoinUsername] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const isSubmittingRef = useRef(false);
-
-  // Pré-remplir avec le dernier pseudo utilisé si disponible
-  useEffect(() => {
-    const lastUser = sessionManager.getLastUsername();
-    if (lastUser) {
-      setCreateUsername(lastUser);
-      setJoinUsername(lastUser);
-    }
-  }, []);
 
   // Synchronise la lueur d'ambiance avec le mode actif (rouge pour créer, cyan pour rejoindre)
   useEffect(() => {
     setGlowColor(mode === "create" ? "red" : "cyan");
+    return () => setGlowColor("cyan");
   }, [mode, setGlowColor]);
 
   const extractRoomCode = (raw: string) => {
     const trimmed = raw.trim();
     if (trimmed.includes("/room/")) {
-      return (
-        trimmed.split("/room/").pop()?.split("?")[0].split("#")[0] || ""
-      );
+      return trimmed.split("/room/").pop()?.split("?")[0].split("#")[0] || "";
     }
     return trimmed;
   };
@@ -92,9 +81,7 @@ export function HomeView() {
         setSearchParams({}, { replace: true });
       }
     }
-    setTimeout(() => {
-      inputRef.current?.focus();
-    }, 0);
+    setTimeout(() => inputRef.current?.focus(), 0);
   };
 
   const handleCancelValidatedCode = () => {
@@ -102,9 +89,7 @@ export function HomeView() {
     if (searchParams.has("join")) {
       setSearchParams({}, { replace: true });
     }
-    setTimeout(() => {
-      inputRef.current?.focus();
-    }, 0);
+    setTimeout(() => inputRef.current?.focus(), 0);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -118,105 +103,82 @@ export function HomeView() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isLoading || isSubmittingRef.current) return;
-    isSubmittingRef.current = true;
+    if (isLoading) return;
 
-    try {
-      if (mode === "create") {
-        const valError = validateUsername(createUsername, (key) =>
-          t(key, { ns: "validation" })
-        );
-        if (valError) {
-          toast.error(valError, { id: "home-val-error" });
-          isSubmittingRef.current = false;
-          return;
-        }
-        const username = createUsername.trim();
-
-        setIsLoading(true);
-        try {
-          const data = await roomApi.createRoom(username);
-          const newRoomId = data.room_id;
-
-          sessionManager.setRoomSession(newRoomId, {
-            username,
-            token: data.host_token,
-            userId: data.user_id,
-          });
-
-          navigate(`/room/${newRoomId}`);
-        } catch (err: any) {
-          toast.error(formatErrorMessage(err, t), { id: "home-api-error" });
-          setIsLoading(false);
-          isSubmittingRef.current = false;
-        }
-      } else if (joinStep === "code") {
-        // Étape 1 : Validation stricte de l'existence du salon via roomApi
-        const cleanRoomCode = extractRoomCode(roomCode);
-        if (!cleanRoomCode) {
-          toast.error(formatErrorMessage("MISSING_ROOM_CODE", t), { id: "home-room-code-error" });
-          isSubmittingRef.current = false;
-          return;
-        }
-
-        setIsLoading(true);
-        try {
-          const check = await roomApi.checkRoom(cleanRoomCode);
-          if (!check.exists) {
-            toast.error(formatErrorMessage("ROOM_NOT_FOUND", t), { id: "home-room-not-found" });
-            setIsLoading(false);
-            isSubmittingRef.current = false;
-            return;
-          }
-
-          setValidatedRoomCode(cleanRoomCode);
-          setJoinStep("username");
-          setIsLoading(false);
-          isSubmittingRef.current = false;
-          setTimeout(() => {
-            inputRef.current?.focus();
-          }, 0);
-        } catch (err: any) {
-          toast.error(formatErrorMessage(err, t), { id: "home-api-error" });
-          setIsLoading(false);
-          isSubmittingRef.current = false;
-        }
-      } else {
-        // Étape 2 : Saisie du pseudo et entrée dans le salon
-        const valError = validateUsername(joinUsername, (key) =>
-          t(key, { ns: "validation" })
-        );
-        if (valError) {
-          toast.error(valError, { id: "home-val-error" });
-          isSubmittingRef.current = false;
-          return;
-        }
-        const username = joinUsername.trim();
-
-        sessionManager.setRoomSession(validatedRoomCode, {
-          username,
-        });
-        navigate(`/room/${validatedRoomCode}`);
+    if (mode === "create") {
+      const valError = validateUsername(createUsername, (key) =>
+        t(key, { ns: "validation" })
+      );
+      if (valError) {
+        toast.error(valError, { id: "home-val-error" });
+        return;
       }
-    } catch {
-      isSubmittingRef.current = false;
+      const username = createUsername.trim();
+
+      setIsLoading(true);
+      try {
+        const data = await roomApi.createRoom(username);
+        sessionManager.setRoomSession(data.room_id, {
+          username,
+          token: data.host_token,
+          userId: data.user_id,
+        });
+        navigate(`/room/${data.room_id}`);
+      } catch (err: any) {
+        toast.error(formatErrorMessage(err, t), { id: "home-api-error" });
+        setIsLoading(false);
+      }
+    } else if (joinStep === "code") {
+      const cleanRoomCode = extractRoomCode(roomCode);
+      if (!cleanRoomCode) {
+        toast.error(formatErrorMessage("MISSING_ROOM_CODE", t), { id: "home-room-code-error" });
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const check = await roomApi.checkRoom(cleanRoomCode);
+        if (!check.exists) {
+          toast.error(formatErrorMessage("ROOM_NOT_FOUND", t), { id: "home-room-not-found" });
+          setIsLoading(false);
+          return;
+        }
+
+        setValidatedRoomCode(cleanRoomCode);
+        setJoinStep("username");
+        setIsLoading(false);
+        setTimeout(() => inputRef.current?.focus(), 0);
+      } catch (err: any) {
+        toast.error(formatErrorMessage(err, t), { id: "home-api-error" });
+        setIsLoading(false);
+      }
+    } else {
+      const valError = validateUsername(joinUsername, (key) =>
+        t(key, { ns: "validation" })
+      );
+      if (valError) {
+        toast.error(valError, { id: "home-val-error" });
+        return;
+      }
+      const username = joinUsername.trim();
+
+      sessionManager.setRoomSession(validatedRoomCode, { username });
+      navigate(`/room/${validatedRoomCode}`);
     }
   };
 
   return (
     <div className="relative flex flex-col items-center justify-center h-full pt-10 pb-32 w-full max-w-full px-6 md:px-12">
-      {/* CONTENEUR DU PREMIER PLAN (Z-Index) */}
+      {/* Conteneur principal */}
       <div className="relative z-10 flex flex-col items-center w-full">
-        {/* LE SWITCH (Effet Sliding Pill) */}
+        {/* Le sélecteur de mode (Créer / Rejoindre) */}
         <div className="relative flex p-1 mb-6 bg-[#18181b] rounded-md border border-white/5 mx-auto">
-          {/* Le fond coulissant (La pilule) */}
           <div
             className={`absolute top-1 bottom-1 left-1 w-[120px] bg-[#27272a] rounded shadow-sm transition-transform duration-300 ease-out ${
               mode === "create" ? "translate-x-0" : "translate-x-[120px]"
             }`}
           />
 
-          {/* Bouton Créer */}
           <button
             type="button"
             onClick={() => handleSwitchMode("create")}
@@ -227,7 +189,6 @@ export function HomeView() {
             {t("home.createTab")}
           </button>
 
-          {/* Bouton Rejoindre */}
           <button
             type="button"
             onClick={() => handleSwitchMode("join")}
@@ -239,7 +200,7 @@ export function HomeView() {
           </button>
         </div>
 
-        {/* L'OMNIBOX (Composant extrait et workflow séquentiel) */}
+        {/* L'Omnibox d'accueil */}
         <Omnibox
           ref={inputRef}
           value={
@@ -294,5 +255,3 @@ export function HomeView() {
     </div>
   );
 }
-
-export default HomeView;
