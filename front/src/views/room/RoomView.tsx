@@ -6,7 +6,6 @@ import { RightSidebarSlot } from "@/components/RightSidebarSlot";
 import { roomApi } from "@/services/roomApi";
 import { sessionManager } from "@/lib/session";
 import { useSyncRoom } from "@/hooks/useSyncRoom";
-import { useActionCooldown } from "@/hooks/useActionCooldown";
 import { toast } from "@/components/ui/sonner";
 import { useUIStore } from "@/stores/uiStore";
 import { MediaPlayer } from "./components/MediaPlayer";
@@ -24,6 +23,7 @@ export function RoomView() {
   const [userId, setUserId] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
   const [roomNotFound, setRoomNotFound] = useState(false);
+  const [currentTime, setCurrentTime] = useState<number>(0);
   const [mediaDuration, setMediaDuration] = useState<number>(0);
 
   // Barre de commande média (URL)
@@ -154,22 +154,34 @@ export function RoomView() {
   );
   const isHost = Boolean(currentParticipant?.is_host);
 
-  const [throttledChangeMedia, isMediaLoadingCooldown] = useActionCooldown((url: string) => {
-    changeMedia(url);
-  }, 800);
-
   const handleLoadMedia = (e: React.FormEvent) => {
     e.preventDefault();
     const cleanUrl = mediaUrl.trim();
     if (!cleanUrl) return;
     if (roomSettings.is_locked && !isHost) {
-      toast.warning(t("controls.hostOnly", "CONTRÔLES HÔTE EXCLUSIFS"), {
+      toast.warning(t("controls.hostOnly", { defaultValue: "CONTRÔLES HÔTE EXCLUSIFS" }), {
         id: "room-lock-host-only",
       });
       return;
     }
-    throttledChangeMedia(cleanUrl);
+    changeMedia(cleanUrl);
     setMediaUrl("");
+  };
+
+  const handleTogglePlay = (time?: number) => {
+    if (roomSettings.is_locked && !isHost) {
+      toast.warning(t("controls.hostOnly", { defaultValue: "CONTRÔLES HÔTE EXCLUSIFS" }), {
+        id: "room-lock-host-only",
+      });
+      return;
+    }
+    const pos = typeof time === "number" ? time : currentTime;
+    if (player.is_playing) {
+      sendPause(pos);
+    } else {
+      const isAtEnd = mediaDuration > 0 && pos >= mediaDuration - 0.5;
+      sendPlay(isAtEnd ? 0 : pos);
+    }
   };
 
   if (roomNotFound) {
@@ -226,8 +238,7 @@ export function RoomView() {
           mode="join"
           placeholder={t("header.urlPlaceholder")}
           buttonText={t("header.load")}
-          disabled={(roomSettings.is_locked && !isHost) || isMediaLoadingCooldown}
-          isLoading={isMediaLoadingCooldown}
+          disabled={roomSettings.is_locked && !isHost}
           maxLength={2048}
           className="w-full max-w-4xl mb-6 relative z-20"
         />
@@ -241,18 +252,22 @@ export function RoomView() {
               : "w-full max-w-4xl flex flex-col items-center"
           }
         >
-          {/* LE LECTEUR MULTIMÉDIA : Conteneur Cinéma Premium */}
+          {/* LE LECTEUR MULTIMÉDIA : Conteneur Cinéma Universel */}
           <MediaPlayer
             player={player}
             roomSettings={roomSettings}
             isHost={isHost}
-            duration={mediaDuration}
             volume={volume}
             isMuted={isMuted}
             isFullscreen={isFullscreen}
-            onLocalPlay={(time) => sendPlay(time)}
-            onLocalPause={(time) => sendPause(time)}
+            onProgress={(time) => setCurrentTime(time)}
             onDurationChange={(d) => setMediaDuration(d)}
+            onEnded={() => {
+              if (isHost && player.is_playing) {
+                sendPause(mediaDuration || player.duration);
+              }
+            }}
+            onTogglePlay={() => handleTogglePlay()}
             onToggleFullscreen={toggleFullscreen}
           />
 
@@ -261,11 +276,12 @@ export function RoomView() {
             player={player}
             roomSettings={roomSettings}
             isHost={isHost}
+            currentTime={currentTime}
             duration={mediaDuration}
             volume={volume}
             isMuted={isMuted}
             isFullscreen={isFullscreen}
-            onPlay={(time) => sendPlay(time)}
+            onPlay={(time) => handleTogglePlay(time)}
             onPause={(time) => sendPause(time)}
             onSeek={(time) => sendSeek(time)}
             onToggleLock={() => updateSettings(!roomSettings.is_locked)}

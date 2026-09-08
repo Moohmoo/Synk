@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import {
   Play,
   Pause,
@@ -15,13 +15,12 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { PlayerState, RoomSettings } from "@/types/room";
-import { useInterpolatedTime } from "@/hooks/useInterpolatedTime";
-import { useActionCooldown } from "@/hooks/useActionCooldown";
 
 interface PlayerControlsProps {
   player: PlayerState;
   roomSettings: RoomSettings;
   isHost: boolean;
+  currentTime?: number;
   duration?: number;
   volume?: number;
   isMuted?: boolean;
@@ -35,10 +34,23 @@ interface PlayerControlsProps {
   onToggleFullscreen?: () => void;
 }
 
+function formatTime(seconds: number): string {
+  if (!seconds || isNaN(seconds) || seconds < 0) return "0:00";
+  const totalSecs = Math.floor(seconds);
+  const hrs = Math.floor(totalSecs / 3600);
+  const mins = Math.floor((totalSecs % 3600) / 60);
+  const secs = totalSecs % 60;
+  if (hrs > 0) {
+    return `${hrs}:${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+  }
+  return `${mins}:${String(secs).padStart(2, "0")}`;
+}
+
 export function PlayerControls({
   player,
   roomSettings,
   isHost,
+  currentTime = 0,
   duration = 0,
   volume = 100,
   isMuted = false,
@@ -54,62 +66,9 @@ export function PlayerControls({
   const { t } = useTranslation("room");
   const isLockedForGuest = roomSettings.is_locked && !isHost;
   const [scrubbingTime, setScrubbingTime] = useState<number | null>(null);
-  const [pendingSeekTime, setPendingSeekTime] = useState<number | null>(null);
-  const pendingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isScrubbing = scrubbingTime !== null;
-
-  // Anti-spam & Cooldown sur les interactions critiques vers le serveur
-  const [throttledToggleLock, isLockCooldown] = useActionCooldown(onToggleLock, 450);
-  const [throttledPlay, isPlayCooldown] = useActionCooldown(onPlay, 350);
-  const [throttledPause, isPauseCooldown] = useActionCooldown(onPause, 350);
-  const [throttledSeek, isSeekCooldown] = useActionCooldown(onSeek, 300);
-  const isPlaybackCooldown = isPlayCooldown || isPauseCooldown;
-
-  // Libérer le maintien optimiste dès confirmation du serveur (acquittement WebSocket)
-  useEffect(() => {
-    if (pendingSeekTime !== null) {
-      setPendingSeekTime(null);
-      if (pendingTimerRef.current) {
-        clearTimeout(pendingTimerRef.current);
-        pendingTimerRef.current = null;
-      }
-    }
-  }, [player.last_updated_at, player.current_time]);
-
-  useEffect(() => {
-    return () => {
-      if (pendingTimerRef.current) {
-        clearTimeout(pendingTimerRef.current);
-      }
-    };
-  }, []);
-
-  const formatTime = (seconds: number) => {
-    if (!seconds || isNaN(seconds) || seconds < 0) return "0:00";
-    const totalSecs = Math.floor(seconds);
-    const hrs = Math.floor(totalSecs / 3600);
-    const mins = Math.floor((totalSecs % 3600) / 60);
-    const secs = totalSecs % 60;
-    if (hrs > 0) {
-      return `${hrs}:${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
-    }
-    return `${mins}:${String(secs).padStart(2, "0")}`;
-  };
 
   const totalDuration = duration > 0 ? duration : (player.duration || 0);
-
-  const interpolatedTime = useInterpolatedTime({
-    player,
-    duration: totalDuration,
-    isScrubbing: isScrubbing || pendingSeekTime !== null,
-  });
-
-  // Maintien optimiste : priorité au scrubbing local, puis au seek en attente de validation serveur, puis à l'interpolation
-  const displayTime = isScrubbing
-    ? scrubbingTime
-    : pendingSeekTime !== null
-    ? pendingSeekTime
-    : interpolatedTime;
+  const displayTime = scrubbingTime !== null ? scrubbingTime : currentTime;
   const isTimelineDisabled = isLockedForGuest || totalDuration === 0 || !player.media_id;
   const isAtEnd = totalDuration > 0 && displayTime >= Math.max(0, totalDuration - 0.5);
 
@@ -134,18 +93,8 @@ export function PlayerControls({
             }}
             onValueCommit={(val) => {
               if (val.length > 0) {
-                const target = val[0];
-                setPendingSeekTime(target);
-                throttledSeek(target);
+                onSeek(val[0]);
                 setScrubbingTime(null);
-
-                // Filet de sécurité maximal : libérer après 1s si aucune réponse réseau
-                if (pendingTimerRef.current) {
-                  clearTimeout(pendingTimerRef.current);
-                }
-                pendingTimerRef.current = setTimeout(() => {
-                  setPendingSeekTime(null);
-                }, 1000);
               }
             }}
           />
@@ -163,8 +112,8 @@ export function PlayerControls({
             <Button
               variant="secondary"
               size="icon"
-              disabled={isLockedForGuest || !player.media_id || isPlaybackCooldown}
-              onClick={() => throttledPause(displayTime)}
+              disabled={isLockedForGuest || !player.media_id}
+              onClick={() => onPause(displayTime)}
               className="text-[#0ac8b9]"
               title={t("controls.pause")}
             >
@@ -174,8 +123,8 @@ export function PlayerControls({
             <Button
               variant="teal"
               size="icon"
-              disabled={isLockedForGuest || !player.media_id || isPlaybackCooldown}
-              onClick={() => throttledPlay(isAtEnd ? 0 : displayTime)}
+              disabled={isLockedForGuest || !player.media_id}
+              onClick={() => onPlay(isAtEnd ? 0 : displayTime)}
               title={isAtEnd ? t("controls.replay", { defaultValue: "Rejouer" }) : t("controls.play")}
             >
               {isAtEnd ? (
@@ -189,13 +138,8 @@ export function PlayerControls({
           <Button
             variant="secondary"
             size="icon"
-            disabled={
-              isLockedForGuest ||
-              !player.media_id ||
-              isSeekCooldown ||
-              (player.current_time === 0 && !player.is_playing)
-            }
-            onClick={() => throttledSeek(0)}
+            disabled={isLockedForGuest || !player.media_id}
+            onClick={() => onSeek(0)}
             title={t("controls.rewind")}
           >
             <RotateCcw className="w-4 h-4 text-zinc-400" />
@@ -203,7 +147,7 @@ export function PlayerControls({
 
           <div className="h-5 w-px bg-white/5 mx-1" />
 
-          {/* Volume Control Interactif (Purement Local) */}
+          {/* Volume Control */}
           <div className="flex items-center gap-2 px-2.5 py-1 bg-black/40 border border-white/5 text-xs font-mono rounded-lg">
             <button
               type="button"
@@ -246,8 +190,7 @@ export function PlayerControls({
             <Button
               variant={roomSettings.is_locked ? "destructive" : "secondary"}
               size="sm"
-              onClick={throttledToggleLock}
-              disabled={isLockCooldown}
+              onClick={onToggleLock}
               className="gap-1.5"
             >
               {roomSettings.is_locked ? (

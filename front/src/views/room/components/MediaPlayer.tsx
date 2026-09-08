@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import ReactPlayer from "react-player";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
 import { PlayerState, RoomSettings } from "@/types/room";
 import { Tv, AlertCircle, Play } from "lucide-react";
 
@@ -9,13 +8,13 @@ interface MediaPlayerProps {
   player: PlayerState;
   roomSettings: RoomSettings;
   isHost: boolean;
-  duration?: number;
   volume?: number;
   isMuted?: boolean;
   isFullscreen?: boolean;
-  onLocalPlay?: (time: number) => void;
-  onLocalPause?: (time: number) => void;
+  onProgress?: (time: number) => void;
   onDurationChange?: (duration: number) => void;
+  onEnded?: () => void;
+  onTogglePlay?: () => void;
   onToggleFullscreen?: () => void;
 }
 
@@ -30,9 +29,8 @@ function resolveMediaUrl(player: PlayerState): string {
 }
 
 /**
- * Lecteur multimédia universel (YouTube, Twitch, Vimeo, flux directs...).
- * S'appuie sur react-player et l'interface standard HTMLMediaElement pour
- * garantir synchronisation robuste, absence de fuites mémoire et code concis.
+ * Lecteur multimédia universel (YouTube, Twitch, Vimeo, SoundCloud, flux directs...).
+ * S'appuie sur react-player et l'interface standard HTMLMediaElement.
  */
 export function MediaPlayer({
   player,
@@ -41,95 +39,38 @@ export function MediaPlayer({
   volume = 100,
   isMuted = false,
   isFullscreen = false,
-  onLocalPlay,
-  onLocalPause,
+  onProgress,
   onDurationChange,
+  onEnded,
+  onTogglePlay,
   onToggleFullscreen,
 }: MediaPlayerProps) {
   const { t } = useTranslation("room");
   const playerRef = useRef<HTMLVideoElement | null>(null);
-  const [isReady, setIsReady] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [needsAutoplayUnlock, setNeedsAutoplayUnlock] = useState(false);
 
-  const mediaUrl = useMemo(() => resolveMediaUrl(player), [player.media_url, player.media_id, player.provider]);
+  const mediaUrl = useMemo(
+    () => resolveMediaUrl(player),
+    [player.media_url, player.media_id, player.provider]
+  );
   const isLockedForGuest = roomSettings.is_locked && !isHost;
 
-  // Réinitialiser l'état lors d'un changement de flux média
+  // Réinitialiser lors d'un changement d'URL
   useEffect(() => {
-    setIsReady(false);
     setHasError(false);
     setNeedsAutoplayUnlock(false);
   }, [mediaUrl]);
 
-  // Synchronisation temporelle (Dead Reckoning & rattrapage de dérive)
+  // Recaler la position lors d'un saut explicite du salon (SEEK) si écart > 2s
   useEffect(() => {
-    if (!playerRef.current || !isReady) return;
-
-    const now = Date.now();
-    const elapsed = player.is_playing
-      ? Math.max(0, (now - (player.last_updated_at || now)) / 1000)
-      : 0;
-    const targetTime = player.current_time + elapsed;
-    const currentLocalTime = playerRef.current.currentTime || 0;
-    const drift = Math.abs(currentLocalTime - targetTime);
-
-    // Si le décalage dépasse la tolérance de 2s, recaler la tête de lecture
-    if (drift > 2.0) {
-      playerRef.current.currentTime = targetTime;
+    if (!playerRef.current) return;
+    const local = playerRef.current.currentTime || 0;
+    if (Math.abs(local - player.current_time) > 2.0) {
+      playerRef.current.currentTime = player.current_time;
     }
-  }, [player.current_time, player.last_updated_at, player.is_playing, isReady]);
+  }, [player.current_time]);
 
-  // Notifier la durée détectée
-  const handleDuration = () => {
-    const d = playerRef.current?.duration;
-    if (d && d > 0 && d !== player.duration && onDurationChange) {
-      onDurationChange(d);
-    }
-  };
-
-  const handleReady = () => {
-    setIsReady(true);
-    setHasError(false);
-    handleDuration();
-
-    if (playerRef.current) {
-      const now = Date.now();
-      const elapsed = player.is_playing
-        ? Math.max(0, (now - (player.last_updated_at || now)) / 1000)
-        : 0;
-      const targetTime = player.current_time + elapsed;
-      if (Math.abs((playerRef.current.currentTime || 0) - targetTime) > 1.0) {
-        playerRef.current.currentTime = targetTime;
-      }
-    }
-  };
-
-  // Fin du média : l'hôte notifie la mise en pause
-  const handleEnded = () => {
-    if (player.is_playing && isHost) {
-      const end = playerRef.current?.duration || player.current_time;
-      onLocalPause?.(end);
-    }
-  };
-
-  // Clic direct sur l'écran cinéma pour basculer play/pause
-  const handlePlayerClick = () => {
-    if (isLockedForGuest) {
-      toast.warning(t("controls.hostOnly", { defaultValue: "CONTRÔLES HÔTE EXCLUSIFS" }), {
-        id: "room-lock-host-only",
-      });
-      return;
-    }
-    const currentTime = playerRef.current?.currentTime ?? player.current_time;
-    if (player.is_playing) {
-      onLocalPause?.(currentTime);
-    } else {
-      onLocalPlay?.(currentTime);
-    }
-  };
-
-  // Déblocage manuel au clic si l'Autoplay Policy du navigateur bloque la lecture avec son
   const handleUnlockAutoplay = () => {
     if (playerRef.current) {
       playerRef.current
@@ -143,9 +84,8 @@ export function MediaPlayer({
     <div
       className={`w-full ${
         isFullscreen ? "flex-1 max-h-[calc(100vh-140px)]" : "max-w-4xl"
-      } aspect-video bg-[#0a0a0c] rounded-2xl border border-white/10 shadow-2xl shadow-black/80 relative z-10 flex items-center justify-center overflow-hidden transition-all duration-200`}
+      } aspect-video bg-[#0a0a0c] rounded-2xl border border-white/10 shadow-2xl shadow-black/80 relative z-10 flex items-center justify-center overflow-hidden`}
     >
-      {/* 1. État d'attente quand aucun média n'est sélectionné */}
       {!mediaUrl ? (
         <div className="flex flex-col items-center justify-center gap-3 text-zinc-600 p-8 text-center select-none">
           <div className="w-16 h-16 border border-zinc-800 bg-zinc-900/50 flex items-center justify-center">
@@ -162,7 +102,7 @@ export function MediaPlayer({
         </div>
       ) : (
         <div className="w-full h-full relative flex items-center justify-center select-none overflow-hidden">
-          {/* Moteur de rendu vidéo (purement visuel, clics protégés de tout piratage d'iframe) */}
+          {/* Lecteur vidéo universel */}
           <div className="w-full h-full pointer-events-none">
             <ReactPlayer
               key={mediaUrl}
@@ -175,10 +115,17 @@ export function MediaPlayer({
               width="100%"
               height="100%"
               style={{ width: "100%", height: "100%", display: "block" }}
-              onReady={handleReady}
-              onEnded={handleEnded}
-              onDurationChange={handleDuration}
-              onLoadedMetadata={handleDuration}
+              onTimeUpdate={() => {
+                if (playerRef.current && onProgress) {
+                  onProgress(playerRef.current.currentTime);
+                }
+              }}
+              onDurationChange={() => {
+                if (playerRef.current?.duration && onDurationChange) {
+                  onDurationChange(playerRef.current.duration);
+                }
+              }}
+              onEnded={onEnded}
               onError={() => {
                 if (player.is_playing) {
                   setNeedsAutoplayUnlock(true);
@@ -196,26 +143,16 @@ export function MediaPlayer({
             />
           </div>
 
-          {/* Surface d'interaction unifiée : capture les clics pour piloter Synk en temps réel */}
+          {/* Écran tactile cinéma : 1 clic = toggle play/pause, 2 clics = plein écran */}
           <div
-            onClick={handlePlayerClick}
+            onClick={onTogglePlay}
             onDoubleClick={onToggleFullscreen}
             className={`absolute inset-0 z-10 ${
               isLockedForGuest ? "cursor-not-allowed" : "cursor-pointer"
             }`}
           />
 
-          {/* Indicateur d'initialisation */}
-          {!isReady && !hasError && (
-            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/90 select-none">
-              <div className="w-8 h-8 border-2 border-[#0ac8b9] border-t-transparent rounded-full animate-spin mb-3" />
-              <span className="text-[11px] font-mono text-zinc-500 uppercase tracking-wider">
-                {t("player.syncing", { defaultValue: "Initialisation du lecteur..." })}
-              </span>
-            </div>
-          )}
-
-          {/* Bannière de reprise si l'Autoplay est bloqué */}
+          {/* Déblocage de l'autoplay avec son si requis par le navigateur */}
           {needsAutoplayUnlock && (
             <button
               type="button"
@@ -236,7 +173,7 @@ export function MediaPlayer({
             </button>
           )}
 
-          {/* Écran d'erreur en cas de flux média indisponible ou restreint */}
+          {/* Message d'erreur flux inaccessible */}
           {hasError && (
             <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#0a0a0c]/95 p-6 text-center select-none backdrop-blur-sm pointer-events-auto">
               <AlertCircle className="w-10 h-10 text-rose-500 mb-3" />

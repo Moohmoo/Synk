@@ -81,41 +81,27 @@ export function useSyncRoom({
   // Actions utilisateur vers le serveur Socket.IO
   const sendPlay = useCallback(
     (currentTime?: number) => {
-      let target = currentTime;
-      if (typeof target !== "number" || isNaN(target)) {
-        if (player.is_playing) {
-          const elapsed = Math.max(0, (Date.now() - player.last_updated_at) / 1000);
-          target = player.current_time + elapsed;
-        } else {
-          target = player.current_time;
-        }
-      }
-      if (player.duration && player.duration > 0 && target >= player.duration - 0.5) {
-        target = 0;
-      }
+      const target = typeof currentTime === "number" && !isNaN(currentTime)
+        ? currentTime
+        : player.current_time;
+      const finalTime = player.duration && player.duration > 0 && target >= player.duration - 0.5 ? 0 : target;
       socketRef.current?.emit("PLAY", {
-        current_time: Math.round(target * 100) / 100,
+        current_time: Math.round(finalTime * 100) / 100,
       });
     },
-    [player.is_playing, player.current_time, player.last_updated_at, player.duration]
+    [player.current_time, player.duration]
   );
 
   const sendPause = useCallback(
     (currentTime?: number) => {
-      let target = currentTime;
-      if (typeof target !== "number" || isNaN(target)) {
-        if (player.is_playing) {
-          const elapsed = Math.max(0, (Date.now() - player.last_updated_at) / 1000);
-          target = player.current_time + elapsed;
-        } else {
-          target = player.current_time;
-        }
-      }
+      const target = typeof currentTime === "number" && !isNaN(currentTime)
+        ? currentTime
+        : player.current_time;
       socketRef.current?.emit("PAUSE", {
         current_time: Math.round(target * 100) / 100,
       });
     },
-    [player.is_playing, player.current_time, player.last_updated_at]
+    [player.current_time]
   );
 
   const sendSeek = useCallback((targetTime: number) => {
