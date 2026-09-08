@@ -143,6 +143,12 @@ export function MediaPlayer({
                 if (isEndedRef.current) return;
                 const cur = playerRef.current.currentTime;
                 const total = playerRef.current.duration || player.duration || 0;
+                if (total > 0 && cur >= total - 0.3 && !isLocallyEnded) {
+                  isEndedRef.current = true;
+                  setIsLocallyEnded(true);
+                  onEnded?.();
+                  return;
+                }
                 if (cur === 0 && total > 2 && isLocallyEnded) return;
                 onProgress(cur);
               }}

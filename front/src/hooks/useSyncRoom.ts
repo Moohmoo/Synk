@@ -71,28 +71,34 @@ export function useSyncRoom({
   lockActionRef.current = lockAction;
 
   // Actions utilisateur vers le serveur Socket.IO (stables & protégées contre le spam)
-  const sendPlay = useCallback((currentTime?: number) => {
+  const sendPlay = useCallback((currentTime?: number, duration?: number) => {
     if (isRateLimited("PLAY")) return;
     const pos = typeof currentTime === "number" && !isNaN(currentTime) ? currentTime : 0;
     socketRef.current?.emit("PLAY", {
       current_time: Math.round(pos * 100) / 100,
+      duration: duration && duration > 0 ? Math.round(duration * 100) / 100 : undefined,
     });
   }, [isRateLimited]);
 
-  const sendPause = useCallback((currentTime?: number) => {
+  const sendPause = useCallback((currentTime?: number, duration?: number) => {
     if (isRateLimited("PAUSE")) return;
     const pos = typeof currentTime === "number" && !isNaN(currentTime) ? currentTime : 0;
     socketRef.current?.emit("PAUSE", {
       current_time: Math.round(pos * 100) / 100,
+      duration: duration && duration > 0 ? Math.round(duration * 100) / 100 : undefined,
     });
   }, [isRateLimited]);
 
-  const sendSeek = useCallback((targetTime: number) => {
+  const sendSeek = useCallback((targetTime: number, duration?: number) => {
     if (isRateLimited("SEEK")) return;
-    socketRef.current?.emit("SEEK", { target_time: targetTime });
+    socketRef.current?.emit("SEEK", {
+      target_time: targetTime,
+      duration: duration && duration > 0 ? Math.round(duration * 100) / 100 : undefined,
+    });
     setPlayer((prev) => ({
       ...prev,
       current_time: targetTime,
+      duration: duration && duration > 0 ? duration : prev.duration,
       last_updated_at: Date.now(),
     }));
   }, [isRateLimited]);

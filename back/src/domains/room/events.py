@@ -266,11 +266,15 @@ async def on_play(sid: str, data: Any) -> None:
         return
     session, payload = guard
 
+    updates: dict[str, Any] = {"is_playing": True, "current_time": payload.current_time}
+    if payload.duration and payload.duration > 0:
+        updates["duration"] = payload.duration
+
     await _update_and_broadcast_player(
         sid,
         session,
         action="PLAY",
-        updates={"is_playing": True, "current_time": payload.current_time},
+        updates=updates,
         extra_broadcast={"current_time": payload.current_time},
     )
 
@@ -283,11 +287,15 @@ async def on_pause(sid: str, data: Any) -> None:
         return
     session, payload = guard
 
+    updates: dict[str, Any] = {"is_playing": False, "current_time": payload.current_time}
+    if payload.duration and payload.duration > 0:
+        updates["duration"] = payload.duration
+
     await _update_and_broadcast_player(
         sid,
         session,
         action="PAUSE",
-        updates={"is_playing": False, "current_time": payload.current_time},
+        updates=updates,
         extra_broadcast={"current_time": payload.current_time},
     )
 
@@ -300,11 +308,15 @@ async def on_seek(sid: str, data: Any) -> None:
         return
     session, payload = guard
 
+    updates: dict[str, Any] = {"current_time": payload.target_time}
+    if payload.duration and payload.duration > 0:
+        updates["duration"] = payload.duration
+
     await _update_and_broadcast_player(
         sid,
         session,
         action="SEEK",
-        updates={"current_time": payload.target_time},
+        updates=updates,
         extra_broadcast={"target_time": payload.target_time},
     )
 

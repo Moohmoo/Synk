@@ -150,6 +150,14 @@ async def test_update_player_safe_idempotence(redis_client):
     )
     assert err == "NOOP"
 
+    # 4b. Replay : envoi d'un PLAY à 0.0s alors que le salon est en cours de lecture -> Replay effectif
+    replay_room, err = await service.update_player_safe(
+        room.room_id, host, is_playing=True, current_time=0.0
+    )
+    assert err is None
+    assert replay_room.player.current_time == 0.0
+    assert replay_room.player.is_playing is True
+
     # 5. SEEK (is_playing est None) -> Doit s'exécuter normalement
     seek_room, err = await service.update_player_safe(
         room.room_id, host, current_time=55.0

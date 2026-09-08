@@ -318,11 +318,8 @@ class RoomService:
             from domains.room.sync import calculate_reference_position
 
             ref_pos = calculate_reference_position(room.player)
-            is_at_end = (
-                room.player.duration > 0 and ref_pos >= room.player.duration - 0.5
-            )
             is_restarting = (
-                current_time is not None and current_time < 1.0 and is_at_end
+                current_time is not None and current_time < 1.0 and ref_pos >= 1.0
             )
 
             if not is_restarting:

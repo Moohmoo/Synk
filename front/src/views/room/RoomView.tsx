@@ -162,14 +162,14 @@ export function RoomView() {
         videoRef.current.currentTime = 0;
       }
       setCurrentTime(0);
-      sendPlay(0);
+      sendPlay(0, mediaDuration);
       return;
     }
 
     if (player.is_playing) {
-      sendPause(pos);
+      sendPause(pos, mediaDuration);
     } else {
-      sendPlay(pos);
+      sendPlay(pos, mediaDuration);
     }
   };
 
@@ -283,7 +283,7 @@ export function RoomView() {
                 videoRef.current.currentTime = time;
               }
               setCurrentTime(time);
-              sendSeek(time);
+              sendSeek(time, mediaDuration);
             }}
             onToggleLock={() => {
               if (!isHost || isRateLimited("UPDATE_SETTINGS")) return;
