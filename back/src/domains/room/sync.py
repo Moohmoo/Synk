@@ -20,5 +20,9 @@ def calculate_reference_position(
 
     now = now_ms if now_ms is not None else int(time.time() * 1000)
     elapsed_sec = max(0.0, (now - player.last_updated_at) / 1000.0)
+    target = player.current_time + (elapsed_sec * playback_rate)
 
-    return round(player.current_time + (elapsed_sec * playback_rate), 3)
+    if player.duration and player.duration > 0:
+        target = min(target, player.duration)
+
+    return round(target, 3)

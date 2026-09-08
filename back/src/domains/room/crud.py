@@ -308,14 +308,25 @@ class RoomService:
 
         # Garde d'idempotence sur l'état de lecture :
         # Évite les écritures Redis superflues et les tempêtes de diffusion
-        # si l'action ne modifie pas l'état réel de lecture.
+        # si l'action ne modifie pas l'état réel de lecture (sauf en cas de Replay depuis la fin).
         if (
             is_playing is not None
             and is_playing == room.player.is_playing
             and media_url is None
             and media_id is None
         ):
-            return room, "NOOP"
+            from domains.room.sync import calculate_reference_position
+
+            ref_pos = calculate_reference_position(room.player)
+            is_at_end = (
+                room.player.duration > 0 and ref_pos >= room.player.duration - 0.5
+            )
+            is_restarting = (
+                current_time is not None and current_time < 1.0 and is_at_end
+            )
+
+            if not is_restarting:
+                return room, "NOOP"
 
         # Garde d'idempotence sur le saut temporel (Seek) :
         # Évite d'écrire et diffuser si la vidéo est déjà en pause au timestamp demandé (ex: rembobinage multiple à 0s)

@@ -54,11 +54,11 @@ def _validate_payload[T: BaseModel](model_cls: type[T], data: Any) -> T | None:
         return None
 
 
-async def _send_error(sid: str, code: str, message: str) -> None:
+async def _send_error(sid: str, code: str, message: str, **extra: Any) -> None:
     """Envoie un événement d'erreur normalisé au client."""
     await sio.emit(
         ServerEventType.ERROR,
-        {"code": code, "message": message},
+        {"code": code, "message": message, **extra},
         to=sid,
     )
 
@@ -90,6 +90,8 @@ async def _guard[T: BaseModel](
                 sid,
                 "RATE_LIMITED",
                 f"Too many fast actions ({action}). Please wait {wait_sec}s.",
+                action=action,
+                retry_after=wait_sec,
             )
         return None
 

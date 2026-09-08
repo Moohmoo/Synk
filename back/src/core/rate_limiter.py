@@ -85,9 +85,6 @@ class RateLimiter:
             pipe = self.redis.pipeline()
             pipe.zremrangebyscore(key, 0, window_start)
             pipe.zcard(key)
-            pipe.zadd(key, {f"{now}:{time.time_ns()}": now})
-            pipe.expire(key, window_seconds + 1)
-
             results = await pipe.execute()
             count = results[1]
 
@@ -98,6 +95,11 @@ class RateLimiter:
                 else:
                     retry_after = window_seconds
                 return False, retry_after
+
+            pipe = self.redis.pipeline()
+            pipe.zadd(key, {f"{now}:{time.time_ns()}": now})
+            pipe.expire(key, window_seconds + 1)
+            await pipe.execute()
 
             return True, 0
 

@@ -76,5 +76,7 @@ export type ErrorCode =
 export interface ErrorPayload {
   code: ErrorCode;
   message: string;
+  action?: string;
+  retry_after?: number;
 }
 

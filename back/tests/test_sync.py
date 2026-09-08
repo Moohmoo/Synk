@@ -47,3 +47,15 @@ def test_calculate_reference_position_clock_skew_resilient():
         last_updated_at=now_ms + 2000,  # Horloge dans le futur
     )
     assert calculate_reference_position(player, now_ms=now_ms) == 25.0
+def test_calculate_reference_position_capped_at_duration():
+    """La position calculée ne dépasse jamais la durée totale si elle est définie."""
+    now_ms = 1772450120000
+    player = PlayerState(
+        is_playing=True,
+        current_time=10.0,
+        duration=60.0,
+        last_updated_at=now_ms - 100000,  # 100 secondes écoulées
+    )
+    assert calculate_reference_position(player, now_ms=now_ms) == 60.0
+
+

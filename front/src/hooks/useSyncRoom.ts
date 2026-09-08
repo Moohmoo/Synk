@@ -15,6 +15,7 @@ import {
 } from "@/types/events";
 import { formatErrorMessage } from "@/lib/errorMapper";
 import { sessionManager } from "@/lib/session";
+import { useRateLimiter } from "./useRateLimiter";
 
 interface UseSyncRoomOptions {
   roomId: string;
@@ -32,6 +33,7 @@ export function useSyncRoom({
   wsBaseUrl = (import.meta as any).env?.VITE_WS_URL || "ws://localhost:8000",
 }: UseSyncRoomOptions) {
   const { t } = useTranslation(["room", "global", "errors"]);
+  const { isRateLimited, getRemainingCooldown, lockAction, resetAction } = useRateLimiter();
   const [isConnected, setIsConnected] = useState(false);
   const [currentUsername, setCurrentUsername] = useState(username);
   const [currentUserId, setCurrentUserId] = useState<string | null>(userId || null);
@@ -58,55 +60,64 @@ export function useSyncRoom({
   const currentUserIdRef = useRef<string | null>(userId || null);
   const myPingRef = useRef(0);
   const tRef = useRef(t);
+  const lockActionRef = useRef(lockAction);
+  const authoritativePlayerRef = useRef<PlayerState>(player);
 
   // Synchronisation synchrone des refs à chaque render
   tRef.current = t;
   currentUsernameRef.current = currentUsername;
   currentUserIdRef.current = currentUserId;
   myPingRef.current = myPing;
+  lockActionRef.current = lockAction;
 
-  // Actions utilisateur vers le serveur Socket.IO (stables)
+  // Actions utilisateur vers le serveur Socket.IO (stables & protégées contre le spam)
   const sendPlay = useCallback((currentTime?: number) => {
+    if (isRateLimited("PLAY")) return;
     const pos = typeof currentTime === "number" && !isNaN(currentTime) ? currentTime : 0;
     socketRef.current?.emit("PLAY", {
       current_time: Math.round(pos * 100) / 100,
     });
-  }, []);
+  }, [isRateLimited]);
 
   const sendPause = useCallback((currentTime?: number) => {
+    if (isRateLimited("PAUSE")) return;
     const pos = typeof currentTime === "number" && !isNaN(currentTime) ? currentTime : 0;
     socketRef.current?.emit("PAUSE", {
       current_time: Math.round(pos * 100) / 100,
     });
-  }, []);
+  }, [isRateLimited]);
 
   const sendSeek = useCallback((targetTime: number) => {
+    if (isRateLimited("SEEK")) return;
     socketRef.current?.emit("SEEK", { target_time: targetTime });
     setPlayer((prev) => ({
       ...prev,
       current_time: targetTime,
       last_updated_at: Date.now(),
     }));
-  }, []);
+  }, [isRateLimited]);
 
   const changeMedia = useCallback((url: string) => {
+    if (isRateLimited("CHANGE_MEDIA")) return;
     const trimmed = url.trim();
     if (!trimmed) return;
     socketRef.current?.emit("CHANGE_MEDIA", { url: trimmed });
-  }, []);
+  }, [isRateLimited]);
 
   const sendChat = useCallback((content: string) => {
+    if (isRateLimited("CHAT_MESSAGE")) return;
     const trimmed = content.trim();
     if (!trimmed) return;
     socketRef.current?.emit("CHAT_MESSAGE", { content: trimmed });
-  }, []);
+  }, [isRateLimited]);
 
   const updateSettings = useCallback(
     (isLocked: boolean) => {
+      if (isRateLimited("UPDATE_SETTINGS")) return;
       if (roomSettings.is_locked === isLocked) return;
       socketRef.current?.emit("UPDATE_SETTINGS", { is_locked: isLocked });
     },
-    [roomSettings.is_locked]
+    [isRateLimited, roomSettings.is_locked]
   );
 
   // Initialisation et gestion du cycle de vie Socket.IO
@@ -153,6 +164,7 @@ export function useSyncRoom({
       const roomData: Room = payload.room;
       setParticipants(roomData.participants);
       setPlayer(roomData.player);
+      authoritativePlayerRef.current = roomData.player;
       setRoomSettings(roomData.settings);
       if (payload.your_username) {
         setCurrentUsername(payload.your_username);
@@ -181,6 +193,7 @@ export function useSyncRoom({
 
     socket.on("PLAYER_UPDATED", (payload: PlayerUpdatedPayload) => {
       setPlayer(payload.player);
+      authoritativePlayerRef.current = payload.player;
       const isSelf =
         payload.triggered_by === currentUsernameRef.current ||
         payload.triggered_by === username;
@@ -283,6 +296,26 @@ export function useSyncRoom({
       const localizedMsg = formatErrorMessage(payload, tRef.current);
       setError(localizedMsg);
       toast.error(localizedMsg, { id: `ws-err-${payload.code || "generic"}` });
+
+      if (payload.code === "RATE_LIMITED") {
+        const action = payload.action;
+        const retryAfter = payload.retry_after || 2;
+        if (action) {
+          lockActionRef.current(action, retryAfter);
+        } else {
+          lockActionRef.current("SEEK", retryAfter);
+          lockActionRef.current("PLAY", retryAfter);
+          lockActionRef.current("PAUSE", retryAfter);
+        }
+
+        // Rollback sur l'état officiel du salon en cas de rejet d'une commande
+        if (!action || action === "SEEK" || action === "PLAY" || action === "PAUSE") {
+          setPlayer({
+            ...authoritativePlayerRef.current,
+            last_updated_at: Date.now(),
+          });
+        }
+      }
     });
 
     // Mesure de latence périodique
@@ -323,6 +356,8 @@ export function useSyncRoom({
     currentUsername,
     currentUserId,
     isHost,
+    isRateLimited,
+    getRemainingCooldown,
     sendPlay,
     sendPause,
     sendSeek,

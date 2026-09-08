@@ -183,6 +183,8 @@ async def test_socketio_full_lifecycle_and_events():
         await alice.emit(ClientEventType.UPDATE_SETTINGS, {"is_locked": True})
         alice_rate_err = await alice.wait_for_event(ServerEventType.ERROR)
         assert alice_rate_err["code"] == "RATE_LIMITED"
+        assert alice_rate_err["action"] == ClientEventType.UPDATE_SETTINGS
+        assert alice_rate_err["retry_after"] >= 1
 
         # 12. Déconnexion de Bob -> Alice est notifiée
         await bob.disconnect()
