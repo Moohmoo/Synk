@@ -249,7 +249,12 @@ export function useSyncRoom({
     });
 
     socket.on("HEARTBEAT_ACK", (payload: { client_sent_at: number; ping_ms: number }) => {
-      setMyPing(payload.ping_ms);
+      if (payload.client_sent_at) {
+        const rtt = Math.max(0, Date.now() - payload.client_sent_at);
+        setMyPing(Math.round(rtt / 2));
+      } else {
+        setMyPing(payload.ping_ms || 0);
+      }
     });
 
     socket.on("PING_UPDATED", (payload: { user_id: string; ping_ms: number }) => {
