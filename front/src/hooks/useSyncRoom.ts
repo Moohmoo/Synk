@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { io, Socket } from "socket.io-client";
@@ -22,7 +22,6 @@ interface UseSyncRoomOptions {
   token?: string | null;
   userId?: string | null;
   wsBaseUrl?: string;
-  onPlayerChange?: (payload: PlayerUpdatedPayload) => void;
 }
 
 export function useSyncRoom({
@@ -31,13 +30,11 @@ export function useSyncRoom({
   token,
   userId,
   wsBaseUrl = (import.meta as any).env?.VITE_WS_URL || "ws://localhost:8000",
-  onPlayerChange,
 }: UseSyncRoomOptions) {
   const { t } = useTranslation(["room", "global", "errors"]);
   const [isConnected, setIsConnected] = useState(false);
   const [currentUsername, setCurrentUsername] = useState(username);
   const [currentUserId, setCurrentUserId] = useState<string | null>(userId || null);
-  const [room, setRoom] = useState<Room | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [player, setPlayer] = useState<PlayerState>({
     media_url: null,
@@ -59,50 +56,27 @@ export function useSyncRoom({
   const socketRef = useRef<Socket | null>(null);
   const currentUsernameRef = useRef(username);
   const currentUserIdRef = useRef<string | null>(userId || null);
-  const onPlayerChangeRef = useRef(onPlayerChange);
   const tRef = useRef(t);
 
-  useEffect(() => {
-    tRef.current = t;
-  }, [t]);
+  // Synchronisation synchrone des refs à chaque render
+  tRef.current = t;
+  currentUsernameRef.current = currentUsername;
+  currentUserIdRef.current = currentUserId;
 
-  useEffect(() => {
-    currentUsernameRef.current = currentUsername;
-  }, [currentUsername]);
+  // Actions utilisateur vers le serveur Socket.IO (stables)
+  const sendPlay = useCallback((currentTime?: number) => {
+    const pos = typeof currentTime === "number" && !isNaN(currentTime) ? currentTime : 0;
+    socketRef.current?.emit("PLAY", {
+      current_time: Math.round(pos * 100) / 100,
+    });
+  }, []);
 
-  useEffect(() => {
-    currentUserIdRef.current = currentUserId;
-  }, [currentUserId]);
-
-  useEffect(() => {
-    onPlayerChangeRef.current = onPlayerChange;
-  }, [onPlayerChange]);
-
-  // Actions utilisateur vers le serveur Socket.IO
-  const sendPlay = useCallback(
-    (currentTime?: number) => {
-      const target = typeof currentTime === "number" && !isNaN(currentTime)
-        ? currentTime
-        : player.current_time;
-      const finalTime = player.duration && player.duration > 0 && target >= player.duration - 0.5 ? 0 : target;
-      socketRef.current?.emit("PLAY", {
-        current_time: Math.round(finalTime * 100) / 100,
-      });
-    },
-    [player.current_time, player.duration]
-  );
-
-  const sendPause = useCallback(
-    (currentTime?: number) => {
-      const target = typeof currentTime === "number" && !isNaN(currentTime)
-        ? currentTime
-        : player.current_time;
-      socketRef.current?.emit("PAUSE", {
-        current_time: Math.round(target * 100) / 100,
-      });
-    },
-    [player.current_time]
-  );
+  const sendPause = useCallback((currentTime?: number) => {
+    const pos = typeof currentTime === "number" && !isNaN(currentTime) ? currentTime : 0;
+    socketRef.current?.emit("PAUSE", {
+      current_time: Math.round(pos * 100) / 100,
+    });
+  }, []);
 
   const sendSeek = useCallback((targetTime: number) => {
     socketRef.current?.emit("SEEK", { target_time: targetTime });
@@ -115,8 +89,9 @@ export function useSyncRoom({
   }, []);
 
   const sendChat = useCallback((content: string) => {
-    if (!content.trim()) return;
-    socketRef.current?.emit("CHAT_MESSAGE", { content: content.trim() });
+    const trimmed = content.trim();
+    if (!trimmed) return;
+    socketRef.current?.emit("CHAT_MESSAGE", { content: trimmed });
   }, []);
 
   const updateSettings = useCallback(
@@ -169,7 +144,6 @@ export function useSyncRoom({
 
     socket.on("ROOM_SYNC", (payload: any) => {
       const roomData: Room = payload.room;
-      setRoom(roomData);
       setParticipants(roomData.participants);
       setPlayer(roomData.player);
       setRoomSettings(roomData.settings);
@@ -200,9 +174,6 @@ export function useSyncRoom({
 
     socket.on("PLAYER_UPDATED", (payload: PlayerUpdatedPayload) => {
       setPlayer(payload.player);
-      if (onPlayerChangeRef.current) {
-        onPlayerChangeRef.current(payload);
-      }
       const isSelf =
         payload.triggered_by === currentUsernameRef.current ||
         payload.triggered_by === username;
@@ -316,9 +287,18 @@ export function useSyncRoom({
     };
   }, [roomId, username, token, wsBaseUrl]);
 
+  // Déterminer si l'utilisateur courant est hôte
+  const effectiveUserId = currentUserId || userId;
+  const isHost = useMemo(() => {
+    return Boolean(
+      participants.find(
+        (p) => (effectiveUserId && p.id === effectiveUserId) || p.username === currentUsername
+      )?.is_host
+    );
+  }, [participants, effectiveUserId, currentUsername]);
+
   return {
     isConnected,
-    room,
     participants,
     player,
     roomSettings,
@@ -327,6 +307,7 @@ export function useSyncRoom({
     error,
     currentUsername,
     currentUserId,
+    isHost,
     sendPlay,
     sendPause,
     sendSeek,

@@ -66,6 +66,7 @@ export function RoomView() {
     roomSettings,
     currentUsername,
     currentUserId,
+    isHost,
     myPing,
     sendPlay,
     sendPause,
@@ -123,15 +124,7 @@ export function RoomView() {
     }
   };
 
-  // Déterminer si l'utilisateur courant est hôte (mémoïsé)
   const effectiveUserId = currentUserId || userId;
-  const isHost = useMemo(() => {
-    const participant = participants.find(
-      (p) => (effectiveUserId && p.id === effectiveUserId) || p.username === currentUsername
-    );
-    return Boolean(participant?.is_host);
-  }, [participants, effectiveUserId, currentUsername]);
-
   const isLockedForGuest = roomSettings.is_locked && !isHost;
 
   const handleLoadMedia = (e: React.FormEvent) => {
