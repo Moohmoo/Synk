@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-[#09090b] text-zinc-100 font-sans antialiased selection:bg-[#0ac8b9] selection:text-black;
+  }
+
+  /* Évite le flash blanc natif de l'iframe lors de l'éviction de texture GPU en arrière-plan */
+  iframe {
+    background-color: #000000 !important;
+    color-scheme: dark;
+  }
+}
+
+/* Custom Minimal Dark Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: #09090b;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e1e24;
+  border-radius: 0px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #2a2a32;
+}

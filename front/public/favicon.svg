@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ff4655">
+  <!-- Anneau extérieur (Hexagone) -->
+  <path d="M12 1.5l9 5.2v10.6l-9 5.2l-9-5.2V6.7l9-5.2zm0 2.5L4.5 8.3v7.4l7.5 4.3l7.5-4.3V8.3L12 4z" />
+  <!-- Cœur massif avec découpe "Double Play" en espace négatif -->
+  <path fill-rule="evenodd" clip-rule="evenodd" d="M12 6 L17.5 9.2 V14.8 L12 18 L6.5 14.8 V9.2 Z M8.5 9.5 V14.5 L12 12 Z M 12.5 9.5 V14.5 L16 12 Z" />
+</svg>
