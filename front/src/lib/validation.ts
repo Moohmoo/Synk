@@ -2,18 +2,6 @@ import i18n from "@/i18n/i18n";
 
 export const USERNAME_REGEX = /^[a-zA-Z0-9_\u00C0-\u017F-]{2,20}$/;
 
-export type UsernameValidationErrorCode =
-  | "required"
-  | "tooShort"
-  | "tooLong"
-  | "invalidCharacters";
-
-export interface UsernameValidationResult {
-  isValid: boolean;
-  errorCode: UsernameValidationErrorCode | null;
-  errorMessage: string | null;
-}
-
 /**
  * Valide le pseudo utilisateur avec support i18n.
  * 

@@ -1,4 +1,4 @@
-import { Participant, PlayerState, Room, RoomSettings } from "./room";
+import { PlayerState } from "./room";
 
 export type ClientEventType =
   | "PLAY"

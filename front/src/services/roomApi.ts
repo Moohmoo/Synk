@@ -1,15 +1,5 @@
-import axiosInstance from "./APIClient";
-
-export interface RoomCreateResponse {
-  room_id: string;
-  host_token: string;
-  user_id: string;
-}
-
-export interface RoomCheckResponse {
-  exists: boolean;
-  participant_count: number;
-}
+import { axiosInstance } from "./APIClient";
+import { RoomCreateResponse, RoomCheckResponse } from "@/types/room";
 
 export const roomApi = {
   /**
