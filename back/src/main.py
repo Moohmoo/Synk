@@ -11,8 +11,9 @@ from api import room
 from core.config import settings
 from core.error_handlers import register_exception_handlers
 from core.logger import logger
+from core.socket import sio
 from db.database import DatabaseService
-from domains.room.websocket import sio
+from domains.room import events  # noqa: F401
 
 
 @asynccontextmanager

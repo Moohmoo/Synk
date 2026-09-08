@@ -1,9 +1,4 @@
-"""Gestionnaire temps réel Socket.IO pour les salons Synk.
-
-Ce module implémente la couche événementielle temps réel au-dessus de python-socketio.
-Il assure la synchronisation vidéo, le chat, la télémétrie de latence et les permissions
-en exploitant Redis Pub/Sub pour la distribution multi-workers.
-"""
+"""Gestionnaires d'événements Socket.IO pour les salons Synk."""
 
 import html
 import secrets
@@ -11,12 +6,13 @@ import time
 import urllib.parse
 from typing import Any
 
-import socketio
 from pydantic import BaseModel, ValidationError
+from socketio.exceptions import ConnectionRefusedError
 
 from core.config import settings
 from core.logger import logger
 from core.rate_limiter import rate_limiter
+from core.socket import sio
 from db.manager import DatabaseManager
 from domains.media.extractor import media_extractor
 from domains.room.schemas.room import Participant
@@ -33,20 +29,7 @@ from domains.room.schemas.websocket import (
 )
 from domains.room.sync import SyncService
 
-# Gestionnaire Redis Pub/Sub pour le clustering multi-instances transparent
-_redis_manager = (
-    socketio.AsyncRedisManager(settings.REDIS_URL) if settings.REDIS_URL else None
-)
-
-# Serveur Socket.IO ASGI principal
-sio = socketio.AsyncServer(
-    async_mode="asgi",
-    client_manager=_redis_manager,
-    cors_allowed_origins="*",
-    max_http_buffer_size=settings.WS_MAX_PAYLOAD_SIZE,
-)
-
-# Quotas WebSocket par action : (max_requêtes, fenêtre_secondes)
+# Quotas par action : (max_requêtes, fenêtre_secondes)
 WS_ACTION_LIMITS: dict[str, tuple[int, int]] = {
     "UPDATE_SETTINGS": (2, 2),
     "CHANGE_MEDIA": (2, 4),
@@ -169,11 +152,11 @@ async def connect(sid: str, environ: dict[str, Any], auth: Any = None) -> None:
     creds = _extract_auth(environ, auth)
     room_id, username = creds["room_id"], creds["username"]
     if not room_id or not username:
-        raise socketio.exceptions.ConnectionRefusedError("Identifiants manquants")
+        raise ConnectionRefusedError("Identifiants manquants")
 
     with DatabaseManager() as db:
         if not await db.room_service.room_exists(room_id):
-            raise socketio.exceptions.ConnectionRefusedError("Salon introuvable")
+            raise ConnectionRefusedError("Salon introuvable")
 
         is_host = (
             await db.room_service.verify_host_token(room_id, creds["token"])
@@ -184,9 +167,7 @@ async def connect(sid: str, environ: dict[str, Any], auth: Any = None) -> None:
             room_id, username, user_id=creds["user_id"], is_host=is_host
         )
         if not result:
-            raise socketio.exceptions.ConnectionRefusedError(
-                "Impossible de rejoindre le salon"
-            )
+            raise ConnectionRefusedError("Impossible de rejoindre le salon")
         room, participant = result
 
     await sio.enter_room(sid, room_id)
@@ -265,7 +246,7 @@ async def disconnect(sid: str) -> None:
 
 
 # ----------------------------------------------------------------------
-# Gestionnaires d'événements multimédia et salon
+# Gestionnaires d'événements
 # ----------------------------------------------------------------------
 
 
