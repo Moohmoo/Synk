@@ -9,13 +9,12 @@ from typing import Any
 from pydantic import BaseModel, ValidationError
 from socketio.exceptions import ConnectionRefusedError
 
-from core.config import settings
 from core.logger import logger
 from core.rate_limiter import rate_limiter
 from core.socket import sio
 from db.manager import DatabaseManager
 from domains.media.extractor import media_extractor
-from domains.room.schemas.room import Participant
+from domains.room.schemas.room import Participant, Room
 from domains.room.schemas.websocket import (
     ChangeMediaPayload,
     ChatMessagePayload,
@@ -28,17 +27,6 @@ from domains.room.schemas.websocket import (
     UpdateSettingsPayload,
 )
 from domains.room.sync import SyncService
-
-# Quotas par action : (max_requêtes, fenêtre_secondes)
-WS_ACTION_LIMITS: dict[str, tuple[int, int]] = {
-    "UPDATE_SETTINGS": (2, 2),
-    "CHANGE_MEDIA": (2, 4),
-    "PLAY": (3, 2),
-    "PAUSE": (3, 2),
-    "SEEK": (4, 2),
-    "CHAT_MESSAGE": (5, 5),
-    "HEARTBEAT": (2, 4),
-}
 
 
 def _extract_auth(environ: dict[str, Any], auth: Any) -> dict[str, str | None]:
@@ -75,31 +63,35 @@ async def _send_error(sid: str, code: str, message: str) -> None:
     )
 
 
-async def _check_rate_limit(sid: str, session: dict[str, Any], action: str) -> bool:
-    """Vérifie le quota d'actions autorisées pour la session courante."""
-    user_id = session["user_id"]
+async def _guard[T: BaseModel](
+    sid: str,
+    data: Any,
+    model_cls: type[T],
+    action: str,
+    err_code: str,
+    err_msg: str = "Payload invalide",
+) -> tuple[dict[str, Any], T] | None:
+    """Récupère la session, valide le payload et vérifie les quotas d'actions."""
+    session = await sio.get_session(sid)
+    if not session:
+        return None
 
-    # 1. Protection globale anti-flood
-    allowed, wait_sec = await rate_limiter.check(
-        user_id, "global", settings.WS_RATE_LIMIT_BURST, 1
-    )
+    payload = _validate_payload(model_cls, data)
+    if not payload:
+        await _send_error(sid, err_code, err_msg)
+        return None
+
+    allowed, wait_sec = await rate_limiter.check_ws(session["user_id"], action)
     if not allowed:
-        msg = f"Trop d'actions rapides. Veuillez patienter {wait_sec}s."
-        await _send_error(sid, "RATE_LIMITED", msg)
-        return False
+        if action != ClientEventType.HEARTBEAT:
+            await _send_error(
+                sid,
+                "RATE_LIMITED",
+                f"Trop d'actions rapides ({action}). Veuillez patienter {wait_sec}s.",
+            )
+        return None
 
-    # 2. Quota par type d'action
-    limit_cfg = WS_ACTION_LIMITS.get(action)
-    if limit_cfg:
-        max_req, window = limit_cfg
-        allowed, wait_sec = await rate_limiter.check(user_id, action, max_req, window)
-        if not allowed:
-            if action != ClientEventType.HEARTBEAT:
-                msg = f"Trop d'actions rapides ({action}). Veuillez patienter {wait_sec}s."
-                await _send_error(sid, "RATE_LIMITED", msg)
-            return False
-
-    return True
+    return session, payload
 
 
 async def _update_and_broadcast_player(
@@ -146,10 +138,8 @@ async def _update_and_broadcast_player(
 # ----------------------------------------------------------------------
 
 
-@sio.event
-async def connect(sid: str, environ: dict[str, Any], auth: Any = None) -> None:
-    """Authentifie le participant, initialise sa session et synchronise le salon."""
-    creds = _extract_auth(environ, auth)
+async def _authenticate(creds: dict[str, str | None]) -> tuple[Room, Participant]:
+    """Valide les identifiants et enregistre le participant en base."""
     room_id, username = creds["room_id"], creds["username"]
     if not room_id or not username:
         raise ConnectionRefusedError("Identifiants manquants")
@@ -168,20 +158,11 @@ async def connect(sid: str, environ: dict[str, Any], auth: Any = None) -> None:
         )
         if not result:
             raise ConnectionRefusedError("Impossible de rejoindre le salon")
-        room, participant = result
+        return result
 
-    await sio.enter_room(sid, room_id)
-    await sio.enter_room(sid, f"user:{participant.id}")
-    await sio.save_session(
-        sid,
-        {
-            "room_id": room_id,
-            "user_id": participant.id,
-            "username": participant.username,
-            "ping_ms": 0,
-        },
-    )
 
+async def _send_initial_sync(sid: str, room: Room, participant: Participant) -> None:
+    """Envoie l'état initial du salon au nouvel arrivant et notifie les autres."""
     now_ms = int(time.time() * 1000)
     room_dict = room.model_dump()
     if room.player.is_playing:
@@ -201,10 +182,33 @@ async def connect(sid: str, environ: dict[str, Any], auth: Any = None) -> None:
     await sio.emit(
         ServerEventType.PARTICIPANT_JOINED,
         {"user": participant.model_dump()},
-        room=room_id,
+        room=room.room_id,
         skip_sid=sid,
     )
-    logger.info(f"[SIO:JOIN] {participant.username} ({participant.id}) -> {room_id}")
+    logger.info(
+        f"[SIO:JOIN] {participant.username} ({participant.id}) -> {room.room_id}"
+    )
+
+
+@sio.event
+async def connect(sid: str, environ: dict[str, Any], auth: Any = None) -> None:
+    """Authentifie le participant, initialise sa session et synchronise le salon."""
+    creds = _extract_auth(environ, auth)
+    room, participant = await _authenticate(creds)
+
+    await sio.enter_room(sid, room.room_id)
+    await sio.enter_room(sid, f"user:{participant.id}")
+    await sio.save_session(
+        sid,
+        {
+            "room_id": room.room_id,
+            "user_id": participant.id,
+            "username": participant.username,
+            "ping_ms": 0,
+        },
+    )
+
+    await _send_initial_sync(sid, room, participant)
 
 
 @sio.event
@@ -253,15 +257,17 @@ async def disconnect(sid: str) -> None:
 @sio.on(ClientEventType.PLAY)
 async def on_play(sid: str, data: Any) -> None:
     """Gère la reprise de lecture vidéo."""
-    session = await sio.get_session(sid)
-    if not session:
+    guard = await _guard(
+        sid,
+        data,
+        PlayPayload,
+        "PLAY",
+        "INVALID_PLAY_PAYLOAD",
+        "Payload de lecture invalide",
+    )
+    if not guard:
         return
-    payload = _validate_payload(PlayPayload, data)
-    if not payload:
-        await _send_error(sid, "INVALID_PLAY_PAYLOAD", "Payload de lecture invalide")
-        return
-    if not await _check_rate_limit(sid, session, "PLAY"):
-        return
+    session, payload = guard
 
     await _update_and_broadcast_player(
         sid,
@@ -275,15 +281,17 @@ async def on_play(sid: str, data: Any) -> None:
 @sio.on(ClientEventType.PAUSE)
 async def on_pause(sid: str, data: Any) -> None:
     """Gère la mise en pause de la vidéo."""
-    session = await sio.get_session(sid)
-    if not session:
+    guard = await _guard(
+        sid,
+        data,
+        PausePayload,
+        "PAUSE",
+        "INVALID_PAUSE_PAYLOAD",
+        "Payload de pause invalide",
+    )
+    if not guard:
         return
-    payload = _validate_payload(PausePayload, data)
-    if not payload:
-        await _send_error(sid, "INVALID_PAUSE_PAYLOAD", "Payload de pause invalide")
-        return
-    if not await _check_rate_limit(sid, session, "PAUSE"):
-        return
+    session, payload = guard
 
     await _update_and_broadcast_player(
         sid,
@@ -297,17 +305,17 @@ async def on_pause(sid: str, data: Any) -> None:
 @sio.on(ClientEventType.SEEK)
 async def on_seek(sid: str, data: Any) -> None:
     """Gère le saut temporel dans la vidéo (Seek)."""
-    session = await sio.get_session(sid)
-    if not session:
+    guard = await _guard(
+        sid,
+        data,
+        SeekPayload,
+        "SEEK",
+        "INVALID_SEEK_PAYLOAD",
+        "Payload de saut temporel invalide",
+    )
+    if not guard:
         return
-    payload = _validate_payload(SeekPayload, data)
-    if not payload:
-        await _send_error(
-            sid, "INVALID_SEEK_PAYLOAD", "Payload de saut temporel invalide"
-        )
-        return
-    if not await _check_rate_limit(sid, session, "SEEK"):
-        return
+    session, payload = guard
 
     await _update_and_broadcast_player(
         sid,
@@ -321,15 +329,17 @@ async def on_seek(sid: str, data: Any) -> None:
 @sio.on(ClientEventType.CHANGE_MEDIA)
 async def on_change_media(sid: str, data: Any) -> None:
     """Gère le chargement d'un nouveau média."""
-    session = await sio.get_session(sid)
-    if not session:
+    guard = await _guard(
+        sid,
+        data,
+        ChangeMediaPayload,
+        "CHANGE_MEDIA",
+        "INVALID_MEDIA_URL",
+        "URL de média invalide",
+    )
+    if not guard:
         return
-    payload = _validate_payload(ChangeMediaPayload, data)
-    if not payload:
-        await _send_error(sid, "INVALID_MEDIA_URL", "URL de média invalide")
-        return
-    if not await _check_rate_limit(sid, session, "CHANGE_MEDIA"):
-        return
+    session, payload = guard
 
     media = media_extractor.extract(payload.url)
     if not media:
@@ -356,15 +366,17 @@ async def on_change_media(sid: str, data: Any) -> None:
 @sio.on(ClientEventType.CHAT_MESSAGE)
 async def on_chat_message(sid: str, data: Any) -> None:
     """Gère la diffusion d'un message de chat avec échappement HTML."""
-    session = await sio.get_session(sid)
-    if not session:
+    guard = await _guard(
+        sid,
+        data,
+        ChatMessagePayload,
+        "CHAT_MESSAGE",
+        "INVALID_CHAT_PAYLOAD",
+        "Message de chat invalide",
+    )
+    if not guard:
         return
-    payload = _validate_payload(ChatMessagePayload, data)
-    if not payload:
-        await _send_error(sid, "INVALID_CHAT_PAYLOAD", "Message de chat invalide")
-        return
-    if not await _check_rate_limit(sid, session, "CHAT_MESSAGE"):
-        return
+    session, payload = guard
 
     clean_content = html.escape(payload.content.strip())
     message_data = {
@@ -382,13 +394,17 @@ async def on_chat_message(sid: str, data: Any) -> None:
 @sio.on(ClientEventType.HEARTBEAT)
 async def on_heartbeat(sid: str, data: Any) -> None:
     """Mesure la latence du client et renvoie un acquittement."""
-    session = await sio.get_session(sid)
-    if not session:
+    guard = await _guard(
+        sid,
+        data,
+        HeartbeatPayload,
+        "HEARTBEAT",
+        "INVALID_HEARTBEAT",
+        "Heartbeat invalide",
+    )
+    if not guard:
         return
-    payload = _validate_payload(HeartbeatPayload, data)
-    if not payload:
-        await _send_error(sid, "INVALID_HEARTBEAT", "Heartbeat invalide")
-        return
+    session, payload = guard
 
     now_ms = int(time.time() * 1000)
     latency = max(0, now_ms - payload.client_sent_at)
@@ -418,15 +434,17 @@ async def on_heartbeat(sid: str, data: Any) -> None:
 @sio.on(ClientEventType.UPDATE_SETTINGS)
 async def on_update_settings(sid: str, data: Any) -> None:
     """Gère la modification du verrouillage du salon par l'hôte."""
-    session = await sio.get_session(sid)
-    if not session:
+    guard = await _guard(
+        sid,
+        data,
+        UpdateSettingsPayload,
+        "UPDATE_SETTINGS",
+        "INVALID_SETTINGS",
+        "Paramètres invalides",
+    )
+    if not guard:
         return
-    payload = _validate_payload(UpdateSettingsPayload, data)
-    if not payload:
-        await _send_error(sid, "INVALID_SETTINGS", "Paramètres invalides")
-        return
-    if not await _check_rate_limit(sid, session, "UPDATE_SETTINGS"):
-        return
+    session, payload = guard
 
     room_id = session["room_id"]
     with DatabaseManager() as db:

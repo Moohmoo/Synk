@@ -119,6 +119,17 @@ async def test_websocket_rate_limiter_actions(redis_client):
     )
     assert chat_ok is True
 
+    # Validation directe de check_ws avec les quotas par défaut
+    ws_user = "test_check_ws_user"
+    await limiter.reset(ws_user)
+    assert (await limiter.check_ws(ws_user, "PLAY"))[0] is True
+    assert (await limiter.check_ws(ws_user, "PLAY"))[0] is True
+    assert (await limiter.check_ws(ws_user, "PLAY"))[0] is True
+    allowed_play_4, wait_play = await limiter.check_ws(ws_user, "PLAY")
+    assert allowed_play_4 is False
+    assert wait_play >= 1
+    await limiter.reset(ws_user)
+
     await limiter.reset(user_id)
 
 

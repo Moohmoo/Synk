@@ -26,6 +26,18 @@ def get_client_ip(request: Request) -> str:
     return "127.0.0.1"
 
 
+# Quotas par action WebSocket : (max_requêtes, fenêtre_secondes)
+WS_ACTION_LIMITS: dict[str, tuple[int, int]] = {
+    "UPDATE_SETTINGS": (2, 2),
+    "CHANGE_MEDIA": (2, 4),
+    "PLAY": (3, 2),
+    "PAUSE": (3, 2),
+    "SEEK": (4, 2),
+    "CHAT_MESSAGE": (5, 5),
+    "HEARTBEAT": (2, 4),
+}
+
+
 class RateLimiter:
     """Limiteur de débit distribué basé sur Redis (Sorted Sets)."""
 
@@ -93,6 +105,21 @@ class RateLimiter:
             # En cas d'erreur Redis, on autorise (fail-open)
             logger.warning(f"[RATE_LIMIT] Erreur Redis (requête autorisée) : {e}")
             return True, 0
+
+    async def check_ws(self, identifier: str, action: str) -> tuple[bool, int]:
+        """Vérifie les quotas global et par action pour un événement WebSocket."""
+        allowed, retry_after = await self.check(
+            identifier, "global", settings.WS_RATE_LIMIT_BURST, 1
+        )
+        if not allowed:
+            return False, retry_after
+
+        limit = WS_ACTION_LIMITS.get(action)
+        if limit:
+            max_req, window = limit
+            return await self.check(identifier, action, max_req, window)
+
+        return True, 0
 
     async def reset(
         self, identifier: str | None = None, action: str | None = None
