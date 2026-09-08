@@ -106,21 +106,6 @@ class RateLimiter:
             logger.warning(f"[RATE_LIMIT] Erreur Redis (requête autorisée) : {e}")
             return True, 0
 
-    async def check_ws(self, identifier: str, action: str) -> tuple[bool, int]:
-        """Vérifie les quotas global et par action pour un événement WebSocket."""
-        allowed, retry_after = await self.check(
-            identifier, "global", settings.WS_RATE_LIMIT_BURST, 1
-        )
-        if not allowed:
-            return False, retry_after
-
-        limit = WS_ACTION_LIMITS.get(action)
-        if limit:
-            max_req, window = limit
-            return await self.check(identifier, action, max_req, window)
-
-        return True, 0
-
     async def reset(
         self, identifier: str | None = None, action: str | None = None
     ) -> None:
@@ -160,3 +145,19 @@ def create_http_rate_limiter(
             )
 
     return dependency
+
+
+async def check_ws_rate_limit(user_id: str, action: str) -> tuple[bool, int]:
+    """Vérifie les quotas global et par action pour un événement WebSocket."""
+    allowed, wait_sec = await rate_limiter.check(
+        user_id, "global", settings.WS_RATE_LIMIT_BURST, 1
+    )
+    if not allowed:
+        return False, wait_sec
+
+    limit = WS_ACTION_LIMITS.get(action)
+    if limit:
+        max_req, window = limit
+        return await rate_limiter.check(user_id, action, max_req, window)
+
+    return True, 0

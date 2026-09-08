@@ -10,7 +10,7 @@ from pydantic import BaseModel, ValidationError
 from socketio.exceptions import ConnectionRefusedError
 
 from core.logger import logger
-from core.rate_limiter import rate_limiter
+from core.rate_limiter import check_ws_rate_limit
 from core.socket import sio
 from db.manager import DatabaseManager
 from domains.media.extractor import media_extractor
@@ -68,8 +68,8 @@ async def _guard[T: BaseModel](
     data: Any,
     model_cls: type[T],
     action: str,
-    err_code: str,
-    err_msg: str = "Payload invalide",
+    err_code: str | None = None,
+    err_msg: str | None = None,
 ) -> tuple[dict[str, Any], T] | None:
     """Récupère la session, valide le payload et vérifie les quotas d'actions."""
     session = await sio.get_session(sid)
@@ -78,10 +78,12 @@ async def _guard[T: BaseModel](
 
     payload = _validate_payload(model_cls, data)
     if not payload:
-        await _send_error(sid, err_code, err_msg)
+        code = err_code or f"INVALID_{action}_PAYLOAD"
+        msg = err_msg or f"Payload invalide pour l'action {action}"
+        await _send_error(sid, code, msg)
         return None
 
-    allowed, wait_sec = await rate_limiter.check_ws(session["user_id"], action)
+    allowed, wait_sec = await check_ws_rate_limit(session["user_id"], action)
     if not allowed:
         if action != ClientEventType.HEARTBEAT:
             await _send_error(
@@ -257,14 +259,7 @@ async def disconnect(sid: str) -> None:
 @sio.on(ClientEventType.PLAY)
 async def on_play(sid: str, data: Any) -> None:
     """Gère la reprise de lecture vidéo."""
-    guard = await _guard(
-        sid,
-        data,
-        PlayPayload,
-        "PLAY",
-        "INVALID_PLAY_PAYLOAD",
-        "Payload de lecture invalide",
-    )
+    guard = await _guard(sid, data, PlayPayload, "PLAY")
     if not guard:
         return
     session, payload = guard
@@ -281,14 +276,7 @@ async def on_play(sid: str, data: Any) -> None:
 @sio.on(ClientEventType.PAUSE)
 async def on_pause(sid: str, data: Any) -> None:
     """Gère la mise en pause de la vidéo."""
-    guard = await _guard(
-        sid,
-        data,
-        PausePayload,
-        "PAUSE",
-        "INVALID_PAUSE_PAYLOAD",
-        "Payload de pause invalide",
-    )
+    guard = await _guard(sid, data, PausePayload, "PAUSE")
     if not guard:
         return
     session, payload = guard
@@ -305,14 +293,7 @@ async def on_pause(sid: str, data: Any) -> None:
 @sio.on(ClientEventType.SEEK)
 async def on_seek(sid: str, data: Any) -> None:
     """Gère le saut temporel dans la vidéo (Seek)."""
-    guard = await _guard(
-        sid,
-        data,
-        SeekPayload,
-        "SEEK",
-        "INVALID_SEEK_PAYLOAD",
-        "Payload de saut temporel invalide",
-    )
+    guard = await _guard(sid, data, SeekPayload, "SEEK")
     if not guard:
         return
     session, payload = guard
@@ -330,12 +311,7 @@ async def on_seek(sid: str, data: Any) -> None:
 async def on_change_media(sid: str, data: Any) -> None:
     """Gère le chargement d'un nouveau média."""
     guard = await _guard(
-        sid,
-        data,
-        ChangeMediaPayload,
-        "CHANGE_MEDIA",
-        "INVALID_MEDIA_URL",
-        "URL de média invalide",
+        sid, data, ChangeMediaPayload, "CHANGE_MEDIA", err_code="INVALID_MEDIA_URL"
     )
     if not guard:
         return
@@ -366,14 +342,7 @@ async def on_change_media(sid: str, data: Any) -> None:
 @sio.on(ClientEventType.CHAT_MESSAGE)
 async def on_chat_message(sid: str, data: Any) -> None:
     """Gère la diffusion d'un message de chat avec échappement HTML."""
-    guard = await _guard(
-        sid,
-        data,
-        ChatMessagePayload,
-        "CHAT_MESSAGE",
-        "INVALID_CHAT_PAYLOAD",
-        "Message de chat invalide",
-    )
+    guard = await _guard(sid, data, ChatMessagePayload, "CHAT_MESSAGE")
     if not guard:
         return
     session, payload = guard
@@ -394,14 +363,7 @@ async def on_chat_message(sid: str, data: Any) -> None:
 @sio.on(ClientEventType.HEARTBEAT)
 async def on_heartbeat(sid: str, data: Any) -> None:
     """Mesure la latence du client et renvoie un acquittement."""
-    guard = await _guard(
-        sid,
-        data,
-        HeartbeatPayload,
-        "HEARTBEAT",
-        "INVALID_HEARTBEAT",
-        "Heartbeat invalide",
-    )
+    guard = await _guard(sid, data, HeartbeatPayload, "HEARTBEAT")
     if not guard:
         return
     session, payload = guard
@@ -434,14 +396,7 @@ async def on_heartbeat(sid: str, data: Any) -> None:
 @sio.on(ClientEventType.UPDATE_SETTINGS)
 async def on_update_settings(sid: str, data: Any) -> None:
     """Gère la modification du verrouillage du salon par l'hôte."""
-    guard = await _guard(
-        sid,
-        data,
-        UpdateSettingsPayload,
-        "UPDATE_SETTINGS",
-        "INVALID_SETTINGS",
-        "Paramètres invalides",
-    )
+    guard = await _guard(sid, data, UpdateSettingsPayload, "UPDATE_SETTINGS")
     if not guard:
         return
     session, payload = guard
