@@ -1,0 +1,61 @@
+{
+  "notFound": {
+    "title": "ROOM NOT FOUND",
+    "description": "The room {{roomId}} does not exist or has expired.",
+    "backHome": "Back to home"
+  },
+  "join": {
+    "title": "Join room",
+    "placeholder": "Enter your username to join...",
+    "button": "JOIN"
+  },
+  "header": {
+    "urlPlaceholder": "Paste a media link (e.g. https://...)",
+    "load": "LOAD",
+    "invite": "INVITE",
+    "linkCopied": "LINK COPIED!"
+  },
+  "player": {
+    "waitingTitle": "WAITING FOR A MEDIA STREAM",
+    "waitingSubtitle": "Paste a media link above to start synchronized playback.",
+    "unsupportedProvider": "Platform \"{{provider}}\" is not currently supported.",
+    "syncOverlayTitle": "PLAYBACK IN PROGRESS IN ROOM",
+    "syncOverlaySubtitle": "Click to synchronize and enable audio"
+  },
+  "controls": {
+    "play": "Play",
+    "pause": "Pause",
+    "rewind": "Back to start",
+    "roomLocked": "ROOM LOCKED",
+    "roomUnlocked": "ROOM OPEN",
+    "hostOnly": "HOST CONTROLS ONLY",
+    "mute": "Mute audio",
+    "unmute": "Unmute audio",
+    "fullscreen": "Fullscreen",
+    "exitFullscreen": "Exit fullscreen"
+  },
+  "sidebar": {
+    "info": "INFORMATION",
+    "roomId": "ROOM ID",
+    "activeSync": "Synchronization active",
+    "disconnected": "Disconnected",
+    "serverPing": "Server ping",
+    "members": "MEMBERS ({{count}})",
+    "copyTooltip": "Copy invitation link"
+  },
+  "participants": {
+    "online": "ONLINE ({{count}})",
+    "you": "(You)",
+    "host": "HOST"
+  },
+  "toast": {
+    "play": "{{user}} started playback",
+    "pause": "{{user}} paused playback",
+    "seek": "{{user}} sought in playback",
+    "loadMedia": "{{user}} loaded new media",
+    "userJoined": "{{user}} joined the room",
+    "userLeft": "{{user}} left the room",
+    "roomLocked": "The room has been locked by the host",
+    "roomUnlocked": "The room has been unlocked"
+  }
+}

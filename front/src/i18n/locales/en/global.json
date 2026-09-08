@@ -1,0 +1,47 @@
+{
+  "app": {
+    "name": "SYNK",
+    "version": "v1.0.0-beta",
+    "tagline": "Real-time media synchronization"
+  },
+  "nav": {
+    "section": "NAVIGATION",
+    "home": "Home",
+    "recent": "Recent",
+    "settings": "Settings",
+    "github": "GitHub",
+    "room": "ROOM",
+    "live": "LIVE",
+    "disconnected": "DISCONNECTED"
+  },
+  "home": {
+    "createTab": "Create a room",
+    "joinTab": "Join",
+    "createPlaceholder": "Enter your username...",
+    "joinCodePlaceholder": "Paste room code...",
+    "joinUsernamePlaceholder": "Enter your username...",
+    "checking": "CHECKING...",
+    "next": "NEXT",
+    "connecting": "CONNECTING...",
+    "join": "JOIN",
+    "create": "CREATE",
+    "changeRoom": "Change room"
+  },
+  "notFound": {
+    "title": "PAGE OR ROOM NOT FOUND",
+    "backHome": "BACK TO HOME"
+  },
+  "toast": {
+    "success": {
+      "linkCopied": "Invitation link copied to clipboard!"
+    },
+    "error": {
+      "network": "Unable to reach server. Please check your connection.",
+      "roomNotFound": "This room does not exist or has expired.",
+      "roomCreateFailed": "Failed to create room.",
+      "roomJoinFailed": "Failed to join this room.",
+      "missingRoomCode": "Please enter a room code.",
+      "generic": "An unexpected error occurred."
+    }
+  }
+}

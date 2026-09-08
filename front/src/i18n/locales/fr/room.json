@@ -1,0 +1,61 @@
+{
+  "notFound": {
+    "title": "SALON INTROUVABLE",
+    "description": "Le salon {{roomId}} n'existe pas ou a expiré.",
+    "backHome": "Retourner à l'accueil"
+  },
+  "join": {
+    "title": "Rejoindre le salon",
+    "placeholder": "Entrez votre pseudo pour rejoindre...",
+    "button": "REJOINDRE"
+  },
+  "header": {
+    "urlPlaceholder": "Coller un lien média (ex: https://...)",
+    "load": "CHARGER",
+    "invite": "INVITER",
+    "linkCopied": "LIEN COPIÉ !"
+  },
+  "player": {
+    "waitingTitle": "EN ATTENTE D'UN FLUX MÉDIA",
+    "waitingSubtitle": "Collez un lien média ci-dessus pour lancer la session synchronisée.",
+    "unsupportedProvider": "La plateforme \"{{provider}}\" n'est pas encore prise en charge.",
+    "syncOverlayTitle": "LECTURE EN COURS DANS LE SALON",
+    "syncOverlaySubtitle": "Cliquez pour synchroniser et activer le son"
+  },
+  "controls": {
+    "play": "Lecture",
+    "pause": "Pause",
+    "rewind": "Revenir au début",
+    "roomLocked": "SALON VERROUILLÉ",
+    "roomUnlocked": "SALON LIBRE",
+    "hostOnly": "CONTRÔLES HÔTE EXCLUSIFS",
+    "mute": "Couper le son",
+    "unmute": "Activer le son",
+    "fullscreen": "Plein écran",
+    "exitFullscreen": "Quitter le plein écran"
+  },
+  "sidebar": {
+    "info": "INFORMATIONS",
+    "roomId": "ID SALON",
+    "activeSync": "Synchronisation active",
+    "disconnected": "Déconnecté",
+    "serverPing": "Ping serveur",
+    "members": "MEMBRES ({{count}})",
+    "copyTooltip": "Copier le lien d'invitation"
+  },
+  "participants": {
+    "online": "CONNECTÉS ({{count}})",
+    "you": "(Vous)",
+    "host": "HÔTE"
+  },
+  "toast": {
+    "play": "{{user}} a lancé la lecture",
+    "pause": "{{user}} a mis en pause",
+    "seek": "{{user}} a modifié la position de lecture",
+    "loadMedia": "{{user}} a chargé un nouveau média",
+    "userJoined": "{{user}} a rejoint le salon",
+    "userLeft": "{{user}} a quitté le salon",
+    "roomLocked": "Le salon a été verrouillé par l'hôte",
+    "roomUnlocked": "Le salon a été déverrouillé"
+  }
+}

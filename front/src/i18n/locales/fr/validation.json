@@ -1,0 +1,12 @@
+{
+  "username": {
+    "required": "Veuillez entrer un pseudo.",
+    "tooShort": "Le pseudo doit contenir au moins 2 caractères.",
+    "tooLong": "Le pseudo ne peut pas dépasser 20 caractères.",
+    "invalidCharacters": "Seuls les lettres, chiffres, tirets et underscores sont autorisés."
+  },
+  "roomCode": {
+    "required": "Veuillez renseigner le code du salon.",
+    "invalid": "Code de salon invalide."
+  }
+}

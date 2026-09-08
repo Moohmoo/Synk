@@ -1,0 +1,47 @@
+{
+  "app": {
+    "name": "SYNK",
+    "version": "v1.0.0-beta",
+    "tagline": "Synchronisation multimédia en temps réel"
+  },
+  "nav": {
+    "section": "NAVIGATION",
+    "home": "Accueil",
+    "recent": "Récents",
+    "settings": "Paramètres",
+    "github": "GitHub",
+    "room": "SALON",
+    "live": "LIVE",
+    "disconnected": "DÉCONNECTÉ"
+  },
+  "home": {
+    "createTab": "Créer un salon",
+    "joinTab": "Rejoindre",
+    "createPlaceholder": "Entrez votre pseudo...",
+    "joinCodePlaceholder": "Collez le code du salon...",
+    "joinUsernamePlaceholder": "Entrez votre pseudo...",
+    "checking": "VÉRIFICATION...",
+    "next": "SUIVANT",
+    "connecting": "CONNEXION...",
+    "join": "REJOINDRE",
+    "create": "CRÉER",
+    "changeRoom": "Changer de salon"
+  },
+  "notFound": {
+    "title": "PAGE OU SALON INTROUVABLE",
+    "backHome": "RETOUR À L'ACCUEIL"
+  },
+  "toast": {
+    "success": {
+      "linkCopied": "Lien d'invitation copié dans le presse-papier !"
+    },
+    "error": {
+      "network": "Impossible de contacter le serveur. Vérifiez votre connexion.",
+      "roomNotFound": "Ce salon n'existe pas ou a expiré.",
+      "roomCreateFailed": "Impossible de créer le salon.",
+      "roomJoinFailed": "Impossible de rejoindre ce salon.",
+      "missingRoomCode": "Veuillez renseigner le code du salon.",
+      "generic": "Une erreur inattendue est survenue."
+    }
+  }
+}

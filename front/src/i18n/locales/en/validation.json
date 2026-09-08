@@ -1,0 +1,12 @@
+{
+  "username": {
+    "required": "Please enter a username.",
+    "tooShort": "Username must be at least 2 characters long.",
+    "tooLong": "Username cannot exceed 20 characters.",
+    "invalidCharacters": "Only letters, numbers, hyphens, and underscores are allowed."
+  },
+  "roomCode": {
+    "required": "Please enter a room code.",
+    "invalid": "Invalid room code."
+  }
+}
