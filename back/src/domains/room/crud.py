@@ -1,4 +1,3 @@
-import re
 import secrets
 import time
 
@@ -144,23 +143,6 @@ class RoomService:
     # Gestion des Participants & Lecture (Transactions Directes)
     # ------------------------------------------------------------------
 
-    @staticmethod
-    def _disambiguate_username(requested: str, existing_names: set[str]) -> str:
-        """Génère un pseudo unique (ex: 'Alex (2)') si le nom demandé est déjà pris."""
-        if requested.casefold() not in existing_names:
-            return requested
-
-        base = re.sub(r"\s*\(\d+\)$", "", requested).strip()
-        counter = 2
-        while True:
-            suffix = f" ({counter})"
-            max_base_len = max(2, 25 - len(suffix))
-            trimmed_base = base[:max_base_len]
-            candidate = f"{trimmed_base}{suffix}"
-            if candidate.casefold() not in existing_names:
-                return candidate
-            counter += 1
-
     async def add_participant(
         self,
         room_id: str,
@@ -168,24 +150,19 @@ class RoomService:
         user_id: str | None = None,
         is_host: bool = False,
     ) -> tuple[Room, Participant] | None:
-        """Ajoute ou met à jour un participant dans le salon avec désambiguïsation du pseudo."""
+        """Ajoute ou met à jour un participant dans le salon (les participants sont identifiés par leur ID unique)."""
         room = await self.get_room(room_id)
         if not room:
             return None
 
         uid = user_id or f"usr_{secrets.token_hex(4)}"
 
-        # Ensemble des pseudos déjà présents pour les AUTRES utilisateurs du salon (insensible à la casse)
-        other_names = {
-            p.username.casefold() for p in room.participants if p.id != uid
-        }
-
         existing_index = next(
             (i for i, p in enumerate(room.participants) if p.id == uid), None
         )
 
         if existing_index is not None:
-            # Reconnexion de la même session (F5) : conserve son pseudo attribué
+            # Reconnexion de la même session (F5) : conserve ses données existantes
             existing_p = room.participants[existing_index]
             participant = Participant(
                 id=uid,
@@ -196,11 +173,10 @@ class RoomService:
             )
             room.participants[existing_index] = participant
         else:
-            # Nouvel arrivant : auto-suffixage si collision de nom ("Alex (2)")
-            unique_username = self._disambiguate_username(username, other_names)
+            # Nouvel arrivant : accepte le pseudo tel quel sans suffixage (Figma/Docs style)
             participant = Participant(
                 id=uid,
-                username=unique_username,
+                username=username,
                 is_host=is_host,
                 joined_at=int(time.time() * 1000),
                 ping_ms=0,

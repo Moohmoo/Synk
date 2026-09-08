@@ -64,7 +64,9 @@ class RoomWebSocketManager:
         async with self._lock:
             if room_id in self._pubsub_tasks:
                 return
-            task = asyncio.create_task(self._listen_to_channel(room_id, redis))
+            pubsub = redis.pubsub()
+            await pubsub.subscribe(self._channel_name(room_id))
+            task = asyncio.create_task(self._listen_to_channel(room_id, pubsub))
             self._pubsub_tasks[room_id] = task
             logger.info(f"[PUBSUB:START] Écoute démarrée pour le salon {room_id}")
 
@@ -85,10 +87,8 @@ class RoomWebSocketManager:
         except (json.JSONDecodeError, TypeError, KeyError):
             return None
 
-    async def _listen_to_channel(self, room_id: str, redis: Redis) -> None:
+    async def _listen_to_channel(self, room_id: str, pubsub: Any) -> None:
         """Boucle de réception Pub/Sub pour diffusion aux sockets locales."""
-        pubsub = redis.pubsub()
-        await pubsub.subscribe(self._channel_name(room_id))
         try:
             async for msg in pubsub.listen():
                 if msg["type"] != "message":

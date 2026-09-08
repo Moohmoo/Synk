@@ -217,12 +217,10 @@ export function useSyncRoom({
             if (payload.your_id) {
               setCurrentUserId(payload.your_id);
               currentUserIdRef.current = payload.your_id;
-            }
-            if (payload.your_username && payload.your_username !== username) {
               sessionManager.setRoomSession(roomId, {
-                username: payload.your_username,
+                username: payload.your_username || username,
                 token,
-                userId: payload.your_id || userId,
+                userId: payload.your_id,
               });
             }
 

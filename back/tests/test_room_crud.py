@@ -87,25 +87,35 @@ async def test_room_crud_lifecycle(redis_client):
 
 
 @pytest.mark.asyncio
-async def test_duplicate_username_auto_disambiguation(redis_client):
+async def test_duplicate_username_allowed(redis_client):
     service = RoomService(redis_client)
 
     # 1. Création avec "Alex"
-    room, _ = await service.create_room("Alex")
+    room, host_token = await service.create_room("Alex")
+    assert len(room.participants) == 1
+    assert room.participants[0].username == "Alex"
+    host_id = room.host_id
 
-    # 2. Un 2ème utilisateur tente de rejoindre avec "Alex"
-    _, alex2 = await service.add_participant(room.room_id, "Alex")
-    assert alex2.username == "Alex (2)"
+    # 2. Un 2ème utilisateur rejoint avec "Alex" (autorisé, distingué par son ID unique)
+    room, alex2 = await service.add_participant(room.room_id, "Alex")
+    assert alex2.username == "Alex"
+    assert alex2.id != host_id
+    assert len(room.participants) == 2
 
-    # 3. Un 3ème utilisateur tente de rejoindre avec "alex" (insensible à la casse)
-    _, alex3 = await service.add_participant(room.room_id, "alex")
-    assert alex3.username == "alex (3)"
+    # 3. Un 3ème utilisateur rejoint avec "alex" (autorisé également)
+    room, alex3 = await service.add_participant(room.room_id, "alex")
+    assert alex3.username == "alex"
+    assert alex3.id != alex2.id
+    assert alex3.id != host_id
+    assert len(room.participants) == 3
 
-    # 4. Reconnexion d'Alex (2) avec son user_id existant (F5) -> conserve son pseudo
-    _, alex2_reconnected = await service.add_participant(
-        room.room_id, "Alex (2)", user_id=alex2.id
+    # 4. Reconnexion d'Alex (2ème participant) avec son user_id existant (F5) -> conserve ses données
+    room, alex2_reconnected = await service.add_participant(
+        room.room_id, "Alex", user_id=alex2.id
     )
-    assert alex2_reconnected.username == "Alex (2)"
+    assert alex2_reconnected.id == alex2.id
+    assert alex2_reconnected.username == "Alex"
+    assert len(room.participants) == 3
 
     # Nettoyage
     await service.delete_room(room.room_id)

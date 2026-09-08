@@ -62,10 +62,11 @@ export const sessionManager = {
   },
 
   /**
-   * Récupère le dernier pseudo utilisé sur l'appareil.
+   * Récupère le dernier pseudo utilisé sur l'appareil (avec nettoyage de tout résidu de suffixe).
    */
   getLastUsername(): string {
-    return localStorage.getItem(STORAGE_KEYS.lastUsername) || "";
+    const raw = localStorage.getItem(STORAGE_KEYS.lastUsername) || "";
+    return raw.replace(/\s*\(\d+\)$/, "").trim();
   },
 
   /**

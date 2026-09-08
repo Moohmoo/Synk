@@ -14,6 +14,28 @@ interface RoomSessionInfoProps {
   currentUserId?: string | null;
 }
 
+// Palette de couleurs déterministes (style Figma / Miro) pour différencier visuellement les participants
+const AVATAR_COLOR_PALETTES = [
+  { bg: "bg-cyan-500/15", text: "text-[#0ac8b9]", border: "border-[#0ac8b9]/30" },
+  { bg: "bg-violet-500/15", text: "text-violet-400", border: "border-violet-500/30" },
+  { bg: "bg-emerald-500/15", text: "text-emerald-400", border: "border-emerald-500/30" },
+  { bg: "bg-amber-500/15", text: "text-amber-400", border: "border-amber-500/30" },
+  { bg: "bg-rose-500/15", text: "text-rose-400", border: "border-rose-500/30" },
+  { bg: "bg-blue-500/15", text: "text-blue-400", border: "border-blue-500/30" },
+  { bg: "bg-fuchsia-500/15", text: "text-fuchsia-400", border: "border-fuchsia-500/30" },
+  { bg: "bg-indigo-500/15", text: "text-indigo-400", border: "border-indigo-500/30" },
+];
+
+function getParticipantColor(id: string) {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash << 5) - hash + id.charCodeAt(i);
+    hash |= 0;
+  }
+  const index = Math.abs(hash) % AVATAR_COLOR_PALETTES.length;
+  return AVATAR_COLOR_PALETTES[index];
+}
+
 export function RoomSessionInfo({
   roomId,
   isConnected,
@@ -24,6 +46,13 @@ export function RoomSessionInfo({
 }: RoomSessionInfoProps) {
   const { t } = useTranslation(["room", "global"]);
   const [copied, setCopied] = useState(false);
+
+  // Comptabiliser les occurrences de chaque pseudo pour détecter les homonymes
+  const duplicateCounts = participants.reduce<Record<string, number>>((acc, p) => {
+    const key = p.username.toLowerCase();
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
 
   const handleCopyLink = () => {
     if (copied) return;
@@ -97,6 +126,11 @@ export function RoomSessionInfo({
           {participants.map((p) => {
             const isMe = currentUserId ? p.id === currentUserId : p.username === currentUsername;
             const initials = p.username.slice(0, 2).toUpperCase();
+            const color = isMe
+              ? { bg: "bg-[#0ac8b9]/20", text: "text-[#0ac8b9]", border: "border-[#0ac8b9]/30" }
+              : getParticipantColor(p.id);
+            const isDuplicate = (duplicateCounts[p.username.toLowerCase()] || 0) > 1;
+
             return (
               <div
                 key={p.id}
@@ -108,11 +142,7 @@ export function RoomSessionInfo({
               >
                 <div className="flex items-center gap-2.5 min-w-0">
                   <div
-                    className={`w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-mono font-bold shrink-0 ${
-                      isMe
-                        ? "bg-[#0ac8b9]/20 text-[#0ac8b9]"
-                        : "bg-white/5 text-zinc-400"
-                    }`}
+                    className={`w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-mono font-bold shrink-0 border ${color.bg} ${color.text} ${color.border}`}
                   >
                     {initials}
                   </div>
@@ -120,8 +150,16 @@ export function RoomSessionInfo({
                     <span className="text-xs font-medium truncate">
                       {p.username}
                     </span>
+                    {isDuplicate && (
+                      <span
+                        className="text-[10px] font-mono text-zinc-500 shrink-0"
+                        title={`ID: ${p.id}`}
+                      >
+                        #{p.id.slice(-4)}
+                      </span>
+                    )}
                     {isMe && (
-                      <span className="text-[10px] text-zinc-500 font-sans">
+                      <span className="text-[10px] text-[#0ac8b9] font-sans font-medium shrink-0">
                         {t("participants.you")}
                       </span>
                     )}
