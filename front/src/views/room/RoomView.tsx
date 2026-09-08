@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { useParams, useNavigate, Navigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Omnibox } from "@/components/shared";
 import { RightSidebarSlot } from "@/components/RightSidebarSlot";
@@ -13,67 +13,52 @@ import { PlayerControls } from "./components/PlayerControls";
 import { RoomSessionInfo } from "./components/RoomSessionInfo";
 
 export function RoomView() {
-  const { roomId } = useParams<{ roomId: string }>();
+  const { roomId = "" } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation(["room", "global"]);
   const setGlowColor = useUIStore((s) => s.setGlowColor);
 
-  const [username, setUsername] = useState<string>("");
-  const [token, setToken] = useState<string | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
+  // Vérification synchrone de la session locale en mémoire
+  const session = useMemo(() => (roomId ? sessionManager.getRoomSession(roomId) : null), [roomId]);
+
+  // Si pas de salon ou pas de pseudo, redirection déclarative immédiate sans délai ni useEffect
+  if (!roomId || !session?.username) {
+    return <Navigate to={roomId ? `/?join=${encodeURIComponent(roomId)}` : "/"} replace />;
+  }
+
+  const username = session.username;
+  const token = session.token;
+  const userId = session.userId;
+
   const [isInitializing, setIsInitializing] = useState(true);
   const [roomNotFound, setRoomNotFound] = useState(false);
   const [currentTime, setCurrentTime] = useState<number>(0);
-  const [mediaDuration, setMediaDuration] = useState<number>(0);
-
-  // Barre de commande média (URL)
+  const [localDuration, setLocalDuration] = useState<number>(0);
   const [mediaUrl, setMediaUrl] = useState("");
 
-  // Route Guard : vérifie la session du salon ou redirige vers l'accueil pour saisie
+  // Effet 1 : Vérification d'existence du salon côté serveur (HTTP) & Glow
   useEffect(() => {
-    if (!roomId) {
-      navigate("/", { replace: true });
-      return;
-    }
-
-    const session = sessionManager.getRoomSession(roomId);
-
-    if (!session.username) {
-      // Redirection immédiate vers l'accueil avec pré-remplissage du salon
-      navigate(`/?join=${encodeURIComponent(roomId)}`, { replace: true });
-      return;
-    }
-
-    setUsername(session.username);
-    setToken(session.token);
-    setUserId(session.userId);
-
-    // Vérifier si le salon existe toujours côté serveur
     roomApi
       .checkRoom(roomId)
       .then((res) => {
         if (!res.exists) {
           setRoomNotFound(true);
+          setGlowColor("red");
         }
       })
       .catch(() => {
-        // Erreur réseau : on laisse WebSocket tenter la reconnexion
+        // En cas d'erreur HTTP transitoire, le WebSocket prend le relais
       })
       .finally(() => {
         setIsInitializing(false);
       });
-  }, [roomId, navigate]);
 
-  // Synchronise la couleur de l'Ambient Glow global
-  useEffect(() => {
-    if (roomNotFound) {
-      setGlowColor("red");
-    } else {
+    return () => {
       setGlowColor("cyan");
-    }
-  }, [roomNotFound, setGlowColor]);
+    };
+  }, [roomId, setGlowColor]);
 
-  // Synchronisation WebSocket
+  // Synchronisation temps réel via WebSocket
   const {
     isConnected,
     participants,
@@ -88,20 +73,14 @@ export function RoomView() {
     changeMedia,
     updateSettings,
   } = useSyncRoom({
-    roomId: roomId || "",
+    roomId,
     username,
     token,
     userId,
   });
 
-  // Synchronisation de la durée avec l'état du lecteur
-  useEffect(() => {
-    if (player.duration && player.duration > 0) {
-      setMediaDuration(player.duration);
-    } else if (!player.media_id) {
-      setMediaDuration(0);
-    }
-  }, [player.media_id, player.duration]);
+  // Durée dérivée : valeur calculée directement à l'affichage, aucun useEffect miroir
+  const mediaDuration = player.duration && player.duration > 0 ? player.duration : localDuration;
 
   // Contrôles locaux du lecteur (Volume local & Plein écran)
   const [volume, setVolume] = useState<number>(() => {
@@ -120,14 +99,13 @@ export function RoomView() {
   const handleToggleMute = () => {
     if (isMuted) {
       setIsMuted(false);
-      if (volume === 0) {
-        handleVolumeChange(50);
-      }
+      if (volume === 0) handleVolumeChange(50);
     } else {
       setIsMuted(true);
     }
   };
 
+  // Effet 2 : Écouteur natif de bascule plein écran du navigateur
   useEffect(() => {
     const onFullscreenChange = () => {
       setIsFullscreen(Boolean(document.fullscreenElement));
@@ -139,26 +117,28 @@ export function RoomView() {
   const toggleFullscreen = () => {
     if (!cinemaContainerRef.current) return;
     if (!document.fullscreenElement) {
-      cinemaContainerRef.current.requestFullscreen().catch(() => {
-        // Ignorer ou plein écran non autorisé par le navigateur
-      });
+      cinemaContainerRef.current.requestFullscreen().catch(() => {});
     } else {
       document.exitFullscreen().catch(() => {});
     }
   };
 
-  // Déterminer si l'utilisateur courant est hôte
+  // Déterminer si l'utilisateur courant est hôte (mémoïsé)
   const effectiveUserId = currentUserId || userId;
-  const currentParticipant = participants.find(
-    (p) => (effectiveUserId && p.id === effectiveUserId) || p.username === currentUsername
-  );
-  const isHost = Boolean(currentParticipant?.is_host);
+  const isHost = useMemo(() => {
+    const participant = participants.find(
+      (p) => (effectiveUserId && p.id === effectiveUserId) || p.username === currentUsername
+    );
+    return Boolean(participant?.is_host);
+  }, [participants, effectiveUserId, currentUsername]);
+
+  const isLockedForGuest = roomSettings.is_locked && !isHost;
 
   const handleLoadMedia = (e: React.FormEvent) => {
     e.preventDefault();
     const cleanUrl = mediaUrl.trim();
     if (!cleanUrl) return;
-    if (roomSettings.is_locked && !isHost) {
+    if (isLockedForGuest) {
       toast.warning(t("controls.hostOnly", { defaultValue: "CONTRÔLES HÔTE EXCLUSIFS" }), {
         id: "room-lock-host-only",
       });
@@ -169,7 +149,7 @@ export function RoomView() {
   };
 
   const handleTogglePlay = (time?: number) => {
-    if (roomSettings.is_locked && !isHost) {
+    if (isLockedForGuest) {
       toast.warning(t("controls.hostOnly", { defaultValue: "CONTRÔLES HÔTE EXCLUSIFS" }), {
         id: "room-lock-host-only",
       });
@@ -208,7 +188,7 @@ export function RoomView() {
     );
   }
 
-  if (isInitializing || !username) {
+  if (isInitializing) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center py-12">
         <div className="w-6 h-6 border-2 border-[#0ac8b9] border-t-transparent rounded-full animate-spin" />
@@ -220,7 +200,7 @@ export function RoomView() {
     <>
       <RightSidebarSlot>
         <RoomSessionInfo
-          roomId={roomId || ""}
+          roomId={roomId}
           isConnected={isConnected}
           ping={myPing}
           participants={participants}
@@ -238,7 +218,7 @@ export function RoomView() {
           mode="join"
           placeholder={t("header.urlPlaceholder")}
           buttonText={t("header.load")}
-          disabled={roomSettings.is_locked && !isHost}
+          disabled={isLockedForGuest}
           maxLength={2048}
           className="w-full max-w-4xl mb-6 relative z-20"
         />
@@ -260,8 +240,8 @@ export function RoomView() {
             volume={volume}
             isMuted={isMuted}
             isFullscreen={isFullscreen}
-            onProgress={(time) => setCurrentTime(time)}
-            onDurationChange={(d) => setMediaDuration(d)}
+            onProgress={setCurrentTime}
+            onDurationChange={setLocalDuration}
             onEnded={() => {
               if (isHost && player.is_playing) {
                 sendPause(mediaDuration || player.duration);
@@ -293,5 +273,3 @@ export function RoomView() {
     </>
   );
 }
-
-export default RoomView;
