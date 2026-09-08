@@ -17,3 +17,19 @@ export function formatTime(seconds: number): string {
   if (hrs > 0) return `${hrs}:${String(mins).padStart(2, "0")}:${padSecs}`;
   return `${mins}:${padSecs}`;
 }
+
+/**
+ * Calcule la position théorique exacte du média à l'instant T
+ * en tenant compte du temps écoulé depuis la dernière mise à jour.
+ */
+export function calculateReferenceTime(player: {
+  is_playing: boolean;
+  current_time: number;
+  last_updated_at: number;
+  duration?: number;
+}): number {
+  if (!player.is_playing) return Math.max(0, player.current_time);
+  const elapsed = Math.max(0, (Date.now() - player.last_updated_at) / 1000);
+  const target = player.current_time + elapsed;
+  return player.duration && player.duration > 0 ? Math.min(target, player.duration) : target;
+}

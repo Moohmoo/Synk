@@ -91,6 +91,7 @@ export function RoomView() {
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const cinemaContainerRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const handleVolumeChange = (newVolume: number) => {
     setVolume(newVolume);
@@ -227,6 +228,7 @@ export function RoomView() {
         >
           {/* LE LECTEUR MULTIMÉDIA : Conteneur Cinéma Universel */}
           <MediaPlayer
+            playerRef={videoRef}
             player={player}
             roomSettings={roomSettings}
             isHost={isHost}
@@ -236,9 +238,7 @@ export function RoomView() {
             onProgress={setCurrentTime}
             onDurationChange={setLocalDuration}
             onEnded={() => {
-              if (isHost && player.is_playing) {
-                sendPause(mediaDuration || player.duration);
-              }
+              // Fin naturelle locale : ne coupe pas les retardataires avec une pause forcée
             }}
             onTogglePlay={() => handleTogglePlay()}
             onToggleFullscreen={toggleFullscreen}
@@ -255,7 +255,15 @@ export function RoomView() {
             isMuted={isMuted}
             isFullscreen={isFullscreen}
             onTogglePlay={() => handleTogglePlay()}
-            onSeek={(time) => sendSeek(time)}
+            onSeek={(time) => {
+              if (videoRef.current) {
+                videoRef.current.currentTime = time;
+              }
+              setCurrentTime(time);
+              if (!isLockedForGuest) {
+                sendSeek(time);
+              }
+            }}
             onToggleLock={() => updateSettings(!roomSettings.is_locked)}
             onVolumeChange={handleVolumeChange}
             onToggleMute={handleToggleMute}

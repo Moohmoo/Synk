@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useMemo } from "react";
 import ReactPlayer from "react-player";
 import { useTranslation } from "react-i18next";
 import { PlayerState, RoomSettings } from "@/types/room";
+import { DESYNC_THRESHOLD_SECONDS } from "@/lib/constants";
 import { Tv, AlertCircle, Play } from "lucide-react";
 
 interface MediaPlayerProps {
@@ -11,6 +12,7 @@ interface MediaPlayerProps {
   volume?: number;
   isMuted?: boolean;
   isFullscreen?: boolean;
+  playerRef?: React.RefObject<HTMLVideoElement>;
   onProgress?: (time: number) => void;
   onDurationChange?: (duration: number) => void;
   onEnded?: () => void;
@@ -39,6 +41,7 @@ export function MediaPlayer({
   volume = 100,
   isMuted = false,
   isFullscreen = false,
+  playerRef: externalPlayerRef,
   onProgress,
   onDurationChange,
   onEnded,
@@ -46,7 +49,8 @@ export function MediaPlayer({
   onToggleFullscreen,
 }: MediaPlayerProps) {
   const { t } = useTranslation("room");
-  const playerRef = useRef<HTMLVideoElement | null>(null);
+  const localPlayerRef = useRef<HTMLVideoElement>(null);
+  const playerRef = externalPlayerRef || localPlayerRef;
   const [hasError, setHasError] = useState(false);
   const [needsAutoplayUnlock, setNeedsAutoplayUnlock] = useState(false);
 
@@ -62,14 +66,15 @@ export function MediaPlayer({
     setNeedsAutoplayUnlock(false);
   }, [mediaUrl]);
 
-  // Recaler la position lors d'un saut explicite du salon (SEEK) si écart > 2s
+  // Recaler la position lors d'un saut explicite du salon (SEEK) si écart > seuil
   useEffect(() => {
     if (!playerRef.current) return;
     const local = playerRef.current.currentTime || 0;
-    if (Math.abs(local - player.current_time) > 2.0) {
+    if (Math.abs(local - player.current_time) > DESYNC_THRESHOLD_SECONDS) {
       playerRef.current.currentTime = player.current_time;
+      onProgress?.(player.current_time);
     }
-  }, [player.current_time]);
+  }, [player.current_time, onProgress, playerRef]);
 
   const handleUnlockAutoplay = () => {
     if (playerRef.current) {

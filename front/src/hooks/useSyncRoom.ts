@@ -82,6 +82,11 @@ export function useSyncRoom({
 
   const sendSeek = useCallback((targetTime: number) => {
     socketRef.current?.emit("SEEK", { target_time: targetTime });
+    setPlayer((prev) => ({
+      ...prev,
+      current_time: targetTime,
+      last_updated_at: Date.now(),
+    }));
   }, []);
 
   const changeMedia = useCallback((url: string) => {

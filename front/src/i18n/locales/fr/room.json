@@ -32,7 +32,8 @@
     "mute": "Couper le son",
     "unmute": "Activer le son",
     "fullscreen": "Plein écran",
-    "exitFullscreen": "Quitter le plein écran"
+    "exitFullscreen": "Quitter le plein écran",
+    "catchUp": "Rattraper"
   },
   "sidebar": {
     "info": "INFORMATIONS",

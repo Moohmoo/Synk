@@ -9,12 +9,14 @@ import {
   Unlock,
   Maximize,
   Minimize,
+  Zap,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { PlayerState, RoomSettings } from "@/types/room";
-import { formatTime } from "@/lib/utils";
+import { formatTime, calculateReferenceTime } from "@/lib/utils";
+import { DESYNC_THRESHOLD_SECONDS } from "@/lib/constants";
 
 interface PlayerControlsProps {
   player: PlayerState;
@@ -57,6 +59,12 @@ export function PlayerControls({
   const displayTime = scrubbingTime !== null ? scrubbingTime : currentTime;
   const isTimelineDisabled = isLockedForGuest || totalDuration === 0 || !player.media_id;
   const isAtEnd = totalDuration > 0 && displayTime >= Math.max(0, totalDuration - 0.5);
+
+  const roomTime = calculateReferenceTime({ ...player, duration: totalDuration });
+  const isBehind =
+    player.is_playing &&
+    scrubbingTime === null &&
+    roomTime - currentTime > DESYNC_THRESHOLD_SECONDS;
 
   return (
     <div className="w-full max-w-4xl bg-[#141417]/90 backdrop-blur-md border border-white/10 rounded-xl p-3.5 sm:p-4 flex flex-col gap-3 select-none mt-3 shadow-lg relative z-10">
@@ -142,6 +150,20 @@ export function PlayerControls({
               {isMuted ? "0%" : `${volume}%`}
             </span>
           </div>
+
+          {/* Bouton Rattraper (visible uniquement si retard > 3s) */}
+          {isBehind && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onSeek(roomTime)}
+              className="text-[#0ac8b9] border-[#0ac8b9]/40 hover:bg-[#0ac8b9]/10 gap-1.5 h-8 px-2.5 text-xs font-mono transition-all animate-in fade-in duration-150 cursor-pointer"
+              title={t("controls.catchUp")}
+            >
+              <Zap className="w-3.5 h-3.5 fill-current" />
+              <span>{t("controls.catchUp")}</span>
+            </Button>
+          )}
         </div>
 
         {/* Côté Droit : Verrou d'hôte & Plein écran */}
