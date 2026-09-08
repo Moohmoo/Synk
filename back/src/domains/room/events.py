@@ -369,7 +369,7 @@ async def on_heartbeat(sid: str, data: Any) -> None:
     session, payload = guard
 
     now_ms = int(time.time() * 1000)
-    latency = max(0, now_ms - payload.client_sent_at)
+    latency = payload.ping_ms if payload.ping_ms > 0 else max(0, now_ms - payload.client_sent_at)
     prev_ping = session.get("ping_ms", 0)
     session["ping_ms"] = latency
     await sio.save_session(sid, session)

@@ -56,12 +56,14 @@ export function useSyncRoom({
   const socketRef = useRef<Socket | null>(null);
   const currentUsernameRef = useRef(username);
   const currentUserIdRef = useRef<string | null>(userId || null);
+  const myPingRef = useRef(0);
   const tRef = useRef(t);
 
   // Synchronisation synchrone des refs à chaque render
   tRef.current = t;
   currentUsernameRef.current = currentUsername;
   currentUserIdRef.current = currentUserId;
+  myPingRef.current = myPing;
 
   // Actions utilisateur vers le serveur Socket.IO (stables)
   const sendPlay = useCallback((currentTime?: number) => {
@@ -281,7 +283,10 @@ export function useSyncRoom({
     // Mesure de latence périodique
     const heartbeatTimer = setInterval(() => {
       if (socket.connected) {
-        socket.emit("HEARTBEAT", { client_sent_at: Date.now() });
+        socket.emit("HEARTBEAT", {
+          client_sent_at: Date.now(),
+          ping_ms: myPingRef.current,
+        });
       }
     }, 5000);
 
