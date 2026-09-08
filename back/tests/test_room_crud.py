@@ -1,0 +1,198 @@
+import pytest
+import pytest_asyncio
+from redis.asyncio import Redis
+
+from core.config import settings
+from domains.room.crud import RoomService
+
+
+@pytest_asyncio.fixture
+async def redis_client():
+    client = Redis.from_url(settings.REDIS_URL, decode_responses=True)
+    yield client
+    await client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_room_crud_lifecycle(redis_client):
+    service = RoomService(redis_client)
+
+    # 1. Création d'un salon
+    room, host_token = await service.create_room("Alice")
+    assert room.room_id is not None
+    assert room.host_id is not None
+    assert len(room.participants) == 1
+    assert room.participants[0].username == "Alice"
+    assert room.participants[0].is_host is True
+
+    # Vérification du token hôte
+    is_valid = await service.verify_host_token(room.room_id, host_token)
+    assert is_valid is True
+
+    # 2. Récupération du salon
+    fetched_room = await service.get_room(room.room_id)
+    assert fetched_room is not None
+    assert fetched_room.room_id == room.room_id
+
+    # 3. Ajout d'un participant
+    updated_room, bob = await service.add_participant(room.room_id, "Bob")
+    assert len(updated_room.participants) == 2
+    assert bob.username == "Bob"
+    assert bob.is_host is False
+
+    # 4. Mise à jour de lecture
+    player_room = await service.update_player(
+        room.room_id, is_playing=True, current_time=25.0, media_id="test_vid_123"
+    )
+    assert player_room.player.is_playing is True
+    assert player_room.player.current_time == 25.0
+    assert player_room.player.media_id == "test_vid_123"
+
+    # 5. Départ de l'hôte (Alice) -> transfert automatique d'hôte à Bob et régénération du token
+    remaining_room, new_host, new_token = await service.remove_participant(
+        room.room_id, room.host_id
+    )
+    assert len(remaining_room.participants) == 1
+    assert remaining_room.participants[0].username == "Bob"
+    assert remaining_room.participants[0].is_host is True
+    assert new_host == bob.id
+    assert new_token is not None
+    # L'ancien token d'Alice doit être invalidé et le nouveau token de Bob doit être vérifié
+    assert await service.verify_host_token(room.room_id, host_token) is False
+    assert await service.verify_host_token(room.room_id, new_token) is True
+
+    # 5.bis Alice tente de revenir avec son ancien token -> doit être simple invité
+    is_valid_alice = await service.verify_host_token(room.room_id, host_token)
+    assert is_valid_alice is False
+    rejoined_room, alice_rejoined = await service.add_participant(
+        room.room_id, "Alice", user_id="usr_alice_rejoin", is_host=is_valid_alice
+    )
+    assert alice_rejoined.is_host is False
+    assert rejoined_room.host_id == bob.id
+    current_bob = next(p for p in rejoined_room.participants if p.id == bob.id)
+    assert current_bob.is_host is True
+
+    # Nettoyage d'Alice pour la suite du test
+    await service.remove_participant(room.room_id, alice_rejoined.id)
+
+    # 6. Départ du dernier participant -> salon vide & pause automatique du lecteur
+    empty_room, _, _ = await service.remove_participant(room.room_id, bob.id)
+    assert len(empty_room.participants) == 0
+    assert empty_room.player.is_playing is False
+
+    # 7. Suppression du salon
+    deleted = await service.delete_room(room.room_id)
+    assert deleted is True
+    assert await service.room_exists(room.room_id) is False
+
+
+@pytest.mark.asyncio
+async def test_duplicate_username_auto_disambiguation(redis_client):
+    service = RoomService(redis_client)
+
+    # 1. Création avec "Alex"
+    room, _ = await service.create_room("Alex")
+
+    # 2. Un 2ème utilisateur tente de rejoindre avec "Alex"
+    _, alex2 = await service.add_participant(room.room_id, "Alex")
+    assert alex2.username == "Alex (2)"
+
+    # 3. Un 3ème utilisateur tente de rejoindre avec "alex" (insensible à la casse)
+    _, alex3 = await service.add_participant(room.room_id, "alex")
+    assert alex3.username == "alex (3)"
+
+    # 4. Reconnexion d'Alex (2) avec son user_id existant (F5) -> conserve son pseudo
+    _, alex2_reconnected = await service.add_participant(
+        room.room_id, "Alex (2)", user_id=alex2.id
+    )
+    assert alex2_reconnected.username == "Alex (2)"
+
+    # Nettoyage
+    await service.delete_room(room.room_id)
+
+
+@pytest.mark.asyncio
+async def test_update_player_safe_idempotence(redis_client):
+    service = RoomService(redis_client)
+    room, _ = await service.create_room("HostUser")
+    host = room.participants[0]
+
+    # 1. Le salon est initialement en pause (is_playing=False)
+    assert room.player.is_playing is False
+
+    # 2. Envoi d'une PAUSE alors que le salon est déjà en pause -> NOOP idempotent
+    res_room, err = await service.update_player_safe(
+        room.room_id, host, is_playing=False, current_time=10.0
+    )
+    assert err == "NOOP"
+    assert res_room is not None
+
+    # 3. Lancement de la lecture (is_playing=True) -> Mise à jour effective
+    play_room, err = await service.update_player_safe(
+        room.room_id, host, is_playing=True, current_time=10.0
+    )
+    assert err is None
+    assert play_room.player.is_playing is True
+
+    # 4. Envoi d'un PLAY alors que le salon est déjà en lecture -> NOOP idempotent
+    _noop_play_room, err = await service.update_player_safe(
+        room.room_id, host, is_playing=True, current_time=15.0
+    )
+    assert err == "NOOP"
+
+    # 5. SEEK (is_playing est None) -> Doit s'exécuter normalement
+    seek_room, err = await service.update_player_safe(
+        room.room_id, host, current_time=55.0
+    )
+    assert err is None
+    assert seek_room.player.current_time == 55.0
+    assert seek_room.player.is_playing is True
+
+    # 6. Rembobinage en pause : si la vidéo est en pause à 0s, un seek à 0s -> NOOP
+    pause_room, _ = await service.update_player_safe(
+        room.room_id, host, is_playing=False, current_time=0.0
+    )
+    assert pause_room.player.is_playing is False
+    assert pause_room.player.current_time == 0.0
+
+    _noop_seek, err = await service.update_player_safe(
+        room.room_id, host, current_time=0.0
+    )
+    assert err == "NOOP"
+
+    # Nettoyage
+    await service.delete_room(room.room_id)
+
+
+@pytest.mark.asyncio
+async def test_update_settings_safe_idempotence(redis_client):
+    service = RoomService(redis_client)
+    room, _ = await service.create_room("HostUser")
+    host = room.participants[0]
+
+    # Initialement non verrouillé
+    assert room.settings.is_locked is False
+
+    # 1. Tenter de déverrouiller un salon déjà déverrouillé -> NOOP idempotent
+    _res_room, err = await service.update_settings_safe(
+        room.room_id, host, is_locked=False
+    )
+    assert err == "NOOP"
+
+    # 2. Verrouiller le salon -> Modification effective
+    locked_room, err = await service.update_settings_safe(
+        room.room_id, host, is_locked=True
+    )
+    assert err is None
+    assert locked_room.settings.is_locked is True
+
+    # 3. Tenter de re-verrouiller le salon -> NOOP idempotent
+    _noop_room, err = await service.update_settings_safe(
+        room.room_id, host, is_locked=True
+    )
+    assert err == "NOOP"
+
+    # Nettoyage
+    await service.delete_room(room.room_id)
+
+
