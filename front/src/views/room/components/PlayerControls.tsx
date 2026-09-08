@@ -4,7 +4,6 @@ import {
   Pause,
   RotateCcw,
   Volume2,
-  Volume1,
   VolumeX,
   Lock,
   Unlock,
@@ -25,8 +24,7 @@ interface PlayerControlsProps {
   volume?: number;
   isMuted?: boolean;
   isFullscreen?: boolean;
-  onPlay: (time?: number) => void;
-  onPause: (time?: number) => void;
+  onTogglePlay: () => void;
   onSeek: (time: number) => void;
   onToggleLock: () => void;
   onVolumeChange?: (volume: number) => void;
@@ -34,16 +32,14 @@ interface PlayerControlsProps {
   onToggleFullscreen?: () => void;
 }
 
-function formatTime(seconds: number): string {
-  if (!seconds || isNaN(seconds) || seconds < 0) return "0:00";
-  const totalSecs = Math.floor(seconds);
-  const hrs = Math.floor(totalSecs / 3600);
-  const mins = Math.floor((totalSecs % 3600) / 60);
-  const secs = totalSecs % 60;
-  if (hrs > 0) {
-    return `${hrs}:${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
-  }
-  return `${mins}:${String(secs).padStart(2, "0")}`;
+function formatTime(s: number): string {
+  if (!s || isNaN(s) || s < 0) return "0:00";
+  const hrs = Math.floor(s / 3600);
+  const mins = Math.floor((s % 3600) / 60);
+  const secs = Math.floor(s % 60);
+  const padSecs = String(secs).padStart(2, "0");
+  if (hrs > 0) return `${hrs}:${String(mins).padStart(2, "0")}:${padSecs}`;
+  return `${mins}:${padSecs}`;
 }
 
 export function PlayerControls({
@@ -55,8 +51,7 @@ export function PlayerControls({
   volume = 100,
   isMuted = false,
   isFullscreen = false,
-  onPlay,
-  onPause,
+  onTogglePlay,
   onSeek,
   onToggleLock,
   onVolumeChange,
@@ -74,7 +69,7 @@ export function PlayerControls({
 
   return (
     <div className="w-full max-w-4xl bg-[#141417]/90 backdrop-blur-md border border-white/10 rounded-xl p-3.5 sm:p-4 flex flex-col gap-3 select-none mt-3 shadow-lg relative z-10">
-      {/* Timeline Seek Bar */}
+      {/* Barre de défilement (Timeline) */}
       <div className="w-full flex items-center gap-3">
         <span className="text-xs font-mono text-zinc-400 min-w-10">
           {formatTime(displayTime)}
@@ -86,16 +81,10 @@ export function PlayerControls({
             max={totalDuration > 0 ? totalDuration : 100}
             step={1}
             disabled={isTimelineDisabled}
-            onValueChange={(val) => {
-              if (val.length > 0) {
-                setScrubbingTime(val[0]);
-              }
-            }}
-            onValueCommit={(val) => {
-              if (val.length > 0) {
-                onSeek(val[0]);
-                setScrubbingTime(null);
-              }
+            onValueChange={([val]) => setScrubbingTime(val)}
+            onValueCommit={([val]) => {
+              onSeek(val);
+              setScrubbingTime(null);
             }}
           />
         </div>
@@ -105,49 +94,35 @@ export function PlayerControls({
         </span>
       </div>
 
-      {/* Action Toolbar */}
+      {/* Barre d'actions */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          {player.is_playing ? (
-            <Button
-              variant="secondary"
-              size="icon"
-              disabled={isLockedForGuest || !player.media_id}
-              onClick={() => onPause(displayTime)}
-              className="text-[#0ac8b9]"
-              title={t("controls.pause")}
-            >
-              <Pause className="w-4 h-4" />
-            </Button>
-          ) : (
-            <Button
-              variant="teal"
-              size="icon"
-              disabled={isLockedForGuest || !player.media_id}
-              onClick={() => onPlay(isAtEnd ? 0 : displayTime)}
-              title={isAtEnd ? t("controls.replay", { defaultValue: "Rejouer" }) : t("controls.play")}
-            >
-              {isAtEnd ? (
-                <RotateCcw className="w-4 h-4" />
-              ) : (
-                <Play className="w-4 h-4 fill-current" />
-              )}
-            </Button>
-          )}
-
+        <div className="flex items-center gap-3">
+          {/* Lecture / Pause / Replay unifié */}
           <Button
-            variant="secondary"
+            variant={player.is_playing ? "secondary" : "teal"}
             size="icon"
             disabled={isLockedForGuest || !player.media_id}
-            onClick={() => onSeek(0)}
-            title={t("controls.rewind")}
+            onClick={onTogglePlay}
+            title={
+              player.is_playing
+                ? t("controls.pause")
+                : isAtEnd
+                  ? t("controls.replay", { defaultValue: "Rejouer" })
+                  : t("controls.play")
+            }
           >
-            <RotateCcw className="w-4 h-4 text-zinc-400" />
+            {player.is_playing ? (
+              <Pause className="w-4 h-4 text-[#0ac8b9]" />
+            ) : isAtEnd ? (
+              <RotateCcw className="w-4 h-4" />
+            ) : (
+              <Play className="w-4 h-4 fill-current" />
+            )}
           </Button>
 
-          <div className="h-5 w-px bg-white/5 mx-1" />
+          <div className="h-5 w-px bg-white/5" />
 
-          {/* Volume Control */}
+          {/* Réglage du Volume */}
           <div className="flex items-center gap-2 px-2.5 py-1 bg-black/40 border border-white/5 text-xs font-mono rounded-lg">
             <button
               type="button"
@@ -157,8 +132,6 @@ export function PlayerControls({
             >
               {isMuted || volume === 0 ? (
                 <VolumeX className="w-3.5 h-3.5 text-rose-400" />
-              ) : volume < 50 ? (
-                <Volume1 className="w-3.5 h-3.5 text-zinc-300" />
               ) : (
                 <Volume2 className="w-3.5 h-3.5 text-zinc-300" />
               )}
@@ -168,13 +141,9 @@ export function PlayerControls({
                 value={[isMuted ? 0 : volume]}
                 max={100}
                 step={1}
-                onValueChange={(val) => {
-                  if (val.length > 0 && onVolumeChange) {
-                    onVolumeChange(val[0]);
-                    if (isMuted && val[0] > 0 && onToggleMute) {
-                      onToggleMute();
-                    }
-                  }
+                onValueChange={([val]) => {
+                  onVolumeChange?.(val);
+                  if (isMuted && val > 0) onToggleMute?.();
                 }}
               />
             </div>
@@ -184,7 +153,7 @@ export function PlayerControls({
           </div>
         </div>
 
-        {/* Contrôles Côté Droit : Verrou d'hôte & Plein écran */}
+        {/* Côté Droit : Verrou d'hôte & Plein écran */}
         <div className="flex items-center gap-2">
           {isHost ? (
             <Button
@@ -194,16 +163,15 @@ export function PlayerControls({
               className="gap-1.5"
             >
               {roomSettings.is_locked ? (
-                <>
-                  <Lock className="w-3.5 h-3.5" />
-                  <span>{t("controls.roomLocked")}</span>
-                </>
+                <Lock className="w-3.5 h-3.5" />
               ) : (
-                <>
-                  <Unlock className="w-3.5 h-3.5" />
-                  <span>{t("controls.roomUnlocked")}</span>
-                </>
+                <Unlock className="w-3.5 h-3.5" />
               )}
+              <span>
+                {roomSettings.is_locked
+                  ? t("controls.roomLocked")
+                  : t("controls.roomUnlocked")}
+              </span>
             </Button>
           ) : (
             roomSettings.is_locked && (
@@ -219,7 +187,11 @@ export function PlayerControls({
               variant="secondary"
               size="icon"
               onClick={onToggleFullscreen}
-              title={isFullscreen ? t("controls.exitFullscreen") : t("controls.fullscreen")}
+              title={
+                isFullscreen
+                  ? t("controls.exitFullscreen")
+                  : t("controls.fullscreen")
+              }
               className="h-8 w-8 text-zinc-400 hover:text-white"
             >
               {isFullscreen ? (

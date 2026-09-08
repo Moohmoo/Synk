@@ -281,8 +281,7 @@ export function RoomView() {
             volume={volume}
             isMuted={isMuted}
             isFullscreen={isFullscreen}
-            onPlay={(time) => handleTogglePlay(time)}
-            onPause={(time) => sendPause(time)}
+            onTogglePlay={() => handleTogglePlay()}
             onSeek={(time) => sendSeek(time)}
             onToggleLock={() => updateSettings(!roomSettings.is_locked)}
             onVolumeChange={handleVolumeChange}
