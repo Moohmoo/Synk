@@ -1,5 +1,5 @@
 import { Copy, Crown, Check } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { Participant } from "@/types/room";
@@ -48,11 +48,13 @@ export function RoomSessionInfo({
   const [copied, setCopied] = useState(false);
 
   // Comptabiliser les occurrences de chaque pseudo pour détecter les homonymes
-  const duplicateCounts = participants.reduce<Record<string, number>>((acc, p) => {
-    const key = p.username.toLowerCase();
-    acc[key] = (acc[key] || 0) + 1;
-    return acc;
-  }, {});
+  const duplicateCounts = useMemo(() => {
+    return participants.reduce<Record<string, number>>((acc, p) => {
+      const key = p.username.toLowerCase();
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {});
+  }, [participants]);
 
   const handleCopyLink = () => {
     if (copied) return;
@@ -185,5 +187,3 @@ export function RoomSessionInfo({
     </div>
   );
 }
-
-export default RoomSessionInfo;
