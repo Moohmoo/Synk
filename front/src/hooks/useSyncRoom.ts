@@ -60,6 +60,11 @@ export function useSyncRoom({
   const currentUsernameRef = useRef(username);
   const currentUserIdRef = useRef<string | null>(userId || null);
   const onPlayerChangeRef = useRef(onPlayerChange);
+  const tRef = useRef(t);
+
+  useEffect(() => {
+    tRef.current = t;
+  }, [t]);
 
   useEffect(() => {
     currentUsernameRef.current = currentUsername;
@@ -323,7 +328,7 @@ export function useSyncRoom({
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [roomId, username, token, userId, wsBaseUrl, t]);
+  }, [roomId, username, token, wsBaseUrl]);
 
   return {
     isConnected,

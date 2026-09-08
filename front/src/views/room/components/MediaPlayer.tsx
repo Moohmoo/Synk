@@ -81,8 +81,9 @@ export function MediaPlayer({
 
   // Notifier la durée détectée
   const handleDuration = () => {
-    if (playerRef.current?.duration && onDurationChange) {
-      onDurationChange(playerRef.current.duration);
+    const d = playerRef.current?.duration;
+    if (d && d > 0 && d !== player.duration && onDurationChange) {
+      onDurationChange(d);
     }
   };
 
@@ -96,49 +97,29 @@ export function MediaPlayer({
       const elapsed = player.is_playing
         ? Math.max(0, (now - (player.last_updated_at || now)) / 1000)
         : 0;
-      playerRef.current.currentTime = player.current_time + elapsed;
-    }
-  };
-
-  // Gestion des événements locaux du lecteur (anti-écho)
-  const handlePlay = () => {
-    setNeedsAutoplayUnlock(false);
-    if (!playerRef.current) return;
-
-    // Déclenché par interaction utilisateur directe sur l'iframe alors que le salon était en pause
-    if (!player.is_playing) {
-      if (isLockedForGuest) {
-        playerRef.current.pause();
-        return;
+      const targetTime = player.current_time + elapsed;
+      if (Math.abs((playerRef.current.currentTime || 0) - targetTime) > 1.0) {
+        playerRef.current.currentTime = targetTime;
       }
-      onLocalPlay?.(playerRef.current.currentTime || 0);
     }
   };
 
-  const handlePause = () => {
-    if (!playerRef.current) return;
-
-    // Déclenché par interaction utilisateur directe sur l'iframe alors que le salon était en lecture
-    if (player.is_playing) {
-      if (isLockedForGuest) {
-        playerRef.current.play();
-        return;
-      }
-      onLocalPause?.(playerRef.current.currentTime || 0);
-    }
-  };
-
+  // Fin du média : l'hôte notifie la mise en pause
   const handleEnded = () => {
-    if (!playerRef.current) return;
-    if (player.is_playing) {
-      const end = playerRef.current.duration || playerRef.current.currentTime || 0;
+    if (player.is_playing && isHost) {
+      const end = playerRef.current?.duration || player.current_time;
       onLocalPause?.(end);
     }
   };
 
-  const handleSeeked = () => {
-    if (!playerRef.current || isLockedForGuest) return;
-    onLocalSeek?.(playerRef.current.currentTime || 0);
+  // Clic direct sur le lecteur pour basculer play/pause
+  const handlePlayerClick = () => {
+    if (isLockedForGuest) return;
+    if (player.is_playing) {
+      onLocalPause?.(playerRef.current?.currentTime || player.current_time);
+    } else {
+      onLocalPlay?.(playerRef.current?.currentTime || player.current_time);
+    }
   };
 
   // Déblocage manuel au clic si l'Autoplay Policy du navigateur bloque la lecture avec son
@@ -174,7 +155,8 @@ export function MediaPlayer({
         </div>
       ) : (
         <div
-          className={`w-full h-full relative flex items-center justify-center ${
+          onClick={handlePlayerClick}
+          className={`w-full h-full relative flex items-center justify-center cursor-pointer ${
             isLockedForGuest ? "pointer-events-none" : ""
           }`}
         >
@@ -190,10 +172,7 @@ export function MediaPlayer({
             height="100%"
             style={{ width: "100%", height: "100%", display: "block" }}
             onReady={handleReady}
-            onPlay={handlePlay}
-            onPause={handlePause}
             onEnded={handleEnded}
-            onSeeked={handleSeeked}
             onDurationChange={handleDuration}
             onLoadedMetadata={handleDuration}
             onError={() => {
