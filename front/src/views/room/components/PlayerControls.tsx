@@ -14,6 +14,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { PlayerState, RoomSettings } from "@/types/room";
+import { formatTime } from "@/lib/utils";
 
 interface PlayerControlsProps {
   player: PlayerState;
@@ -30,16 +31,6 @@ interface PlayerControlsProps {
   onVolumeChange?: (volume: number) => void;
   onToggleMute?: () => void;
   onToggleFullscreen?: () => void;
-}
-
-function formatTime(s: number): string {
-  if (!s || isNaN(s) || s < 0) return "0:00";
-  const hrs = Math.floor(s / 3600);
-  const mins = Math.floor((s % 3600) / 60);
-  const secs = Math.floor(s % 60);
-  const padSecs = String(secs).padStart(2, "0");
-  if (hrs > 0) return `${hrs}:${String(mins).padStart(2, "0")}:${padSecs}`;
-  return `${mins}:${padSecs}`;
 }
 
 export function PlayerControls({
