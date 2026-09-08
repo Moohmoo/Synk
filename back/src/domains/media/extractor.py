@@ -35,11 +35,10 @@ class MediaExtractor:
 
         cleaned_url = url.strip()
         for extractor in self._extractors:
-            if extractor.can_handle(cleaned_url):
-                info = extractor.extract(cleaned_url)
-                if info:
-                    logger.debug(f"Média extrait [{info.provider}] ID: {info.media_id}")
-                    return info
+            info = extractor.extract(cleaned_url)
+            if info:
+                logger.debug(f"Média extrait [{info.provider}] ID: {info.media_id}")
+                return info
         return None
 
 

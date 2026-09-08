@@ -8,15 +8,9 @@ from domains.media.schemas.media import MediaInfo, MediaType
 class YouTubeExtractor(BaseExtractor):
     """Extracteur dédié aux contenus de la plateforme YouTube."""
 
+    name: str = "youtube"
+    default_media_type: MediaType = MediaType.VIDEO
     VIDEO_ID_REGEX = re.compile(r"^[a-zA-Z0-9_-]{11}$")
-
-    @property
-    def name(self) -> str:
-        return "youtube"
-
-    @property
-    def default_media_type(self) -> MediaType:
-        return MediaType.VIDEO
 
     def _extract_video_id(self, url: str) -> str | None:
         if not url or not isinstance(url, str):
@@ -62,10 +56,6 @@ class YouTubeExtractor(BaseExtractor):
         if video_id and self.VIDEO_ID_REGEX.fullmatch(video_id):
             return video_id
         return None
-
-    def can_handle(self, url: str) -> bool:
-        """Vérifie si l'URL correspond au domaine YouTube et contient un ID valide."""
-        return self._extract_video_id(url) is not None
 
     def extract(self, url: str) -> MediaInfo | None:
         """Extrait l'ID de 11 caractères et génère l'URL canonique de visionnage."""
