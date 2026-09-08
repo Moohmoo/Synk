@@ -147,6 +147,20 @@ def create_http_rate_limiter(
     return dependency
 
 
+# Dépendances HTTP réutilisables (Profils)
+rate_limit_strict = create_http_rate_limiter(
+    requests_per_window=settings.RATE_LIMIT_ROOM_CREATE_PER_MIN,
+    window_seconds=60,
+    key_prefix="http:strict",
+)
+
+rate_limit_standard = create_http_rate_limiter(
+    requests_per_window=settings.RATE_LIMIT_ROOM_CHECK_PER_MIN,
+    window_seconds=60,
+    key_prefix="http:standard",
+)
+
+
 async def check_ws_rate_limit(user_id: str, action: str) -> tuple[bool, int]:
     """Vérifie les quotas global et par action pour un événement WebSocket."""
     allowed, wait_sec = await rate_limiter.check(
