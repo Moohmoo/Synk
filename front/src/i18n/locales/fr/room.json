@@ -55,6 +55,7 @@
     "loadMedia": "{{user}} a chargé un nouveau média",
     "userJoined": "{{user}} a rejoint le salon",
     "userLeft": "{{user}} a quitté le salon",
+    "hostTransferredToYou": "Vous êtes désormais l'hôte du salon !",
     "roomLocked": "Le salon a été verrouillé par l'hôte",
     "roomUnlocked": "Le salon a été déverrouillé"
   }

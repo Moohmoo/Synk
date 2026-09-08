@@ -55,6 +55,7 @@
     "loadMedia": "{{user}} loaded new media",
     "userJoined": "{{user}} joined the room",
     "userLeft": "{{user}} left the room",
+    "hostTransferredToYou": "You are now the room host!",
     "roomLocked": "The room has been locked by the host",
     "roomUnlocked": "The room has been unlocked"
   }

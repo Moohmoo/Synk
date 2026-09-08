@@ -78,6 +78,11 @@ export function formatErrorMessage(
     if (translated && translated !== code && !translated.startsWith("errors.")) {
       return translated;
     }
+    // Secours direct sur l'instance globale i18n (garantit la langue active du store)
+    const direct = String(i18n.t(code, { ns: "errors", defaultValue: "" }));
+    if (direct && direct !== code && !direct.startsWith("errors.")) {
+      return direct;
+    }
   }
 
   // Fallback sécurisé : message d'erreur inconnu localisé

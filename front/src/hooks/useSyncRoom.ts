@@ -182,19 +182,19 @@ export function useSyncRoom({
 
       if (payload.triggered_by && !isSelf) {
         if (payload.action === "PLAY") {
-          toast.info(t("toast.play", { user: payload.triggered_by }), {
+          toast.info(tRef.current("toast.play", { user: payload.triggered_by }), {
             id: "player-sync-action",
           });
         } else if (payload.action === "PAUSE") {
-          toast.info(t("toast.pause", { user: payload.triggered_by }), {
+          toast.info(tRef.current("toast.pause", { user: payload.triggered_by }), {
             id: "player-sync-action",
           });
         } else if (payload.action === "SEEK") {
-          toast.info(t("toast.seek", { user: payload.triggered_by }), {
+          toast.info(tRef.current("toast.seek", { user: payload.triggered_by }), {
             id: "player-sync-action",
           });
         } else if (payload.action === "CHANGE_MEDIA") {
-          toast.info(t("toast.loadMedia", { user: payload.triggered_by }), {
+          toast.info(tRef.current("toast.loadMedia", { user: payload.triggered_by }), {
             id: "player-sync-action",
           });
         }
@@ -211,7 +211,7 @@ export function useSyncRoom({
         newParticipant.username === currentUsernameRef.current ||
         newParticipant.username === username;
       if (!isSelfJoined) {
-        toast.info(t("toast.userJoined", { user: newParticipant.username }));
+        toast.info(tRef.current("toast.userJoined", { user: newParticipant.username }));
       }
     });
 
@@ -224,14 +224,14 @@ export function useSyncRoom({
           (leaving.username === currentUsernameRef.current ||
             leaving.username === username);
         if (leaving && !isSelfLeft) {
-          toast.info(t("toast.userLeft", { user: leaving.username }));
+          toast.info(tRef.current("toast.userLeft", { user: leaving.username }));
         }
         return prev
           .filter((p) => p.id !== user_id)
           .map((p) => (p.id === new_host_id ? { ...p, is_host: true } : p));
       });
       if (new_host_id && (currentUserIdRef.current === new_host_id || userId === new_host_id)) {
-        toast.info(t("toast.hostTransferredToYou", { defaultValue: "Vous êtes désormais l'hôte du salon !" }), {
+        toast.info(tRef.current("toast.hostTransferredToYou"), {
           id: "host-transferred",
         });
       }
@@ -240,7 +240,7 @@ export function useSyncRoom({
     socket.on("HOST_PROMOTED", (payload: { host_token: string }) => {
       if (payload.host_token) {
         sessionManager.setHostToken(roomId, payload.host_token);
-        toast.info(t("toast.hostTransferredToYou", { defaultValue: "Vous êtes désormais l'hôte du salon !" }), {
+        toast.info(tRef.current("toast.hostTransferredToYou"), {
           id: "host-transferred",
         });
       }
@@ -268,14 +268,14 @@ export function useSyncRoom({
     socket.on("SETTINGS_UPDATED", (payload: { settings: RoomSettings }) => {
       setRoomSettings(payload.settings);
       if (payload.settings.is_locked) {
-        toast.warning(t("toast.roomLocked"), { id: "room-lock-status" });
+        toast.warning(tRef.current("toast.roomLocked"), { id: "room-lock-status" });
       } else {
-        toast.info(t("toast.roomUnlocked"), { id: "room-lock-status" });
+        toast.info(tRef.current("toast.roomUnlocked"), { id: "room-lock-status" });
       }
     });
 
     socket.on("ERROR", (payload: ErrorPayload) => {
-      const localizedMsg = formatErrorMessage(payload, t);
+      const localizedMsg = formatErrorMessage(payload, tRef.current);
       setError(localizedMsg);
       toast.error(localizedMsg, { id: `ws-err-${payload.code || "generic"}` });
     });

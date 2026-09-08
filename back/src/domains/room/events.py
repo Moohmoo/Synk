@@ -89,7 +89,7 @@ async def _guard[T: BaseModel](
             await _send_error(
                 sid,
                 "RATE_LIMITED",
-                f"Trop d'actions rapides ({action}). Veuillez patienter {wait_sec}s.",
+                f"Too many fast actions ({action}). Please wait {wait_sec}s.",
             )
         return None
 
