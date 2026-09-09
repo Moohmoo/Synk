@@ -184,8 +184,8 @@ export function HomeView() {
 
   return (
     <div className="relative flex-1 flex flex-col items-center justify-center w-full max-w-full px-6 md:px-12 py-10">
-      {/* Conteneur principal */}
-      <div className="relative z-10 flex flex-col items-center w-full">
+      {/* Conteneur principal (rehaussé au centre optique du halo) */}
+      <div className="relative z-10 flex flex-col items-center w-full -translate-y-8 sm:-translate-y-12">
         {/* Titre & Sous-titre en superposition de grille (zéro layout shift) */}
         <div className="grid grid-cols-1 grid-rows-1 place-items-center mb-8 max-w-lg text-center select-none">
           {/* État Mode Créer */}
