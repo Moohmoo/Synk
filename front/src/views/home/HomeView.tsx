@@ -183,7 +183,11 @@ export function HomeView() {
       : t("home.join");
 
   return (
-    <div className="relative flex-1 flex flex-col items-center justify-center w-full max-w-full px-6 md:px-12 py-10">
+    <div className="relative flex-1 flex flex-col items-center justify-center w-full max-w-full px-4 sm:px-6 md:px-12 py-10">
+      {/* 
+        POURQUOI px-4 sm:px-6 md:px-12 : Libère 16px d'espace horizontal sur smartphone 
+        pour loger confortablement le badge et l'omnibox sans débordement.
+      */}
       {/* Conteneur principal (rehaussé au centre optique du halo) */}
       <div className="relative z-10 flex flex-col items-center w-full -translate-y-8 sm:-translate-y-12">
         {/* Titre & Sous-titre en superposition de grille (zéro layout shift) */}
@@ -196,7 +200,8 @@ export function HomeView() {
                 : "opacity-0 scale-95 pointer-events-none"
             }`}
           >
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-b from-white via-zinc-100 to-zinc-400">
+            {/* POURQUOI text-2xl sm:text-4xl : Évite une rupture sur 3 lignes comprimées sur les écrans étroits (< 375px) */}
+            <h1 className="text-2xl sm:text-4xl md:text-5xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-b from-white via-zinc-100 to-zinc-400">
               {t("home.createTitle")}
             </h1>
             <p className="text-xs sm:text-sm font-mono text-zinc-500 mt-2">
@@ -212,7 +217,7 @@ export function HomeView() {
                 : "opacity-0 scale-95 pointer-events-none"
             }`}
           >
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-b from-white via-zinc-100 to-zinc-400">
+            <h1 className="text-2xl sm:text-4xl md:text-5xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-b from-white via-zinc-100 to-zinc-400">
               {t("home.joinTitle")}
             </h1>
             <p className="text-xs sm:text-sm font-mono text-zinc-500 mt-2">

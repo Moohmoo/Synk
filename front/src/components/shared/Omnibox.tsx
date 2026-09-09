@@ -64,10 +64,10 @@ export const Omnibox = forwardRef<HTMLInputElement, OmniboxProps>(
       <div className={cn("w-full max-w-xl flex flex-col items-center", className)}>
         <form
           onSubmit={onSubmit}
-          className="w-full bg-[#141417] border border-white/10 rounded-xl p-1.5 flex items-center shadow-xl transition-all"
+          className="w-full bg-[#141417] border border-white/10 rounded-xl p-1.5 flex items-center shadow-xl transition-all overflow-hidden"
         >
           {badge && (
-            <div className="flex items-center gap-1.5 bg-[#27272a] text-[#0ac8b9] border border-[#0ac8b9]/25 px-2.5 py-1 rounded-lg text-xs font-mono font-semibold shrink-0 ml-1">
+            <div className="flex items-center gap-1.5 bg-[#27272a] text-[#0ac8b9] border border-[#0ac8b9]/25 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md sm:rounded-lg text-[11px] sm:text-xs font-mono font-semibold shrink-0 ml-0.5 sm:ml-1">
               <span>{badge.text}</span>
               {badge.onRemove && (
                 <button
@@ -82,6 +82,11 @@ export const Omnibox = forwardRef<HTMLInputElement, OmniboxProps>(
             </div>
           )}
 
+          {/* 
+            POURQUOI min-w-0 : En CSS Flexbox, un élément a 'min-width: auto' par défaut, 
+            ce qui empêche le champ de rétrécir au-delà de son contenu et provoque des débordements
+            quand le badge est affiché sur écran mobile (< 375px). min-w-0 garantit une contraction fluide.
+          */}
           <input
             ref={ref}
             type="text"
@@ -89,15 +94,21 @@ export const Omnibox = forwardRef<HTMLInputElement, OmniboxProps>(
             onChange={onChange}
             onKeyDown={onKeyDown}
             placeholder={placeholder || defaultPlaceholder}
-            className="flex-1 min-w-[100px] w-full bg-transparent border-none outline-none px-3 text-sm font-medium text-zinc-100 placeholder-zinc-600"
+            className="flex-1 min-w-0 w-full bg-transparent border-none outline-none px-2 sm:px-3 text-xs sm:text-sm font-medium text-zinc-100 placeholder-zinc-600"
             autoFocus={autoFocus}
             maxLength={maxLength}
             disabled={isLoading || disabled}
           />
+
+          {/* 
+            POURQUOI min-w-[76px] sm:w-[130px] : Évite d'occuper plus d'un tiers de l'écran utile 
+            sur smartphone avec un bouton rigide de 130px, tout en préservant le format canonique 
+            large sur grand écran.
+          */}
           <button
             type="submit"
             disabled={isLoading || disabled}
-            className={`w-[130px] flex-shrink-0 flex items-center justify-center py-1.5 rounded-lg text-xs font-semibold tracking-wide transition-all duration-300 ease-in-out ${
+            className={`flex-shrink-0 px-3 sm:px-4 py-1.5 min-w-[76px] sm:w-[130px] flex items-center justify-center rounded-lg text-xs font-semibold tracking-wide transition-all duration-300 ease-in-out ${
               isCreate
                 ? "bg-[#ff4655] text-white hover:bg-[#ff4655]/90"
                 : "bg-[#0ac8b9] text-[#09090b] hover:bg-[#0ac8b9]/90"
