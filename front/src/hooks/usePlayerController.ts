@@ -1,9 +1,15 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { PlayerState } from "@/types/room";
+import { PlaybackStatus } from "@/types/player";
 import { calculateReferenceTime } from "@/lib/utils";
-import { DESYNC_THRESHOLD_SECONDS } from "@/lib/constants";
+import {
+  DESYNC_THRESHOLD_SECONDS,
+  END_THRESHOLD_SECONDS,
+  DOM_SYNC_DRIFT_THRESHOLD_SECONDS,
+} from "@/lib/constants";
 
-export type PlaybackStatus = "idle" | "playing" | "paused" | "ended" | "buffering" | "error";
+// Ré-export pour rétrocompatibilité et co-localisation
+export type { PlaybackStatus };
 
 export interface UsePlayerControllerOptions {
   player: PlayerState;
@@ -54,10 +60,21 @@ export interface PlayerController {
     onDurationChange: () => void;
     onEnded: () => void;
     onError: () => void;
+    onSeeked?: () => void;
   };
 }
 
-function resolveMediaUrl(player: PlayerState): string {
+/**
+ * Détermine si une position temporelle est considérée comme la fin de lecture du média.
+ */
+function isNearEnd(time: number, duration: number): boolean {
+  return duration > 0 && time >= duration - END_THRESHOLD_SECONDS;
+}
+
+/**
+ * Résout l'URL complète d'un média à partir de son identifiant et de son fournisseur.
+ */
+export function resolveMediaUrl(player: PlayerState): string {
   if (player.media_url) return player.media_url;
   if (!player.media_id) return "";
   const provider = player.provider || "youtube";
@@ -81,20 +98,33 @@ export function usePlayerController({
 }: UsePlayerControllerOptions): PlayerController {
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // États locaux de lecture
-  const [currentTime, setCurrentTime] = useState<number>(0);
-  const [mediaElementDuration, setMediaElementDuration] = useState<number>(0);
-  const [scrubbingTime, setScrubbingTime] = useState<number | null>(null);
-  const [isLocallyEnded, setIsLocallyEnded] = useState<boolean>(false);
-  const [needsAutoplayUnlock, setNeedsAutoplayUnlock] = useState<boolean>(false);
-  const [hasError, setHasError] = useState<boolean>(false);
-
-  const lastHandledUpdateRef = useRef<number>(player.last_updated_at);
-
+  // Source média résolue
   const mediaUrl = useMemo(
     () => resolveMediaUrl(player),
     [player.media_url, player.media_id, player.provider]
   );
+
+  // États locaux de lecture
+  const [currentTime, setCurrentTime] = useState<number>(0);
+  const [mediaElementDuration, setMediaElementDuration] = useState<number>(0);
+  const [scrubbingTime, setScrubbingTime] = useState<number | null>(null);
+  const [hasError, setHasError] = useState<boolean>(false);
+  const [needsAutoplayUnlock, setNeedsAutoplayUnlock] = useState<boolean>(false);
+
+  // Réinitialisation synchrone pendant le render lors d'un changement d'URL
+  // (Pattern React recommandé évitant les cascades de re-renders dues à un useEffect)
+  const [prevMediaUrl, setPrevMediaUrl] = useState<string>(mediaUrl);
+  if (mediaUrl !== prevMediaUrl) {
+    setPrevMediaUrl(mediaUrl);
+    setCurrentTime(0);
+    setMediaElementDuration(0);
+    setScrubbingTime(null);
+    setHasError(false);
+    setNeedsAutoplayUnlock(false);
+  }
+
+  const lastHandledUpdateRef = useRef<number>(player.last_updated_at);
+  const pendingSeekRef = useRef<number | null>(null);
 
   // Durée unifiée (priorité au serveur, repli sur la durée détectée par l'élément vidéo)
   const duration = player.duration && player.duration > 0 ? player.duration : mediaElementDuration;
@@ -104,23 +134,27 @@ export function usePlayerController({
 
   // Position théorique du salon
   const roomTime = calculateReferenceTime({ ...player, duration });
-  const isRoomAtEnd = duration > 0 && roomTime >= duration - 0.5;
 
-  // Machine d'état unifiée : un seul statut exclusif
+  // Machine d'état unifiée : statut dérivé sans état booléen redondant
   const status: PlaybackStatus = useMemo(() => {
     if (!mediaUrl) return "idle";
     if (hasError) return "error";
-    if (isLocallyEnded || (duration > 0 && currentTime >= duration - 0.5)) return "ended";
+    if (
+      isNearEnd(currentTime, duration) ||
+      (!player.is_playing && isNearEnd(player.current_time, duration))
+    ) {
+      return "ended";
+    }
     if (player.is_playing) return "playing";
     return "paused";
-  }, [mediaUrl, hasError, isLocallyEnded, duration, currentTime, player.is_playing]);
+  }, [mediaUrl, hasError, currentTime, duration, player.is_playing, player.current_time]);
 
-  // Détection de désynchronisation : en retard de plus de 3s par rapport au salon
+  // Détection de retard (Bouton Rattraper)
   const isBehind =
     player.is_playing &&
     duration > 0 &&
     status !== "ended" &&
-    !isRoomAtEnd &&
+    !isNearEnd(roomTime, duration) &&
     scrubbingTime === null &&
     roomTime - currentTime > DESYNC_THRESHOLD_SECONDS;
 
@@ -136,37 +170,35 @@ export function usePlayerController({
     !player.media_id ||
     Boolean(isRateLimited?.("SEEK"));
 
-  // Réinitialisation lors du changement d'URL
-  useEffect(() => {
-    setHasError(false);
-    setNeedsAutoplayUnlock(false);
-    setIsLocallyEnded(false);
-    setCurrentTime(0);
-    setMediaElementDuration(0);
-    setScrubbingTime(null);
-  }, [mediaUrl]);
+  // Helper factorisé pour mettre en pause le salon de façon sécurisée
+  const pauseIfPlaying = useCallback(
+    (atTime: number) => {
+      if (player.is_playing && !isRestrictedForGuest && !isRateLimited?.("PAUSE")) {
+        sendPause(atTime, duration);
+      }
+    },
+    [player.is_playing, isRestrictedForGuest, isRateLimited, sendPause, duration]
+  );
 
-  // Synchronisation temporelle avec les ordres du salon (PLAY, PAUSE, SEEK, ROLLBACK)
+  // Synchronisation temporelle impérative avec les ordres du salon (DOM uniquement)
   useEffect(() => {
     if (lastHandledUpdateRef.current === player.last_updated_at) return;
     lastHandledUpdateRef.current = player.last_updated_at;
 
-    const target = calculateReferenceTime({ ...player, duration });
-    const isAtEnd = duration > 0 && target >= duration - 0.5;
-
-    setIsLocallyEnded(isAtEnd);
+    const target = roomTime;
     setScrubbingTime(null);
     setCurrentTime(target);
 
     if (videoRef.current) {
       const local = videoRef.current.currentTime || 0;
-      if (Math.abs(local - target) > 0.5) {
+      if (Math.abs(local - target) > DOM_SYNC_DRIFT_THRESHOLD_SECONDS) {
+        pendingSeekRef.current = target;
         videoRef.current.currentTime = target;
       }
     }
-  }, [player.last_updated_at, player.current_time, player.is_playing, duration]);
+  }, [player.last_updated_at, roomTime]);
 
-  // Commandes explicites
+  // Commandes explicites de l'utilisateur
   const play = useCallback(() => {
     if (isPlayDisabled) return;
     sendPlay(currentTime, duration, false);
@@ -179,12 +211,12 @@ export function usePlayerController({
 
   const replay = useCallback(() => {
     if (isPlayDisabled) return;
+    pendingSeekRef.current = 0;
     if (videoRef.current) {
       videoRef.current.currentTime = 0;
     }
     setScrubbingTime(null);
     setCurrentTime(0);
-    setIsLocallyEnded(false);
     sendPlay(0, duration, true);
   }, [isPlayDisabled, sendPlay, duration]);
 
@@ -204,40 +236,32 @@ export function usePlayerController({
       if (isSeekDisabled) return;
       const clamped =
         duration > 0 ? Math.min(Math.max(0, targetTime), duration) : Math.max(0, targetTime);
-      const isAtEnd = duration > 0 && clamped >= duration - 0.5;
+      const atEnd = isNearEnd(clamped, duration);
 
+      pendingSeekRef.current = clamped;
       if (videoRef.current) {
         videoRef.current.currentTime = clamped;
       }
       setCurrentTime(clamped);
 
-      if (isAtEnd) {
-        setIsLocallyEnded(true);
-        if (player.is_playing && !isRestrictedForGuest && !isRateLimited?.("PAUSE")) {
-          sendPause(clamped, duration);
-        } else {
-          sendSeek(clamped, duration);
-        }
+      if (atEnd && player.is_playing) {
+        pauseIfPlaying(clamped);
       } else {
-        setIsLocallyEnded(false);
         sendSeek(clamped, duration);
       }
     },
-    [isSeekDisabled, duration, player.is_playing, isRestrictedForGuest, isRateLimited, sendPause, sendSeek]
+    [isSeekDisabled, duration, player.is_playing, pauseIfPlaying, sendSeek]
   );
 
   const catchUp = useCallback(() => {
     const safeTarget =
-      duration > 0 ? Math.min(roomTime, Math.max(0, duration - 0.5)) : roomTime;
+      duration > 0 ? Math.min(roomTime, Math.max(0, duration - END_THRESHOLD_SECONDS)) : roomTime;
     seek(safeTarget);
   }, [duration, roomTime, seek]);
 
-  const scrub = useCallback(
-    (time: number | null) => {
-      setScrubbingTime(time);
-    },
-    []
-  );
+  const scrub = useCallback((time: number | null) => {
+    setScrubbingTime(time);
+  }, []);
 
   const unlockAutoplay = useCallback(() => {
     if (videoRef.current) {
@@ -250,19 +274,26 @@ export function usePlayerController({
 
   // Callbacks DOM pour ReactPlayer
   const onTimeUpdate = useCallback(() => {
-    if (!videoRef.current || isLocallyEnded) return;
+    if (!videoRef.current) return;
     const cur = videoRef.current.currentTime;
-    if (duration > 0 && cur >= duration - 0.5) {
-      setIsLocallyEnded(true);
-      setCurrentTime(duration);
-      if (player.is_playing && !isRestrictedForGuest && !isRateLimited?.("PAUSE")) {
-        sendPause(duration, duration);
+
+    // Ignore les frames résiduelles tant que le saut asynchrone n'a pas convergé
+    if (pendingSeekRef.current !== null) {
+      if (Math.abs(cur - pendingSeekRef.current) > 1.0) return;
+      pendingSeekRef.current = null;
+    }
+
+    if (isNearEnd(cur, duration)) {
+      if (currentTime !== duration) {
+        setCurrentTime(duration);
+        pauseIfPlaying(duration);
       }
       return;
     }
+    // Évite le saut à 0 lorsque le lecteur boucle ou bufferise en toute fin
     if (cur === 0 && duration > 2 && currentTime >= duration - 1) return;
     setCurrentTime(cur);
-  }, [isLocallyEnded, duration, currentTime, player.is_playing, isRestrictedForGuest, isRateLimited, sendPause]);
+  }, [duration, currentTime, pauseIfPlaying]);
 
   const onDurationChange = useCallback(() => {
     if (videoRef.current?.duration) {
@@ -271,13 +302,15 @@ export function usePlayerController({
   }, []);
 
   const onEnded = useCallback(() => {
-    setIsLocallyEnded(true);
+    pendingSeekRef.current = null;
     const finalTime = duration > 0 ? duration : (videoRef.current?.duration || 0);
     setCurrentTime(finalTime);
-    if (player.is_playing && !isRestrictedForGuest && !isRateLimited?.("PAUSE")) {
-      sendPause(finalTime, duration);
-    }
-  }, [duration, player.is_playing, isRestrictedForGuest, isRateLimited, sendPause]);
+    pauseIfPlaying(finalTime);
+  }, [duration, pauseIfPlaying]);
+
+  const onSeeked = useCallback(() => {
+    pendingSeekRef.current = null;
+  }, []);
 
   const onError = useCallback(() => {
     if (player.is_playing) {
@@ -311,6 +344,7 @@ export function usePlayerController({
       onDurationChange,
       onEnded,
       onError,
+      onSeeked,
     },
   };
 }

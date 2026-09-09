@@ -19,6 +19,8 @@
     "waitingTitle": "EN ATTENTE D'UN FLUX MÉDIA",
     "waitingSubtitle": "Collez un lien média ci-dessus pour lancer la session synchronisée.",
     "unsupportedProvider": "La plateforme \"{{provider}}\" n'est pas encore prise en charge.",
+    "errorTitle": "Impossible de charger ce média.",
+    "errorDescription": "Le flux est restreint par son propriétaire ou l'URL fournie n'est pas accessible.",
     "syncOverlayTitle": "LECTURE EN COURS DANS LE SALON",
     "syncOverlaySubtitle": "Cliquez pour synchroniser et activer le son"
   },
