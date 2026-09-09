@@ -11,6 +11,7 @@ import { useUIStore } from "@/stores/uiStore";
 import { MediaPlayer } from "./components/MediaPlayer";
 import { PlayerControls } from "./components/PlayerControls";
 import { RoomSessionInfo } from "./components/RoomSessionInfo";
+import { useRoomPlayer } from "./hooks/useRoomPlayer";
 
 export function RoomView() {
   const { roomId = "" } = useParams<{ roomId: string }>();
@@ -32,9 +33,7 @@ export function RoomView() {
 
   const [isInitializing, setIsInitializing] = useState(true);
   const [roomNotFound, setRoomNotFound] = useState(false);
-  const [currentTime, setCurrentTime] = useState<number>(0);
-  const [localDuration, setLocalDuration] = useState<number>(0);
-  const [mediaUrl, setMediaUrl] = useState("");
+  const [mediaUrlInput, setMediaUrlInput] = useState("");
 
   // Effet 1 : Vérification d'existence du salon côté serveur (HTTP) & Glow
   useEffect(() => {
@@ -81,8 +80,16 @@ export function RoomView() {
     userId,
   });
 
-  // Durée dérivée : valeur calculée directement à l'affichage, aucun useEffect miroir
-  const mediaDuration = player.duration && player.duration > 0 ? player.duration : localDuration;
+  // Contrôleur unifié du lecteur multimédia (temps, lecture, rattrapage, durée)
+  const playerController = useRoomPlayer({
+    player,
+    isHost,
+    isLocked: roomSettings.is_locked,
+    isRateLimited,
+    sendPlay,
+    sendPause,
+    sendSeek,
+  });
 
   // Contrôles locaux du lecteur (Volume local & Plein écran)
   const [volume, setVolume] = useState<number>(() => {
@@ -92,7 +99,6 @@ export function RoomView() {
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const cinemaContainerRef = useRef<HTMLDivElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
 
   const handleVolumeChange = (newVolume: number) => {
     setVolume(newVolume);
@@ -131,7 +137,7 @@ export function RoomView() {
 
   const handleLoadMedia = (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanUrl = mediaUrl.trim();
+    const cleanUrl = mediaUrlInput.trim();
     if (!cleanUrl) return;
     if (isLockedForGuest || isRateLimited("CHANGE_MEDIA")) {
       if (isLockedForGuest) {
@@ -142,37 +148,7 @@ export function RoomView() {
       return;
     }
     changeMedia(cleanUrl);
-    setMediaUrl("");
-    setLocalDuration(0);
-    setCurrentTime(0);
-  };
-
-  const handleTogglePlay = (time?: number) => {
-    if (isLockedForGuest || isRateLimited("PLAY") || isRateLimited("PAUSE")) {
-      if (isLockedForGuest) {
-        toast.warning(t("controls.hostOnly", { defaultValue: "CONTRÔLES HÔTE EXCLUSIFS" }), {
-          id: "room-lock-host-only",
-        });
-      }
-      return;
-    }
-    const pos = typeof time === "number" ? time : currentTime;
-    const isAtEnd = mediaDuration > 0 && pos >= mediaDuration - 0.5;
-
-    if (isAtEnd) {
-      if (videoRef.current) {
-        videoRef.current.currentTime = 0;
-      }
-      setCurrentTime(0);
-      sendPlay(0, mediaDuration);
-      return;
-    }
-
-    if (player.is_playing) {
-      sendPause(pos, mediaDuration);
-    } else {
-      sendPlay(pos, mediaDuration);
-    }
+    setMediaUrlInput("");
   };
 
   if (roomNotFound) {
@@ -223,8 +199,8 @@ export function RoomView() {
       <div className="flex-1 flex flex-col items-center justify-center min-w-0 w-full">
         {/* LA BARRE DE COMMANDE (URL) : Omnibox réutilisée au-dessus du lecteur */}
         <Omnibox
-          value={mediaUrl}
-          onChange={(e) => setMediaUrl(e.target.value)}
+          value={mediaUrlInput}
+          onChange={(e) => setMediaUrlInput(e.target.value)}
           onSubmit={handleLoadMedia}
           mode="join"
           placeholder={t("header.urlPlaceholder")}
@@ -245,51 +221,22 @@ export function RoomView() {
         >
           {/* LE LECTEUR MULTIMÉDIA : Conteneur Cinéma Universel */}
           <MediaPlayer
-            playerRef={videoRef}
-            player={player}
-            roomSettings={roomSettings}
-            isHost={isHost}
+            controller={playerController}
             volume={volume}
             isMuted={isMuted}
             isFullscreen={isFullscreen}
-            isRateLimited={isRateLimited}
-            onProgress={setCurrentTime}
-            onDurationChange={setLocalDuration}
-            onEnded={() => {
-              const finalTime = mediaDuration > 0 ? mediaDuration : (videoRef.current?.duration || 0);
-              if (finalTime > 0) {
-                setCurrentTime(finalTime);
-              }
-              if (player.is_playing && !isLockedForGuest && !isRateLimited("PAUSE")) {
-                sendPause(finalTime, mediaDuration);
-              }
-            }}
-            onTogglePlay={() => handleTogglePlay()}
             onToggleFullscreen={toggleFullscreen}
           />
 
           {/* Barre de Contrôle du Lecteur & Verrou d'hôte */}
           <PlayerControls
-            player={player}
+            controller={playerController}
             roomSettings={roomSettings}
             isHost={isHost}
-            currentTime={currentTime}
-            duration={mediaDuration}
             volume={volume}
             isMuted={isMuted}
             isFullscreen={isFullscreen}
-            isRateLimited={isRateLimited}
-            onTogglePlay={() => handleTogglePlay()}
-            onSeek={(time) => {
-              if (isLockedForGuest || isRateLimited("SEEK")) {
-                return;
-              }
-              if (videoRef.current) {
-                videoRef.current.currentTime = time;
-              }
-              setCurrentTime(time);
-              sendSeek(time, mediaDuration);
-            }}
+            isLockDisabled={!isHost || Boolean(isRateLimited("UPDATE_SETTINGS"))}
             onToggleLock={() => {
               if (!isHost || isRateLimited("UPDATE_SETTINGS")) return;
               updateSettings(!roomSettings.is_locked);
