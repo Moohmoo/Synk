@@ -215,15 +215,20 @@ export function RoomView() {
     );
   }
 
+  {/*
+    Dropzone d'accueil (en attente d'un média) :
+    Optimisée avec des marges et icônes compactes sur mobile (< 640px), garantissant
+    que l'Omnibox et les badges de compatibilité respirent sans déborder de l'écran.
+  */}
   const emptyDropzone = (
-    <div className="flex flex-col items-center w-full max-w-xl px-4 select-none">
-      <div className="w-12 h-12 rounded-xl bg-zinc-900/80 border border-white/10 flex items-center justify-center mb-4 shadow-inner">
-        <Tv className="w-6 h-6 text-[#0ac8b9]" />
+    <div className="flex flex-col items-center w-full max-w-xl px-3 sm:px-4 select-none">
+      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-zinc-900/80 border border-white/10 flex items-center justify-center mb-2 sm:mb-4 shadow-inner">
+        <Tv className="w-5 h-5 sm:w-6 sm:h-6 text-[#0ac8b9]" />
       </div>
       <h2 className="text-xs sm:text-sm font-mono font-bold tracking-widest uppercase text-zinc-300 mb-1">
         {t("player.waitingTitle")}
       </h2>
-      <p className="text-[11px] font-mono text-zinc-500 mb-6 text-center">
+      <p className="text-[10px] sm:text-[11px] font-mono text-zinc-500 mb-3 sm:mb-6 text-center">
         {t("player.waitingSubtitle")}
       </p>
 
@@ -240,7 +245,7 @@ export function RoomView() {
         autoFocus
       />
 
-      <div className="flex flex-wrap items-center justify-center gap-2 mt-5 text-[10px] font-mono text-zinc-500 uppercase tracking-wider">
+      <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 mt-3 sm:mt-5 text-[9px] sm:text-[10px] font-mono text-zinc-500 uppercase tracking-wider">
         <span className="px-2 py-0.5 rounded bg-zinc-900/60 border border-white/5">YouTube</span>
         <span className="px-2 py-0.5 rounded bg-zinc-900/60 border border-white/5">Twitch</span>
         <span className="px-2 py-0.5 rounded bg-zinc-900/60 border border-white/5">Vimeo</span>
@@ -346,9 +351,13 @@ export function RoomView() {
         </div>
       </div>
 
-      {/* Palette de commande (Modale) pour changer de média en cours de session */}
+      {/* 
+        Palette de commande (Modale) pour changer de média en cours de session :
+        Largeur adaptative avec gouttière de sécurité sur mobile (w-[calc(100%-2rem)])
+        pour éviter le contact bord à bord sur écran étroit.
+      */}
       <Dialog open={isChangeMediaOpen} onOpenChange={setIsChangeMediaOpen}>
-        <DialogContent className="sm:max-w-xl bg-[#141417]/95 border-white/10 backdrop-blur-xl p-6">
+        <DialogContent className="w-[calc(100%-2rem)] sm:max-w-xl bg-[#141417]/95 border-white/10 backdrop-blur-xl p-4 sm:p-6 rounded-xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-sm font-mono tracking-wider text-white">
               <Link2 className="w-4 h-4 text-[#0ac8b9]" />

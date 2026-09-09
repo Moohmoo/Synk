@@ -66,7 +66,7 @@ export function PlayerControls({
   const isAtEnd = status === "ended";
 
   return (
-    <div className="w-full max-w-4xl bg-[#141417]/90 backdrop-blur-md border border-white/10 rounded-xl p-3.5 sm:p-4 flex flex-col gap-3 select-none mt-3 shadow-lg relative z-10">
+    <div className="w-full max-w-4xl bg-[#141417]/90 backdrop-blur-md border border-white/10 rounded-xl p-2.5 sm:p-4 flex flex-col gap-2.5 sm:gap-3 select-none mt-3 shadow-lg relative z-10">
       {/* Barre de défilement (Timeline) */}
       <div className="w-full flex items-center gap-3">
         <span className="text-xs font-mono text-zinc-400 min-w-10">
@@ -91,7 +91,7 @@ export function PlayerControls({
 
       {/* Barre d'actions */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           {/* Lecture / Pause / Replay unifié */}
           <Button
             variant={isAtEnd ? "teal" : status === "playing" ? "secondary" : "teal"}
@@ -110,8 +110,13 @@ export function PlayerControls({
 
           <div className="h-5 w-px bg-white/5" />
 
-          {/* Réglage du Volume */}
-          <div className="flex items-center gap-2 px-2.5 py-1 bg-black/40 border border-white/5 text-xs font-mono rounded-lg">
+          {/* 
+            Réglage du Volume :
+            Sur mobile, le slider horizontal encombre la barre d'action alors que le volume
+            est ajusté matériellement par les boutons physiques de l'appareil. On masque donc
+            le slider pour ne conserver qu'un bouton toggle mute/unmute tactile et direct.
+          */}
+          <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-2.5 py-1 bg-black/40 border border-white/5 text-xs font-mono rounded-lg">
             <button
               type="button"
               onClick={onToggleMute}
@@ -124,7 +129,7 @@ export function PlayerControls({
                 <Volume2 className="w-3.5 h-3.5 text-zinc-300" />
               )}
             </button>
-            <div className="w-16 sm:w-20">
+            <div className="hidden sm:block w-16 sm:w-20">
               <Slider
                 value={[isMuted ? 0 : volume]}
                 max={100}
@@ -135,36 +140,36 @@ export function PlayerControls({
                 }}
               />
             </div>
-            <span className="min-w-[28px] text-[11px] text-zinc-400 select-none">
+            <span className="hidden sm:inline min-w-[28px] text-[11px] text-zinc-400 select-none">
               {isMuted ? "0%" : `${volume}%`}
             </span>
           </div>
 
-          {/* Bouton Rattraper (visible uniquement si retard > 3s) */}
+          {/* Bouton Rattraper : icône seule sur mobile pour éviter de déborder si retard > 3s */}
           {isBehind && (
             <Button
               variant="outline"
               size="sm"
               disabled={isSeekDisabled}
               onClick={catchUp}
-              className="text-[#0ac8b9] border-[#0ac8b9]/40 hover:bg-[#0ac8b9]/10 gap-1.5 h-8 px-2.5 text-xs font-mono transition-all animate-in fade-in duration-150 cursor-pointer"
+              className="text-[#0ac8b9] border-[#0ac8b9]/40 hover:bg-[#0ac8b9]/10 gap-1.5 h-8 px-2 sm:px-2.5 text-xs font-mono transition-all animate-in fade-in duration-150 cursor-pointer"
               title={t("controls.catchUp")}
             >
               <Zap className="w-3.5 h-3.5 fill-current" />
-              <span>{t("controls.catchUp")}</span>
+              <span className="hidden sm:inline">{t("controls.catchUp")}</span>
             </Button>
           )}
         </div>
 
         {/* Côté Droit : Changement de média, Verrou d'hôte & Plein écran */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           {onChangeMedia && (
             <Button
               variant="secondary"
               size="sm"
               disabled={isChangeMediaDisabled}
               onClick={onChangeMedia}
-              className="gap-1.5 h-8 px-2.5 text-xs text-zinc-300 hover:text-white"
+              className="gap-1.5 h-8 px-2 sm:px-2.5 text-xs text-zinc-300 hover:text-white"
               title={`${t("controls.changeMedia")} (⌘K)`}
             >
               <Link2 className="w-3.5 h-3.5 text-[#0ac8b9]" />
@@ -175,20 +180,30 @@ export function PlayerControls({
             </Button>
           )}
 
+          {/* 
+            Bouton de verrouillage du salon (Hôte) :
+            Sur mobile, le texte complet ("Salon déverrouillé" ~160px) est masqué pour n'afficher que l'icône,
+            évitant tout débordement horizontal tout en conservant le tooltip 'title' pour l'accessibilité.
+          */}
           {isHost ? (
             <Button
               variant={roomSettings.is_locked ? "destructive" : "secondary"}
               size="sm"
               disabled={isLockDisabled}
               onClick={onToggleLock}
-              className="gap-1.5"
+              className="gap-1.5 h-8 px-2.5 sm:px-3 text-xs"
+              title={
+                roomSettings.is_locked
+                  ? t("controls.roomLocked")
+                  : t("controls.roomUnlocked")
+              }
             >
               {roomSettings.is_locked ? (
                 <Lock className="w-3.5 h-3.5" />
               ) : (
                 <Unlock className="w-3.5 h-3.5" />
               )}
-              <span>
+              <span className="hidden sm:inline">
                 {roomSettings.is_locked
                   ? t("controls.roomLocked")
                   : t("controls.roomUnlocked")}
@@ -196,9 +211,12 @@ export function PlayerControls({
             </Button>
           ) : (
             roomSettings.is_locked && (
-              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-black/40 border border-white/5 text-[11px] font-sans tracking-wider text-amber-400 uppercase">
+              <div
+                className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1 bg-black/40 border border-white/5 text-[11px] font-sans tracking-wider text-amber-400 uppercase rounded-md"
+                title={t("controls.hostOnly")}
+              >
                 <Lock className="w-3 h-3" />
-                <span>{t("controls.hostOnly")}</span>
+                <span className="hidden sm:inline">{t("controls.hostOnly")}</span>
               </div>
             )
           )}
