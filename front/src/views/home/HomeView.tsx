@@ -183,11 +183,46 @@ export function HomeView() {
       : t("home.join");
 
   return (
-    <div className="relative flex flex-col items-center justify-center h-full pt-10 pb-32 w-full max-w-full px-6 md:px-12">
-      {/* Conteneur principal */}
-      <div className="relative z-10 flex flex-col items-center w-full">
+    <div className="relative flex-1 flex flex-col items-center justify-center w-full max-w-full px-6 md:px-12 py-10">
+      {/* Conteneur principal (rehaussé au centre optique du halo) */}
+      <div className="relative z-10 flex flex-col items-center w-full -translate-y-8 sm:-translate-y-12">
+        {/* Titre & Sous-titre en superposition de grille (zéro layout shift) */}
+        <div className="grid grid-cols-1 grid-rows-1 place-items-center mb-8 max-w-lg text-center select-none">
+          {/* État Mode Créer */}
+          <div
+            className={`col-start-1 row-start-1 flex flex-col items-center transition-all duration-300 ease-out ${
+              mode === "create"
+                ? "opacity-100 scale-100"
+                : "opacity-0 scale-95 pointer-events-none"
+            }`}
+          >
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-b from-white via-zinc-100 to-zinc-400">
+              {t("home.createTitle")}
+            </h1>
+            <p className="text-xs sm:text-sm font-mono text-zinc-500 mt-2">
+              {t("home.createSubtitle")}
+            </p>
+          </div>
+
+          {/* État Mode Rejoindre */}
+          <div
+            className={`col-start-1 row-start-1 flex flex-col items-center transition-all duration-300 ease-out ${
+              mode === "join"
+                ? "opacity-100 scale-100"
+                : "opacity-0 scale-95 pointer-events-none"
+            }`}
+          >
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-b from-white via-zinc-100 to-zinc-400">
+              {t("home.joinTitle")}
+            </h1>
+            <p className="text-xs sm:text-sm font-mono text-zinc-500 mt-2">
+              {t("home.joinSubtitle")}
+            </p>
+          </div>
+        </div>
+
         {/* Le sélecteur de mode (Créer / Rejoindre) */}
-        <div className="relative flex p-1 mb-6 bg-[#18181b] rounded-md border border-white/5 mx-auto">
+        <div className="relative flex p-1 mb-8 bg-[#18181b] rounded-md border border-white/5 mx-auto select-none">
           <div
             className={`absolute top-1 bottom-1 left-1 w-[120px] bg-[#27272a] rounded shadow-sm transition-transform duration-300 ease-out ${
               mode === "create" ? "translate-x-0" : "translate-x-[120px]"
@@ -197,7 +232,7 @@ export function HomeView() {
           <button
             type="button"
             onClick={() => handleSwitchMode("create")}
-            className={`relative z-10 w-[120px] text-center px-3 py-1 text-xs font-medium transition-colors duration-300 ${
+            className={`relative z-10 w-[120px] text-center px-3 py-1.5 text-xs font-medium transition-colors duration-300 ${
               mode === "create" ? "text-white" : "text-zinc-500 hover:text-zinc-300"
             }`}
           >
@@ -207,7 +242,7 @@ export function HomeView() {
           <button
             type="button"
             onClick={() => handleSwitchMode("join")}
-            className={`relative z-10 w-[120px] text-center px-3 py-1 text-xs font-medium transition-colors duration-300 ${
+            className={`relative z-10 w-[120px] text-center px-3 py-1.5 text-xs font-medium transition-colors duration-300 ${
               mode === "join" ? "text-white" : "text-zinc-500 hover:text-zinc-300"
             }`}
           >

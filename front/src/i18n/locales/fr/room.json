@@ -13,11 +13,13 @@
     "urlPlaceholder": "Coller un lien média (ex: https://...)",
     "load": "CHARGER",
     "invite": "INVITER",
-    "linkCopied": "LIEN COPIÉ !"
+    "linkCopied": "LIEN COPIÉ !",
+    "changeMediaTitle": "CHANGER DE MÉDIA",
+    "changeMediaSubtitle": "Collez le lien d'une vidéo (YouTube, Twitch, flux direct...) pour synchroniser la lecture."
   },
   "player": {
     "waitingTitle": "EN ATTENTE D'UN FLUX MÉDIA",
-    "waitingSubtitle": "Collez un lien média ci-dessus pour lancer la session synchronisée.",
+    "waitingSubtitle": "Collez un lien média ci-dessous pour lancer la session synchronisée.",
     "unsupportedProvider": "La plateforme \"{{provider}}\" n'est pas encore prise en charge.",
     "errorTitle": "Impossible de charger ce média.",
     "errorDescription": "Le flux est restreint par son propriétaire ou l'URL fournie n'est pas accessible.",
@@ -35,7 +37,8 @@
     "unmute": "Activer le son",
     "fullscreen": "Plein écran",
     "exitFullscreen": "Quitter le plein écran",
-    "catchUp": "Rattraper"
+    "catchUp": "Rattraper",
+    "changeMedia": "Changer de média"
   },
   "sidebar": {
     "info": "INFORMATIONS",

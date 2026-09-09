@@ -13,11 +13,13 @@
     "urlPlaceholder": "Paste a media link (e.g. https://...)",
     "load": "LOAD",
     "invite": "INVITE",
-    "linkCopied": "LINK COPIED!"
+    "linkCopied": "LINK COPIED!",
+    "changeMediaTitle": "CHANGE MEDIA",
+    "changeMediaSubtitle": "Paste a media link (YouTube, Twitch, direct stream...) to synchronize playback."
   },
   "player": {
     "waitingTitle": "WAITING FOR A MEDIA STREAM",
-    "waitingSubtitle": "Paste a media link above to start synchronized playback.",
+    "waitingSubtitle": "Paste a media link below to start synchronized playback.",
     "unsupportedProvider": "Platform \"{{provider}}\" is not currently supported.",
     "errorTitle": "Unable to load this media.",
     "errorDescription": "The stream is restricted by its owner or the provided URL is inaccessible.",
@@ -35,7 +37,8 @@
     "unmute": "Unmute audio",
     "fullscreen": "Fullscreen",
     "exitFullscreen": "Exit fullscreen",
-    "catchUp": "Catch up"
+    "catchUp": "Catch up",
+    "changeMedia": "Change media"
   },
   "sidebar": {
     "info": "INFORMATION",

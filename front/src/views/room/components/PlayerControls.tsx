@@ -9,6 +9,7 @@ import {
   Maximize,
   Minimize,
   Zap,
+  Link2,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -25,7 +26,9 @@ interface PlayerControlsProps {
   isMuted?: boolean;
   isFullscreen?: boolean;
   isLockDisabled?: boolean;
+  isChangeMediaDisabled?: boolean;
   onToggleLock: () => void;
+  onChangeMedia?: () => void;
   onVolumeChange?: (volume: number) => void;
   onToggleMute?: () => void;
   onToggleFullscreen?: () => void;
@@ -39,7 +42,9 @@ export function PlayerControls({
   isMuted = false,
   isFullscreen = false,
   isLockDisabled = false,
+  isChangeMediaDisabled = false,
   onToggleLock,
+  onChangeMedia,
   onVolumeChange,
   onToggleMute,
   onToggleFullscreen,
@@ -151,8 +156,25 @@ export function PlayerControls({
           )}
         </div>
 
-        {/* Côté Droit : Verrou d'hôte & Plein écran */}
+        {/* Côté Droit : Changement de média, Verrou d'hôte & Plein écran */}
         <div className="flex items-center gap-2">
+          {onChangeMedia && (
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={isChangeMediaDisabled}
+              onClick={onChangeMedia}
+              className="gap-1.5 h-8 px-2.5 text-xs text-zinc-300 hover:text-white"
+              title={`${t("controls.changeMedia")} (⌘K)`}
+            >
+              <Link2 className="w-3.5 h-3.5 text-[#0ac8b9]" />
+              <span className="hidden sm:inline">{t("controls.changeMedia")}</span>
+              <kbd className="hidden md:inline-block px-1 py-0.5 bg-black/40 border border-white/10 rounded text-[9px] font-mono text-zinc-400">
+                ⌘K
+              </kbd>
+            </Button>
+          )}
+
           {isHost ? (
             <Button
               variant={roomSettings.is_locked ? "destructive" : "secondary"}
