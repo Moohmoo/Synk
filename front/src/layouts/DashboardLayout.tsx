@@ -1,6 +1,6 @@
 import { Outlet } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
-import { Sidebar } from "@/components/Sidebar";
+import { LeftSidebar } from "@/components/LeftSidebar";
 import { RightSidebar } from "@/components/RightSidebar";
 import { AmbientGlow } from "@/components/shared";
 import { useUIStore } from "@/stores/uiStore";
@@ -18,8 +18,8 @@ export function DashboardLayout() {
 
       {/* Conteneur principal des 3 colonnes avec marges fluides */}
       <div className="flex-1 w-full max-w-[1400px] mx-auto px-4 lg:px-0 flex flex-row overflow-hidden min-h-0 relative z-10">
-        {/* Colonne de Gauche (Navigation) */}
-        <Sidebar />
+        {/* Colonne de Gauche (Navigation principale) */}
+        <LeftSidebar />
 
         {/* Zone centrale (Main Content) - fond transparent pour laisser transparaître le glow */}
         <main className="flex-1 min-w-0 overflow-y-auto p-4 sm:p-6 md:p-8 flex flex-col relative z-10">

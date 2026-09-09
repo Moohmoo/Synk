@@ -4,11 +4,15 @@ import { useTranslation } from "react-i18next";
 
 import { cn } from "@/lib/utils";
 
-export interface SidebarProps {
+export interface LeftSidebarProps {
   className?: string;
 }
 
-export function Sidebar({ className }: SidebarProps = {}) {
+/**
+ * Barre latérale gauche de navigation principale.
+ * Affiche les onglets de navigation globale (Accueil, Récents, Paramètres).
+ */
+export function LeftSidebar({ className }: LeftSidebarProps = {}) {
   const location = useLocation();
   const { t } = useTranslation("global");
 
@@ -70,4 +74,4 @@ export function Sidebar({ className }: SidebarProps = {}) {
   );
 }
 
-export default Sidebar;
+export default LeftSidebar;
