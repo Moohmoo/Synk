@@ -153,6 +153,10 @@ export function useSyncRoom({
     socket.on("connect", () => {
       setIsConnected(true);
       setError(null);
+      socket.emit("HEARTBEAT", {
+        client_sent_at: Date.now(),
+        ping_ms: myPingRef.current,
+      });
     });
 
     socket.on("disconnect", () => {
