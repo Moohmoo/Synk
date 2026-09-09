@@ -152,6 +152,7 @@ export function usePlayerController({
     lastHandledUpdateRef.current = player.last_updated_at;
 
     setIsLocallyEnded(false);
+    setScrubbingTime(null);
 
     const target = calculateReferenceTime({ ...player, duration });
     setCurrentTime(target);
@@ -180,6 +181,7 @@ export function usePlayerController({
     if (videoRef.current) {
       videoRef.current.currentTime = 0;
     }
+    setScrubbingTime(null);
     setCurrentTime(0);
     setIsLocallyEnded(false);
     sendPlay(0, duration, true);
@@ -197,6 +199,7 @@ export function usePlayerController({
 
   const seek = useCallback(
     (targetTime: number) => {
+      setScrubbingTime(null);
       if (isSeekDisabled) return;
       const clamped =
         duration > 0 ? Math.min(Math.max(0, targetTime), duration) : Math.max(0, targetTime);
@@ -234,10 +237,10 @@ export function usePlayerController({
 
   // Callbacks DOM pour ReactPlayer
   const onTimeUpdate = useCallback(() => {
-    if (!videoRef.current || isLocallyEnded || scrubbingTime !== null) return;
+    if (!videoRef.current || isLocallyEnded) return;
     const cur = videoRef.current.currentTime;
     setCurrentTime(cur);
-  }, [isLocallyEnded, scrubbingTime]);
+  }, [isLocallyEnded]);
 
   const onDurationChange = useCallback(() => {
     if (videoRef.current?.duration) {
