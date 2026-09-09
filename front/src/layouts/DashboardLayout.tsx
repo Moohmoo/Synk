@@ -22,7 +22,7 @@ export function DashboardLayout() {
         <LeftSidebar />
 
         {/* Zone centrale (Main Content) - fond transparent pour laisser transparaître le glow */}
-        <main className="flex-1 min-w-0 overflow-y-auto p-4 sm:p-6 md:p-8 flex flex-col relative z-10">
+        <main className="flex-1 min-w-0 overflow-y-auto p-4 sm:p-6 md:p-8 flex flex-col justify-start relative z-10">
           <Outlet />
         </main>
 

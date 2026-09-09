@@ -183,7 +183,7 @@ export function HomeView() {
       : t("home.join");
 
   return (
-    <div className="relative flex flex-col items-center justify-center h-full pt-10 pb-32 w-full max-w-full px-6 md:px-12">
+    <div className="relative flex flex-col items-center justify-start w-full max-w-full px-6 md:px-12 pt-12 sm:pt-16 md:pt-20">
       {/* Conteneur principal */}
       <div className="relative z-10 flex flex-col items-center w-full">
         {/* Le sélecteur de mode (Créer / Rejoindre) */}

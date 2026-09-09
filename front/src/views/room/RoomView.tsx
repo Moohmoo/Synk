@@ -196,7 +196,7 @@ export function RoomView() {
         />
       </RightSidebarSlot>
 
-      <div className="flex-1 flex flex-col items-center justify-center min-w-0 w-full">
+      <div className="flex-1 flex flex-col items-center justify-start min-w-0 w-full">
         {/* LA BARRE DE COMMANDE (URL) : Omnibox réutilisée au-dessus du lecteur */}
         <Omnibox
           value={mediaUrlInput}
