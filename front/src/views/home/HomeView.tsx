@@ -183,42 +183,70 @@ export function HomeView() {
       : t("home.join");
 
   return (
-    <div className="relative flex flex-col items-center justify-start w-full max-w-full px-6 md:px-12 pt-8 sm:pt-12 md:pt-16">
+    <div className="relative flex-1 flex flex-col items-center justify-center w-full max-w-full px-6 md:px-12 py-10">
       {/* Conteneur principal */}
       <div className="relative z-10 flex flex-col items-center w-full">
-        {/* Titre & Sous-titre contextuels et dynamiques */}
-        <div className="text-center mb-6 max-w-lg transition-all duration-300">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-b from-white via-zinc-100 to-zinc-400">
-            {mode === "create" ? t("home.createTitle") : t("home.joinTitle")}
-          </h1>
-          <p className="text-xs sm:text-sm font-mono text-zinc-500 mt-2">
-            {mode === "create" ? t("home.createSubtitle") : t("home.joinSubtitle")}
-          </p>
+        {/* Titre & Sous-titre en superposition de grille (zéro layout shift) */}
+        <div className="grid grid-cols-1 grid-rows-1 place-items-center mb-8 max-w-lg text-center select-none">
+          {/* État Mode Créer */}
+          <div
+            className={`col-start-1 row-start-1 flex flex-col items-center transition-all duration-300 ease-out ${
+              mode === "create"
+                ? "opacity-100 scale-100"
+                : "opacity-0 scale-95 pointer-events-none"
+            }`}
+          >
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-b from-white via-zinc-100 to-zinc-400">
+              {t("home.createTitle")}
+            </h1>
+            <p className="text-xs sm:text-sm font-mono text-zinc-500 mt-2">
+              {t("home.createSubtitle")}
+            </p>
+          </div>
+
+          {/* État Mode Rejoindre */}
+          <div
+            className={`col-start-1 row-start-1 flex flex-col items-center transition-all duration-300 ease-out ${
+              mode === "join"
+                ? "opacity-100 scale-100"
+                : "opacity-0 scale-95 pointer-events-none"
+            }`}
+          >
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-b from-white via-zinc-100 to-zinc-400">
+              {t("home.joinTitle")}
+            </h1>
+            <p className="text-xs sm:text-sm font-mono text-zinc-500 mt-2">
+              {t("home.joinSubtitle")}
+            </p>
+          </div>
         </div>
 
-        {/* Le sélecteur de mode (Créer / Rejoindre) */}
-        <div className="relative flex p-1 mb-6 bg-[#18181b] rounded-md border border-white/5 mx-auto">
-          <div
-            className={`absolute top-1 bottom-1 left-1 w-[120px] bg-[#27272a] rounded shadow-sm transition-transform duration-300 ease-out ${
-              mode === "create" ? "translate-x-0" : "translate-x-[120px]"
-            }`}
-          />
-
+        {/* Le sélecteur de mode : deux gouttes connectées par un pont rectangulaire */}
+        <div className="relative flex items-center mb-8 mx-auto select-none">
+          {/* Goutte Gauche (Créer) */}
           <button
             type="button"
             onClick={() => handleSwitchMode("create")}
-            className={`relative z-10 w-[120px] text-center px-3 py-1 text-xs font-medium transition-colors duration-300 ${
-              mode === "create" ? "text-white" : "text-zinc-500 hover:text-zinc-300"
+            className={`relative z-10 px-5 py-2 rounded-full text-xs font-semibold tracking-wide transition-all duration-300 border ${
+              mode === "create"
+                ? "bg-[#27272a] text-white border-white/15 shadow-lg shadow-red-500/10"
+                : "bg-[#18181b] text-zinc-500 border-white/5 hover:text-zinc-300"
             }`}
           >
             {t("home.createTab")}
           </button>
 
+          {/* Pont rectangulaire reliant les deux gouttes */}
+          <div className="w-5 h-2.5 bg-[#18181b] border-y border-white/5 -mx-1.5 z-0" />
+
+          {/* Goutte Droite (Rejoindre) */}
           <button
             type="button"
             onClick={() => handleSwitchMode("join")}
-            className={`relative z-10 w-[120px] text-center px-3 py-1 text-xs font-medium transition-colors duration-300 ${
-              mode === "join" ? "text-white" : "text-zinc-500 hover:text-zinc-300"
+            className={`relative z-10 px-5 py-2 rounded-full text-xs font-semibold tracking-wide transition-all duration-300 border ${
+              mode === "join"
+                ? "bg-[#27272a] text-white border-white/15 shadow-lg shadow-cyan-500/10"
+                : "bg-[#18181b] text-zinc-500 border-white/5 hover:text-zinc-300"
             }`}
           >
             {t("home.joinTab")}

@@ -15,9 +15,9 @@
     "disconnected": "DÉCONNECTÉ"
   },
   "home": {
-    "createTitle": "Lancer une session.",
+    "createTitle": "Lancer une session",
     "createSubtitle": "Créez un salon instantané et synchronisez vos vidéos en temps réel.",
-    "joinTitle": "Rejoindre l'équipe.",
+    "joinTitle": "Rejoindre l'équipe",
     "joinSubtitle": "Entrez le code du salon pour vous synchroniser.",
     "createTab": "Créer un salon",
     "joinTab": "Rejoindre",
