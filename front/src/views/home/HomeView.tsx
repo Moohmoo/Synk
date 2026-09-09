@@ -221,21 +221,18 @@ export function HomeView() {
           </div>
         </div>
 
-        {/* Le sélecteur de mode : Capsule avec pilule à effet ressort élastique (Spring) */}
-        <div className="relative inline-flex items-center p-1 mb-8 bg-[#141417] rounded-full border border-white/10 mx-auto select-none shadow-inner">
-          {/* Pilule coulissante active (physique de goutte d'eau / ressort) */}
+        {/* Le sélecteur de mode (Créer / Rejoindre) */}
+        <div className="relative flex p-1 mb-8 bg-[#18181b] rounded-md border border-white/5 mx-auto select-none">
           <div
-            className={`absolute top-1 bottom-1 left-1 w-[130px] rounded-full bg-[#27272a] border border-white/15 shadow-md transition-all duration-500 [transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)] ${
-              mode === "create"
-                ? "translate-x-0 shadow-red-500/15"
-                : "translate-x-[130px] shadow-cyan-500/15"
+            className={`absolute top-1 bottom-1 left-1 w-[120px] bg-[#27272a] rounded shadow-sm transition-transform duration-300 ease-out ${
+              mode === "create" ? "translate-x-0" : "translate-x-[120px]"
             }`}
           />
 
           <button
             type="button"
             onClick={() => handleSwitchMode("create")}
-            className={`relative z-10 w-[130px] text-center px-4 py-2 rounded-full text-xs font-semibold tracking-wide transition-colors duration-300 ${
+            className={`relative z-10 w-[120px] text-center px-3 py-1.5 text-xs font-medium transition-colors duration-300 ${
               mode === "create" ? "text-white" : "text-zinc-500 hover:text-zinc-300"
             }`}
           >
@@ -245,7 +242,7 @@ export function HomeView() {
           <button
             type="button"
             onClick={() => handleSwitchMode("join")}
-            className={`relative z-10 w-[130px] text-center px-4 py-2 rounded-full text-xs font-semibold tracking-wide transition-colors duration-300 ${
+            className={`relative z-10 w-[120px] text-center px-3 py-1.5 text-xs font-medium transition-colors duration-300 ${
               mode === "join" ? "text-white" : "text-zinc-500 hover:text-zinc-300"
             }`}
           >
