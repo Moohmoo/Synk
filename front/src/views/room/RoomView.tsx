@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useParams, useNavigate, Navigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Tv, Link2, Users } from "lucide-react";
@@ -33,6 +33,8 @@ export function RoomView() {
   const navigate = useNavigate();
   const { t } = useTranslation(["room", "global"]);
   const setGlowColor = useUIStore((s) => s.setGlowColor);
+  const isFullscreen = useUIStore((s) => s.isFullscreen);
+  const setIsFullscreen = useUIStore((s) => s.setIsFullscreen);
 
   // Vérification synchrone de la session locale en mémoire
   const session = useMemo(() => (roomId ? sessionManager.getRoomSession(roomId) : null), [roomId]);
@@ -71,8 +73,9 @@ export function RoomView() {
 
     return () => {
       setGlowColor("cyan");
+      setIsFullscreen(false);
     };
-  }, [roomId, setGlowColor]);
+  }, [roomId, setGlowColor, setIsFullscreen]);
 
   // Synchronisation temps réel via WebSocket
   const {
@@ -114,7 +117,6 @@ export function RoomView() {
     return saved !== null ? Number(saved) : 100;
   });
   const [isMuted, setIsMuted] = useState<boolean>(false);
-  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const cinemaContainerRef = useRef<HTMLDivElement>(null);
 
   const handleVolumeChange = (newVolume: number) => {
@@ -131,23 +133,120 @@ export function RoomView() {
     }
   };
 
-  // Effet 2 : Écouteur natif de bascule plein écran du navigateur
+  // Gestion de la visibilité des commandes en plein écran (Auto-Hide après 3s d'inactivité)
+  const [areControlsVisible, setAreControlsVisible] = useState<boolean>(true);
+  const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Réinitialise le minuteur d'auto-hide des contrôles
+  const resetControlsTimeout = useCallback(() => {
+    setAreControlsVisible(true);
+    if (controlsTimeoutRef.current) {
+      clearTimeout(controlsTimeoutRef.current);
+    }
+    // Si la vidéo est en cours de lecture, on masque les contrôles après 3s d'inactivité
+    if (playerController.status === "playing") {
+      controlsTimeoutRef.current = setTimeout(() => {
+        setAreControlsVisible(false);
+      }, 3000);
+    }
+  }, [playerController.status]);
+
+  // Si l'état de lecture change (ex: mise en pause), on réaffiche immédiatement les contrôles
   useEffect(() => {
-    const onFullscreenChange = () => {
-      setIsFullscreen(Boolean(document.fullscreenElement));
+    if (playerController.status !== "playing") {
+      setAreControlsVisible(true);
+      if (controlsTimeoutRef.current) {
+        clearTimeout(controlsTimeoutRef.current);
+      }
+    } else if (isFullscreen) {
+      resetControlsTimeout();
+    }
+  }, [playerController.status, isFullscreen, resetControlsTimeout]);
+
+  // Nettoyage du timer d'inactivité au démontage
+  useEffect(() => {
+    return () => {
+      if (controlsTimeoutRef.current) {
+        clearTimeout(controlsTimeoutRef.current);
+      }
     };
-    document.addEventListener("fullscreenchange", onFullscreenChange);
-    return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
   }, []);
 
-  const toggleFullscreen = () => {
-    if (!cinemaContainerRef.current) return;
-    if (!document.fullscreenElement) {
-      cinemaContainerRef.current.requestFullscreen().catch(() => {});
+  // Écouteur des événements de bascule plein écran natif (W3C standard & préfixes WebKit pour Safari)
+  useEffect(() => {
+    const handleNativeFullscreenChange = () => {
+      const doc = document as Document & {
+        webkitFullscreenElement?: Element;
+      };
+      const isNative = Boolean(doc.fullscreenElement || doc.webkitFullscreenElement);
+      setIsFullscreen(isNative);
+      if (!isNative) {
+        setAreControlsVisible(true);
+      }
+    };
+
+    document.addEventListener("fullscreenchange", handleNativeFullscreenChange);
+    document.addEventListener("webkitfullscreenchange", handleNativeFullscreenChange);
+
+    // Permet de quitter le mode plein écran In-Window CSS avec la touche Échap
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isFullscreen) {
+        setIsFullscreen(false);
+        setAreControlsVisible(true);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("fullscreenchange", handleNativeFullscreenChange);
+      document.removeEventListener("webkitfullscreenchange", handleNativeFullscreenChange);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isFullscreen]);
+
+  // Bascule universelle plein écran :
+  // - Safari iOS (iPhone) : ne supporte pas Element.requestFullscreen() sur les <div> -> repli gracieux In-Window CSS.
+  // - Desktop & Android : API Fullscreen native avec support des préfixes WebKit pour anciens navigateurs.
+  const toggleFullscreen = useCallback(() => {
+    const container = cinemaContainerRef.current;
+    if (!container) return;
+
+    const doc = document as Document & {
+      webkitFullscreenElement?: Element;
+      webkitExitFullscreen?: () => Promise<void>;
+    };
+    const isNativeActive = Boolean(doc.fullscreenElement || doc.webkitFullscreenElement);
+
+    if (isFullscreen || isNativeActive) {
+      if (isNativeActive) {
+        const exit = doc.exitFullscreen || doc.webkitExitFullscreen;
+        exit?.call(doc).catch(() => {});
+      }
+      setIsFullscreen(false);
+      setAreControlsVisible(true);
     } else {
-      document.exitFullscreen().catch(() => {});
+      const req =
+        container.requestFullscreen ||
+        (container as unknown as { webkitRequestFullscreen?: () => Promise<void> })
+          .webkitRequestFullscreen;
+
+      if (typeof req === "function") {
+        req
+          .call(container)
+          .then(() => {
+            setIsFullscreen(true);
+          })
+          .catch(() => {
+            // Repli direct sur In-Window CSS si l'API est rejetée ou non autorisée
+            setIsFullscreen(true);
+          });
+      } else {
+        // iPhone Safari : repli immédiat In-Window CSS
+        setIsFullscreen(true);
+      }
+      resetControlsTimeout();
     }
-  };
+  }, [isFullscreen, resetControlsTimeout]);
 
   const effectiveUserId = currentUserId || userId;
   const isLockedForGuest = roomSettings.is_locked && !isHost;
@@ -313,9 +412,15 @@ export function RoomView() {
         {/* ESPACE CINÉMA UNIFIÉ : Lecteur & Barre de Contrôle */}
         <div
           ref={cinemaContainerRef}
+          onMouseMove={isFullscreen ? resetControlsTimeout : undefined}
+          onTouchStart={isFullscreen ? resetControlsTimeout : undefined}
           className={
             isFullscreen
-              ? "fixed inset-0 z-50 bg-[#0a0a0c] flex flex-col items-center justify-center p-4 sm:p-6 w-full h-full"
+              ? `w-full h-full bg-black flex items-center justify-center relative overflow-hidden select-none ${
+                  !areControlsVisible && playerController.status === "playing"
+                    ? "cursor-none"
+                    : "cursor-default"
+                }`
               : "w-full max-w-4xl flex flex-col items-center"
           }
         >
@@ -329,25 +434,50 @@ export function RoomView() {
             emptySlot={emptyDropzone}
           />
 
-          {/* Barre de Contrôle du Lecteur & Verrou d'hôte */}
-          <PlayerControls
-            controller={playerController}
-            roomSettings={roomSettings}
-            isHost={isHost}
-            volume={volume}
-            isMuted={isMuted}
-            isFullscreen={isFullscreen}
-            isLockDisabled={!isHost || Boolean(isRateLimited("UPDATE_SETTINGS"))}
-            isChangeMediaDisabled={isLockedForGuest || Boolean(isRateLimited("CHANGE_MEDIA"))}
-            onChangeMedia={() => setIsChangeMediaOpen(true)}
-            onToggleLock={() => {
-              if (!isHost || isRateLimited("UPDATE_SETTINGS")) return;
-              updateSettings(!roomSettings.is_locked);
-            }}
-            onVolumeChange={handleVolumeChange}
-            onToggleMute={handleToggleMute}
-            onToggleFullscreen={toggleFullscreen}
-          />
+          {/* Dégradé immersif en bas d'écran (Plein écran uniquement) pour la lisibilité des contrôles */}
+          {isFullscreen && (
+            <div
+              className={`absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none transition-opacity duration-300 z-20 ${
+                areControlsVisible ? "opacity-100" : "opacity-0"
+              }`}
+            />
+          )}
+
+          {/* 
+            Barre de Contrôle du Lecteur & Verrou d'hôte :
+            - En mode normal : disposée directement sous le lecteur.
+            - En mode plein écran : superposition flottante (overlay) avec auto-hide après 3s d'inactivité.
+          */}
+          <div
+            className={
+              isFullscreen
+                ? `absolute bottom-3 sm:bottom-5 left-1/2 -translate-x-1/2 w-[calc(100%-1.5rem)] sm:w-[calc(100%-2rem)] max-w-4xl z-30 transition-all duration-300 ${
+                    areControlsVisible
+                      ? "opacity-100 translate-y-0 pointer-events-auto"
+                      : "opacity-0 translate-y-4 pointer-events-none"
+                  }`
+                : "w-full flex justify-center"
+            }
+          >
+            <PlayerControls
+              controller={playerController}
+              roomSettings={roomSettings}
+              isHost={isHost}
+              volume={volume}
+              isMuted={isMuted}
+              isFullscreen={isFullscreen}
+              isLockDisabled={!isHost || Boolean(isRateLimited("UPDATE_SETTINGS"))}
+              isChangeMediaDisabled={isLockedForGuest || Boolean(isRateLimited("CHANGE_MEDIA"))}
+              onChangeMedia={() => setIsChangeMediaOpen(true)}
+              onToggleLock={() => {
+                if (!isHost || isRateLimited("UPDATE_SETTINGS")) return;
+                updateSettings(!roomSettings.is_locked);
+              }}
+              onVolumeChange={handleVolumeChange}
+              onToggleMute={handleToggleMute}
+              onToggleFullscreen={toggleFullscreen}
+            />
+          </div>
         </div>
       </div>
 

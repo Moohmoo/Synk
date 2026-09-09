@@ -269,8 +269,26 @@ export function usePlayerController({
         .play()
         .then(() => setNeedsAutoplayUnlock(false))
         .catch(() => {});
+    } else {
+      setNeedsAutoplayUnlock(false);
     }
   }, []);
+
+  // Détection proactive du blocage d'autoplay sonore par les navigateurs (Safari / Chrome) :
+  // Lorsqu'un utilisateur rejoint un salon en cours de lecture, le navigateur peut rejeter
+  // la promesse play() avec 'NotAllowedError'. On lève alors l'overlay de déblocage sonore.
+  useEffect(() => {
+    if (player.is_playing && videoRef.current) {
+      const playPromise = videoRef.current.play?.();
+      if (playPromise !== undefined && typeof playPromise.catch === "function") {
+        playPromise.catch((err: unknown) => {
+          if (err instanceof Error && (err.name === "NotAllowedError" || err.name === "AbortError")) {
+            setNeedsAutoplayUnlock(true);
+          }
+        });
+      }
+    }
+  }, [player.is_playing, mediaUrl]);
 
   // Callbacks DOM pour ReactPlayer
   const onTimeUpdate = useCallback(() => {
