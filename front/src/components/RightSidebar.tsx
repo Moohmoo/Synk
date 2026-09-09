@@ -10,7 +10,7 @@ export function RightSidebar({ children, className }: RightSidebarProps) {
   return (
     <aside
       className={cn(
-        "w-72 hidden xl:flex flex-col bg-transparent p-6 shrink-0 select-none h-full text-zinc-400 justify-between relative z-20",
+        "w-64 hidden xl:flex flex-col bg-transparent p-4 shrink-0 select-none h-full text-zinc-400 justify-between relative z-20",
         className
       )}
     >

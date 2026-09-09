@@ -4,15 +4,16 @@ import { useTranslation } from "react-i18next";
 
 import { cn } from "@/lib/utils";
 
-export interface LeftSidebarProps {
+export interface LeftNavContentProps {
+  onItemClick?: () => void;
   className?: string;
 }
 
 /**
- * Barre latérale gauche de navigation principale.
- * Affiche les onglets de navigation globale (Accueil, Récents, Paramètres).
+ * Contenu pur de la navigation principale.
+ * Réutilisable sans duplication dans la barre latérale desktop et le tiroir mobile.
  */
-export function LeftSidebar({ className }: LeftSidebarProps = {}) {
+export function LeftNavContent({ onItemClick, className }: LeftNavContentProps) {
   const location = useLocation();
   const { t } = useTranslation("global");
 
@@ -38,20 +39,21 @@ export function LeftSidebar({ className }: LeftSidebarProps = {}) {
   ];
 
   return (
-    <aside className={cn("hidden md:flex w-60 flex-col bg-transparent p-4 shrink-0 select-none h-full relative z-20", className)}>
+    <div className={cn("flex flex-col select-none", className)}>
       {/* Section Header */}
       <div className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 mb-3 px-3">
         {t("nav.section")}
       </div>
 
       {/* Navigation List */}
-      <nav className="flex-1 space-y-1.5 mt-1">
+      <nav className="space-y-1.5 mt-1">
         {navItems.map((item) => {
           const Icon = item.icon;
           return (
             <Link
               key={item.path}
               to={item.path}
+              onClick={onItemClick}
               className={`group flex items-center gap-3 px-3.5 py-2.5 text-sm font-medium tracking-wide border-l-[3px] transition-all duration-200 ${
                 item.isActive
                   ? "text-white bg-gradient-to-r from-[#0ac8b9]/20 to-transparent border-[#0ac8b9]"
@@ -70,8 +72,30 @@ export function LeftSidebar({ className }: LeftSidebarProps = {}) {
           );
         })}
       </nav>
+    </div>
+  );
+}
+
+export interface LeftSidebarProps {
+  className?: string;
+}
+
+/**
+ * Barre latérale gauche de navigation principale.
+ * Affichée uniquement sur grand écran (xl: >= 1280px) pour préserver la symétrie.
+ */
+export function LeftSidebar({ className }: LeftSidebarProps = {}) {
+  return (
+    <aside
+      className={cn(
+        "hidden xl:flex w-64 flex-col bg-transparent p-4 shrink-0 select-none h-full relative z-20",
+        className
+      )}
+    >
+      <LeftNavContent />
     </aside>
   );
 }
 
 export default LeftSidebar;
+

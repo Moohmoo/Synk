@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useNavigate, Navigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Tv, Link2 } from "lucide-react";
+import { Tv, Link2, Users } from "lucide-react";
 import { Omnibox } from "@/components/shared";
 import {
   Dialog,
@@ -10,6 +10,13 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { RightSidebarSlot } from "@/components/RightSidebarSlot";
 import { roomApi } from "@/services/roomApi";
 import { sessionManager } from "@/lib/session";
@@ -43,6 +50,7 @@ export function RoomView() {
   const [roomNotFound, setRoomNotFound] = useState(false);
   const [mediaUrlInput, setMediaUrlInput] = useState("");
   const [isChangeMediaOpen, setIsChangeMediaOpen] = useState(false);
+  const [isMobileInfoOpen, setIsMobileInfoOpen] = useState(false);
 
   // Effet 1 : Vérification d'existence du salon côté serveur (HTTP) & Glow
   useEffect(() => {
@@ -255,6 +263,48 @@ export function RoomView() {
       </RightSidebarSlot>
 
       <div className="flex-1 flex flex-col items-center justify-start min-w-0 w-full">
+        {/* Accès rapide aux informations du salon (Mobile & Tablette < 1280px) */}
+        {!isFullscreen && (
+          <div className="xl:hidden w-full max-w-4xl flex items-center justify-end mb-2.5">
+            <Sheet open={isMobileInfoOpen} onOpenChange={setIsMobileInfoOpen}>
+              <SheetTrigger asChild>
+                <button
+                  type="button"
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#141417]/90 border border-white/10 text-xs font-mono hover:bg-[#27272a] hover:border-white/20 transition-all cursor-pointer shadow-sm"
+                  aria-label={t("sidebar.info")}
+                >
+                  <div
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      isConnected
+                        ? "bg-[#0ac8b9] shadow-[0_0_6px_#0ac8b9] animate-pulse"
+                        : "bg-zinc-600"
+                    }`}
+                  />
+                  <span className="text-[#0ac8b9] font-bold">#{roomId}</span>
+                  <span className="text-zinc-600">|</span>
+                  <span className="text-zinc-300 flex items-center gap-1.5">
+                    <Users className="w-3.5 h-3.5 text-zinc-400" />
+                    <span>{participants.length}</span>
+                  </span>
+                </button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-80 p-6 overflow-y-auto">
+                <SheetHeader className="mb-4">
+                  <SheetTitle>{t("sidebar.info")}</SheetTitle>
+                </SheetHeader>
+                <RoomSessionInfo
+                  roomId={roomId}
+                  isConnected={isConnected}
+                  ping={myPing}
+                  participants={participants}
+                  currentUsername={currentUsername}
+                  currentUserId={effectiveUserId}
+                />
+              </SheetContent>
+            </Sheet>
+          </div>
+        )}
+
         {/* ESPACE CINÉMA UNIFIÉ : Lecteur & Barre de Contrôle */}
         <div
           ref={cinemaContainerRef}
