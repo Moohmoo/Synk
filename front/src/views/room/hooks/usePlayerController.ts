@@ -153,14 +153,16 @@ export function usePlayerController({
 
     setIsLocallyEnded(false);
 
-    if (!videoRef.current) return;
-    const local = videoRef.current.currentTime || 0;
-    const target = calculateReferenceTime(player);
-    if (Math.abs(local - target) > 0.5) {
-      videoRef.current.currentTime = target;
-      setCurrentTime(target);
+    const target = calculateReferenceTime({ ...player, duration });
+    setCurrentTime(target);
+
+    if (videoRef.current) {
+      const local = videoRef.current.currentTime || 0;
+      if (Math.abs(local - target) > 0.5) {
+        videoRef.current.currentTime = target;
+      }
     }
-  }, [player.last_updated_at, player.current_time, player.is_playing]);
+  }, [player.last_updated_at, player.current_time, player.is_playing, duration]);
 
   // Commandes explicites
   const play = useCallback(() => {
