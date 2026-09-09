@@ -36,11 +36,20 @@ export function MediaPlayer({
     playerProps,
   } = controller;
 
+  // Conteneur Cinéma Universel :
+  // - En état de lecture : aspect-video strict garanti (16:9 cinématographique sans distorsion).
+  // - En état d'attente (idle) : sur mobile (< 640px), un ratio rigide 16:9 comprimerait excessivement
+  //   le contenu d'accueil (titre, Omnibox, badges) dans ~190px de haut. On applique donc min-h-[260px]
+  //   avec padding vertical pour laisser respirer l'accueil, tout en restaurant aspect-video dès 'sm:'.
   return (
     <div
       className={`w-full ${
         isFullscreen ? "flex-1 max-h-[calc(100vh-140px)]" : "max-w-4xl"
-      } aspect-video bg-[#0a0a0c] rounded-2xl border border-white/10 shadow-2xl shadow-black/80 relative z-10 flex items-center justify-center overflow-hidden`}
+      } ${
+        status === "idle"
+          ? "min-h-[260px] sm:aspect-video py-6 sm:py-0"
+          : "aspect-video"
+      } bg-[#0a0a0c] rounded-2xl border border-white/10 shadow-2xl shadow-black/80 relative z-10 flex items-center justify-center overflow-hidden`}
     >
       {status === "idle" ? (
         emptySlot ?? (

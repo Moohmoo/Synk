@@ -1,12 +1,23 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Menu } from "lucide-react";
 import { Logo } from "@/components/Logo";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { LeftNavContent } from "@/components/LeftSidebar";
 
 export interface NavbarProps {
   className?: string;
 }
 
 export function Navbar({ className = "" }: NavbarProps) {
-  const { i18n } = useTranslation("global");
+  const { t, i18n } = useTranslation("global");
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const currentLang = i18n.language?.startsWith("en") ? "en" : "fr";
 
   const changeLanguage = (lang: string) => {
@@ -16,9 +27,31 @@ export function Navbar({ className = "" }: NavbarProps) {
 
   return (
     <header className={`w-full h-16 flex-shrink-0 z-10 bg-[#18181b] border-b border-white/10 select-none ${className}`}>
-      <div className="w-full max-w-[1400px] mx-auto h-full flex items-center justify-between px-6">
-        {/* Logo SYNK à gauche */}
-        <Logo />
+      <div className="w-full max-w-[1400px] mx-auto h-full flex items-center justify-between px-4 sm:px-6">
+        {/* Section gauche : Menu mobile (< xl) + Logo */}
+        <div className="flex items-center gap-3">
+          <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+            <SheetTrigger asChild>
+              <button
+                type="button"
+                className="xl:hidden p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/5 transition-colors border border-white/5 cursor-pointer"
+                aria-label={t("nav.openMenu", { defaultValue: "Ouvrir le menu de navigation" })}
+              >
+                <Menu className="w-5 h-5" />
+              </button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-72 p-4 pt-6">
+              <SheetHeader className="mb-6 px-2">
+                <SheetTitle>
+                  <Logo />
+                </SheetTitle>
+              </SheetHeader>
+              <LeftNavContent onItemClick={() => setMobileNavOpen(false)} />
+            </SheetContent>
+          </Sheet>
+
+          <Logo />
+        </div>
 
         {/* Section droite : Toggle de langue FR / EN */}
         <div className="flex items-center p-1 bg-black/40 border border-white/10 rounded text-xs font-mono">
