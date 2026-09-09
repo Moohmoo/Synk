@@ -11,7 +11,7 @@ import { useUIStore } from "@/stores/uiStore";
 import { MediaPlayer } from "./components/MediaPlayer";
 import { PlayerControls } from "./components/PlayerControls";
 import { RoomSessionInfo } from "./components/RoomSessionInfo";
-import { usePlayerController } from "./hooks/usePlayerController";
+import { usePlayerController } from "@/hooks/usePlayerController";
 
 export function RoomView() {
   const { roomId = "" } = useParams<{ roomId: string }>();

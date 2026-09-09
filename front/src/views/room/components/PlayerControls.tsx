@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { RoomSettings } from "@/types/room";
 import { formatTime } from "@/lib/utils";
-import { PlayerController } from "../hooks/usePlayerController";
+import { PlayerController } from "@/hooks/usePlayerController";
 
 interface PlayerControlsProps {
   controller: PlayerController;

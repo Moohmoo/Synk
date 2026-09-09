@@ -1,6 +1,6 @@
 import ReactPlayer from "react-player";
 import { useTranslation } from "react-i18next";
-import { PlayerController } from "../hooks/usePlayerController";
+import { PlayerController } from "@/hooks/usePlayerController";
 import { Tv, AlertCircle, Play } from "lucide-react";
 
 interface MediaPlayerProps {
