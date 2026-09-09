@@ -60,6 +60,7 @@ export interface PlayerController {
     onDurationChange: () => void;
     onEnded: () => void;
     onError: () => void;
+    onSeeked?: () => void;
   };
 }
 
@@ -123,6 +124,7 @@ export function usePlayerController({
   }
 
   const lastHandledUpdateRef = useRef<number>(player.last_updated_at);
+  const pendingSeekRef = useRef<number | null>(null);
 
   // Durée unifiée (priorité au serveur, repli sur la durée détectée par l'élément vidéo)
   const duration = player.duration && player.duration > 0 ? player.duration : mediaElementDuration;
@@ -137,10 +139,15 @@ export function usePlayerController({
   const status: PlaybackStatus = useMemo(() => {
     if (!mediaUrl) return "idle";
     if (hasError) return "error";
-    if (isNearEnd(currentTime, duration)) return "ended";
+    if (
+      isNearEnd(currentTime, duration) ||
+      (!player.is_playing && isNearEnd(player.current_time, duration))
+    ) {
+      return "ended";
+    }
     if (player.is_playing) return "playing";
     return "paused";
-  }, [mediaUrl, hasError, currentTime, duration, player.is_playing]);
+  }, [mediaUrl, hasError, currentTime, duration, player.is_playing, player.current_time]);
 
   // Détection de retard (Bouton Rattraper)
   const isBehind =
@@ -185,6 +192,7 @@ export function usePlayerController({
     if (videoRef.current) {
       const local = videoRef.current.currentTime || 0;
       if (Math.abs(local - target) > DOM_SYNC_DRIFT_THRESHOLD_SECONDS) {
+        pendingSeekRef.current = target;
         videoRef.current.currentTime = target;
       }
     }
@@ -203,6 +211,7 @@ export function usePlayerController({
 
   const replay = useCallback(() => {
     if (isPlayDisabled) return;
+    pendingSeekRef.current = 0;
     if (videoRef.current) {
       videoRef.current.currentTime = 0;
     }
@@ -229,18 +238,19 @@ export function usePlayerController({
         duration > 0 ? Math.min(Math.max(0, targetTime), duration) : Math.max(0, targetTime);
       const atEnd = isNearEnd(clamped, duration);
 
+      pendingSeekRef.current = clamped;
       if (videoRef.current) {
         videoRef.current.currentTime = clamped;
       }
       setCurrentTime(clamped);
 
-      if (atEnd) {
+      if (atEnd && player.is_playing) {
         pauseIfPlaying(clamped);
       } else {
         sendSeek(clamped, duration);
       }
     },
-    [isSeekDisabled, duration, pauseIfPlaying, sendSeek]
+    [isSeekDisabled, duration, player.is_playing, pauseIfPlaying, sendSeek]
   );
 
   const catchUp = useCallback(() => {
@@ -266,6 +276,13 @@ export function usePlayerController({
   const onTimeUpdate = useCallback(() => {
     if (!videoRef.current) return;
     const cur = videoRef.current.currentTime;
+
+    // Ignore les frames résiduelles tant que le saut asynchrone n'a pas convergé
+    if (pendingSeekRef.current !== null) {
+      if (Math.abs(cur - pendingSeekRef.current) > 1.0) return;
+      pendingSeekRef.current = null;
+    }
+
     if (isNearEnd(cur, duration)) {
       if (currentTime !== duration) {
         setCurrentTime(duration);
@@ -285,10 +302,15 @@ export function usePlayerController({
   }, []);
 
   const onEnded = useCallback(() => {
+    pendingSeekRef.current = null;
     const finalTime = duration > 0 ? duration : (videoRef.current?.duration || 0);
     setCurrentTime(finalTime);
     pauseIfPlaying(finalTime);
   }, [duration, pauseIfPlaying]);
+
+  const onSeeked = useCallback(() => {
+    pendingSeekRef.current = null;
+  }, []);
 
   const onError = useCallback(() => {
     if (player.is_playing) {
@@ -322,6 +344,7 @@ export function usePlayerController({
       onDurationChange,
       onEnded,
       onError,
+      onSeeked,
     },
   };
 }

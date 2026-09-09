@@ -14,7 +14,7 @@ export const DESYNC_THRESHOLD_SECONDS = 2.0;
 /**
  * Seuil en secondes avant la durée totale pour considérer que la fin du média est atteinte.
  */
-export const END_THRESHOLD_SECONDS = 0.5;
+export const END_THRESHOLD_SECONDS = 1.0;
 
 /**
  * Tolérance en secondes de décalage avant d'ajuster impérativement la position du DOM vidéo.
