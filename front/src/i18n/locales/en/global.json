@@ -15,6 +15,10 @@
     "disconnected": "DISCONNECTED"
   },
   "home": {
+    "createTitle": "Start a session.",
+    "createSubtitle": "Create an instant room and synchronize your media in real time.",
+    "joinTitle": "Join the crew.",
+    "joinSubtitle": "Enter a room code to synchronize playback.",
     "createTab": "Create a room",
     "joinTab": "Join",
     "createPlaceholder": "Enter your username...",

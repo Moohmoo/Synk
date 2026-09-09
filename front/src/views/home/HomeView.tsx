@@ -183,9 +183,27 @@ export function HomeView() {
       : t("home.join");
 
   return (
-    <div className="relative flex flex-col items-center justify-start w-full max-w-full px-6 md:px-12 pt-12 sm:pt-16 md:pt-20">
+    <div className="relative flex flex-col items-center justify-start w-full max-w-full px-6 md:px-12 pt-8 sm:pt-12 md:pt-16">
+      {/* Watermark typographique monumental d'arrière-plan */}
+      <div
+        aria-hidden="true"
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none select-none text-[12rem] sm:text-[16rem] md:text-[22rem] font-black tracking-tighter text-white/[0.02] -z-0"
+      >
+        SYNK
+      </div>
+
       {/* Conteneur principal */}
       <div className="relative z-10 flex flex-col items-center w-full">
+        {/* Titre & Sous-titre contextuels et dynamiques */}
+        <div className="text-center mb-6 max-w-lg transition-all duration-300">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-b from-white via-zinc-100 to-zinc-400">
+            {mode === "create" ? t("home.createTitle") : t("home.joinTitle")}
+          </h1>
+          <p className="text-xs sm:text-sm font-mono text-zinc-500 mt-2">
+            {mode === "create" ? t("home.createSubtitle") : t("home.joinSubtitle")}
+          </p>
+        </div>
+
         {/* Le sélecteur de mode (Créer / Rejoindre) */}
         <div className="relative flex p-1 mb-6 bg-[#18181b] rounded-md border border-white/5 mx-auto">
           <div
