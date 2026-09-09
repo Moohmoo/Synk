@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useMemo } from "react";
 import ReactPlayer from "react-player";
 import { useTranslation } from "react-i18next";
 import { PlayerState, RoomSettings } from "@/types/room";
-import { DESYNC_THRESHOLD_SECONDS } from "@/lib/constants";
+import { calculateReferenceTime } from "@/lib/utils";
 import { Tv, AlertCircle, Play } from "lucide-react";
 
 interface MediaPlayerProps {
@@ -12,6 +12,7 @@ interface MediaPlayerProps {
   volume?: number;
   isMuted?: boolean;
   isFullscreen?: boolean;
+  isRateLimited?: (action: string) => boolean;
   playerRef?: React.RefObject<HTMLVideoElement>;
   onProgress?: (time: number) => void;
   onDurationChange?: (duration: number) => void;
@@ -41,6 +42,7 @@ export function MediaPlayer({
   volume = 100,
   isMuted = false,
   isFullscreen = false,
+  isRateLimited,
   playerRef: externalPlayerRef,
   onProgress,
   onDurationChange,
@@ -53,28 +55,44 @@ export function MediaPlayer({
   const playerRef = externalPlayerRef || localPlayerRef;
   const [hasError, setHasError] = useState(false);
   const [needsAutoplayUnlock, setNeedsAutoplayUnlock] = useState(false);
+  const [isLocallyEnded, setIsLocallyEnded] = useState(false);
+  const isEndedRef = useRef(false);
+  const lastHandledUpdateRef = useRef<number>(player.last_updated_at);
 
   const mediaUrl = useMemo(
     () => resolveMediaUrl(player),
     [player.media_url, player.media_id, player.provider]
   );
   const isLockedForGuest = roomSettings.is_locked && !isHost;
+  const isPlayRestricted =
+    isLockedForGuest ||
+    Boolean(isRateLimited?.("PLAY") || isRateLimited?.("PAUSE"));
 
   // Réinitialiser lors d'un changement d'URL
   useEffect(() => {
     setHasError(false);
     setNeedsAutoplayUnlock(false);
+    setIsLocallyEnded(false);
+    isEndedRef.current = false;
   }, [mediaUrl]);
 
-  // Recaler la position lors d'un saut explicite du salon (SEEK) si écart > seuil
+  // Appliquer les ordres officiels du salon (PLAY, PAUSE, SEEK, REPLAY, ROLLBACK)
   useEffect(() => {
+    if (lastHandledUpdateRef.current === player.last_updated_at) return;
+    lastHandledUpdateRef.current = player.last_updated_at;
+
+    // Réinitialiser l'état de fin dès qu'un nouvel ordre salon arrive
+    setIsLocallyEnded(false);
+    isEndedRef.current = false;
+
     if (!playerRef.current) return;
     const local = playerRef.current.currentTime || 0;
-    if (Math.abs(local - player.current_time) > DESYNC_THRESHOLD_SECONDS) {
-      playerRef.current.currentTime = player.current_time;
-      onProgress?.(player.current_time);
+    const target = calculateReferenceTime(player);
+    if (Math.abs(local - target) > 0.5) {
+      playerRef.current.currentTime = target;
+      onProgress?.(target);
     }
-  }, [player.current_time, onProgress, playerRef]);
+  }, [player.last_updated_at, player.current_time, player.is_playing, onProgress, playerRef]);
 
   const handleUnlockAutoplay = () => {
     if (playerRef.current) {
@@ -113,7 +131,7 @@ export function MediaPlayer({
               key={mediaUrl}
               ref={playerRef}
               src={mediaUrl}
-              playing={player.is_playing}
+              playing={player.is_playing && !isLocallyEnded}
               volume={isMuted ? 0 : volume / 100}
               muted={isMuted}
               controls={false}
@@ -121,16 +139,29 @@ export function MediaPlayer({
               height="100%"
               style={{ width: "100%", height: "100%", display: "block" }}
               onTimeUpdate={() => {
-                if (playerRef.current && onProgress) {
-                  onProgress(playerRef.current.currentTime);
+                if (!playerRef.current || !onProgress) return;
+                if (isEndedRef.current) return;
+                const cur = playerRef.current.currentTime;
+                const total = playerRef.current.duration || player.duration || 0;
+                if (total > 0 && cur >= total - 0.3 && !isLocallyEnded) {
+                  isEndedRef.current = true;
+                  setIsLocallyEnded(true);
+                  onEnded?.();
+                  return;
                 }
+                if (cur === 0 && total > 2 && isLocallyEnded) return;
+                onProgress(cur);
               }}
               onDurationChange={() => {
                 if (playerRef.current?.duration && onDurationChange) {
                   onDurationChange(playerRef.current.duration);
                 }
               }}
-              onEnded={onEnded}
+              onEnded={() => {
+                isEndedRef.current = true;
+                setIsLocallyEnded(true);
+                onEnded?.();
+              }}
               onError={() => {
                 if (player.is_playing) {
                   setNeedsAutoplayUnlock(true);
@@ -153,7 +184,7 @@ export function MediaPlayer({
             onClick={onTogglePlay}
             onDoubleClick={onToggleFullscreen}
             className={`absolute inset-0 z-10 ${
-              isLockedForGuest ? "cursor-not-allowed" : "cursor-pointer"
+              isPlayRestricted ? "cursor-not-allowed" : "cursor-pointer"
             }`}
           />
 

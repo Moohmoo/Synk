@@ -67,6 +67,7 @@ export function RoomView() {
     currentUsername,
     currentUserId,
     isHost,
+    isRateLimited,
     myPing,
     sendPlay,
     sendPause,
@@ -132,10 +133,12 @@ export function RoomView() {
     e.preventDefault();
     const cleanUrl = mediaUrl.trim();
     if (!cleanUrl) return;
-    if (isLockedForGuest) {
-      toast.warning(t("controls.hostOnly", { defaultValue: "CONTRÔLES HÔTE EXCLUSIFS" }), {
-        id: "room-lock-host-only",
-      });
+    if (isLockedForGuest || isRateLimited("CHANGE_MEDIA")) {
+      if (isLockedForGuest) {
+        toast.warning(t("controls.hostOnly", { defaultValue: "CONTRÔLES HÔTE EXCLUSIFS" }), {
+          id: "room-lock-host-only",
+        });
+      }
       return;
     }
     changeMedia(cleanUrl);
@@ -143,18 +146,30 @@ export function RoomView() {
   };
 
   const handleTogglePlay = (time?: number) => {
-    if (isLockedForGuest) {
-      toast.warning(t("controls.hostOnly", { defaultValue: "CONTRÔLES HÔTE EXCLUSIFS" }), {
-        id: "room-lock-host-only",
-      });
+    if (isLockedForGuest || isRateLimited("PLAY") || isRateLimited("PAUSE")) {
+      if (isLockedForGuest) {
+        toast.warning(t("controls.hostOnly", { defaultValue: "CONTRÔLES HÔTE EXCLUSIFS" }), {
+          id: "room-lock-host-only",
+        });
+      }
       return;
     }
     const pos = typeof time === "number" ? time : currentTime;
+    const isAtEnd = mediaDuration > 0 && pos >= mediaDuration - 0.5;
+
+    if (isAtEnd) {
+      if (videoRef.current) {
+        videoRef.current.currentTime = 0;
+      }
+      setCurrentTime(0);
+      sendPlay(0, mediaDuration);
+      return;
+    }
+
     if (player.is_playing) {
-      sendPause(pos);
+      sendPause(pos, mediaDuration);
     } else {
-      const isAtEnd = mediaDuration > 0 && pos >= mediaDuration - 0.5;
-      sendPlay(isAtEnd ? 0 : pos);
+      sendPlay(pos, mediaDuration);
     }
   };
 
@@ -212,7 +227,7 @@ export function RoomView() {
           mode="join"
           placeholder={t("header.urlPlaceholder")}
           buttonText={t("header.load")}
-          disabled={isLockedForGuest}
+          disabled={isLockedForGuest || isRateLimited("CHANGE_MEDIA")}
           maxLength={2048}
           className="w-full max-w-4xl mb-6 relative z-20"
         />
@@ -235,10 +250,14 @@ export function RoomView() {
             volume={volume}
             isMuted={isMuted}
             isFullscreen={isFullscreen}
+            isRateLimited={isRateLimited}
             onProgress={setCurrentTime}
             onDurationChange={setLocalDuration}
             onEnded={() => {
-              // Fin naturelle locale : ne coupe pas les retardataires avec une pause forcée
+              const finalTime = mediaDuration > 0 ? mediaDuration : (videoRef.current?.duration || 0);
+              if (finalTime > 0) {
+                setCurrentTime(finalTime);
+              }
             }}
             onTogglePlay={() => handleTogglePlay()}
             onToggleFullscreen={toggleFullscreen}
@@ -254,17 +273,22 @@ export function RoomView() {
             volume={volume}
             isMuted={isMuted}
             isFullscreen={isFullscreen}
+            isRateLimited={isRateLimited}
             onTogglePlay={() => handleTogglePlay()}
             onSeek={(time) => {
+              if (isLockedForGuest || isRateLimited("SEEK")) {
+                return;
+              }
               if (videoRef.current) {
                 videoRef.current.currentTime = time;
               }
               setCurrentTime(time);
-              if (!isLockedForGuest) {
-                sendSeek(time);
-              }
+              sendSeek(time, mediaDuration);
             }}
-            onToggleLock={() => updateSettings(!roomSettings.is_locked)}
+            onToggleLock={() => {
+              if (!isHost || isRateLimited("UPDATE_SETTINGS")) return;
+              updateSettings(!roomSettings.is_locked);
+            }}
             onVolumeChange={handleVolumeChange}
             onToggleMute={handleToggleMute}
             onToggleFullscreen={toggleFullscreen}

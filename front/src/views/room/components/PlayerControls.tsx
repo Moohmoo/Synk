@@ -27,6 +27,7 @@ interface PlayerControlsProps {
   volume?: number;
   isMuted?: boolean;
   isFullscreen?: boolean;
+  isRateLimited?: (action: string) => boolean;
   onTogglePlay: () => void;
   onSeek: (time: number) => void;
   onToggleLock: () => void;
@@ -44,6 +45,7 @@ export function PlayerControls({
   volume = 100,
   isMuted = false,
   isFullscreen = false,
+  isRateLimited,
   onTogglePlay,
   onSeek,
   onToggleLock,
@@ -57,12 +59,24 @@ export function PlayerControls({
 
   const totalDuration = duration > 0 ? duration : (player.duration || 0);
   const displayTime = scrubbingTime !== null ? scrubbingTime : currentTime;
-  const isTimelineDisabled = isLockedForGuest || totalDuration === 0 || !player.media_id;
+  const isSeekDisabled =
+    isLockedForGuest ||
+    totalDuration === 0 ||
+    !player.media_id ||
+    Boolean(isRateLimited?.("SEEK"));
+  const isPlayDisabled =
+    isLockedForGuest ||
+    !player.media_id ||
+    Boolean(isRateLimited?.("PLAY") || isRateLimited?.("PAUSE"));
+  const isLockDisabled = !isHost || Boolean(isRateLimited?.("UPDATE_SETTINGS"));
   const isAtEnd = totalDuration > 0 && displayTime >= Math.max(0, totalDuration - 0.5);
 
   const roomTime = calculateReferenceTime({ ...player, duration: totalDuration });
+  const isRoomAtEnd = totalDuration > 0 && roomTime >= Math.max(0, totalDuration - 0.5);
   const isBehind =
     player.is_playing &&
+    !isAtEnd &&
+    !isRoomAtEnd &&
     scrubbingTime === null &&
     roomTime - currentTime > DESYNC_THRESHOLD_SECONDS;
 
@@ -79,7 +93,7 @@ export function PlayerControls({
             value={[Math.min(displayTime, totalDuration > 0 ? totalDuration : 0)]}
             max={totalDuration > 0 ? totalDuration : 100}
             step={1}
-            disabled={isTimelineDisabled}
+            disabled={isSeekDisabled}
             onValueChange={([val]) => setScrubbingTime(val)}
             onValueCommit={([val]) => {
               onSeek(val);
@@ -98,22 +112,15 @@ export function PlayerControls({
         <div className="flex items-center gap-3">
           {/* Lecture / Pause / Replay unifié */}
           <Button
-            variant={player.is_playing ? "secondary" : "teal"}
+            variant={isAtEnd ? "teal" : player.is_playing ? "secondary" : "teal"}
             size="icon"
-            disabled={isLockedForGuest || !player.media_id}
+            disabled={isPlayDisabled}
             onClick={onTogglePlay}
-            title={
-              player.is_playing
-                ? t("controls.pause")
-                : isAtEnd
-                  ? t("controls.replay", { defaultValue: "Rejouer" })
-                  : t("controls.play")
-            }
           >
-            {player.is_playing ? (
-              <Pause className="w-4 h-4 text-[#0ac8b9]" />
-            ) : isAtEnd ? (
+            {isAtEnd ? (
               <RotateCcw className="w-4 h-4" />
+            ) : player.is_playing ? (
+              <Pause className="w-4 h-4 text-[#0ac8b9]" />
             ) : (
               <Play className="w-4 h-4 fill-current" />
             )}
@@ -156,6 +163,7 @@ export function PlayerControls({
             <Button
               variant="outline"
               size="sm"
+              disabled={isSeekDisabled}
               onClick={() => onSeek(roomTime)}
               className="text-[#0ac8b9] border-[#0ac8b9]/40 hover:bg-[#0ac8b9]/10 gap-1.5 h-8 px-2.5 text-xs font-mono transition-all animate-in fade-in duration-150 cursor-pointer"
               title={t("controls.catchUp")}
@@ -172,6 +180,7 @@ export function PlayerControls({
             <Button
               variant={roomSettings.is_locked ? "destructive" : "secondary"}
               size="sm"
+              disabled={isLockDisabled}
               onClick={onToggleLock}
               className="gap-1.5"
             >

@@ -87,7 +87,7 @@ export function RoomSessionInfo({
             <span className="text-[11px] font-mono text-zinc-400">
               Ping :{" "}
               <span className="text-zinc-200">
-                {isConnected ? (ping !== undefined && ping > 0 ? `${ping}ms` : "<1ms") : "--"}
+                {isConnected ? (ping !== undefined && ping > 0 ? `${ping}ms` : "1ms") : "--"}
               </span>
             </span>
           </div>

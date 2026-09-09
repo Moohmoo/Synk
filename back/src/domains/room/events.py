@@ -54,11 +54,11 @@ def _validate_payload[T: BaseModel](model_cls: type[T], data: Any) -> T | None:
         return None
 
 
-async def _send_error(sid: str, code: str, message: str) -> None:
+async def _send_error(sid: str, code: str, message: str, **extra: Any) -> None:
     """Envoie un événement d'erreur normalisé au client."""
     await sio.emit(
         ServerEventType.ERROR,
-        {"code": code, "message": message},
+        {"code": code, "message": message, **extra},
         to=sid,
     )
 
@@ -90,6 +90,8 @@ async def _guard[T: BaseModel](
                 sid,
                 "RATE_LIMITED",
                 f"Too many fast actions ({action}). Please wait {wait_sec}s.",
+                action=action,
+                retry_after=wait_sec,
             )
         return None
 
@@ -264,11 +266,15 @@ async def on_play(sid: str, data: Any) -> None:
         return
     session, payload = guard
 
+    updates: dict[str, Any] = {"is_playing": True, "current_time": payload.current_time}
+    if payload.duration and payload.duration > 0:
+        updates["duration"] = payload.duration
+
     await _update_and_broadcast_player(
         sid,
         session,
         action="PLAY",
-        updates={"is_playing": True, "current_time": payload.current_time},
+        updates=updates,
         extra_broadcast={"current_time": payload.current_time},
     )
 
@@ -281,11 +287,15 @@ async def on_pause(sid: str, data: Any) -> None:
         return
     session, payload = guard
 
+    updates: dict[str, Any] = {"is_playing": False, "current_time": payload.current_time}
+    if payload.duration and payload.duration > 0:
+        updates["duration"] = payload.duration
+
     await _update_and_broadcast_player(
         sid,
         session,
         action="PAUSE",
-        updates={"is_playing": False, "current_time": payload.current_time},
+        updates=updates,
         extra_broadcast={"current_time": payload.current_time},
     )
 
@@ -298,11 +308,15 @@ async def on_seek(sid: str, data: Any) -> None:
         return
     session, payload = guard
 
+    updates: dict[str, Any] = {"current_time": payload.target_time}
+    if payload.duration and payload.duration > 0:
+        updates["duration"] = payload.duration
+
     await _update_and_broadcast_player(
         sid,
         session,
         action="SEEK",
-        updates={"current_time": payload.target_time},
+        updates=updates,
         extra_broadcast={"target_time": payload.target_time},
     )
 
