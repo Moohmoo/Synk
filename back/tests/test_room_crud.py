@@ -212,3 +212,45 @@ async def test_update_settings_safe_idempotence(redis_client):
 
     # Nettoyage
     await service.delete_room(room.room_id)
+
+
+@pytest.mark.asyncio
+async def test_room_unclaimed_ttl_and_claim_extension(redis_client):
+    """Valide le TTL initial court (300s) et son extension lors de la réclamation du salon."""
+    service = RoomService(redis_client)
+    room, _ = await service.create_room("HostAlice")
+
+    # Initialement créé : TTL non réclamé (300s)
+    ttl_initial = await redis_client.ttl(f"room:{room.room_id}")
+    assert 0 < ttl_initial <= settings.ROOM_UNCLAIMED_TTL_SECONDS
+
+    # Premier participant rejoint : TTL étendu au cycle de vie normal (7200s)
+    await service.add_participant(room.room_id, "HostAlice", user_id=room.host_id)
+    ttl_claimed = await redis_client.ttl(f"room:{room.room_id}")
+    assert ttl_claimed > settings.ROOM_UNCLAIMED_TTL_SECONDS
+    assert ttl_claimed <= settings.ROOM_TTL_SECONDS
+
+    await service.delete_room(room.room_id)
+
+
+@pytest.mark.asyncio
+async def test_room_max_participants_limit(redis_client):
+    """Valide le rejet de nouveaux participants lorsque le plafond du salon est atteint."""
+    service = RoomService(redis_client)
+    room, _ = await service.create_room("HostUser")
+    host_id = room.host_id
+
+    # Remplissage jusqu'à la limite maximale
+    for i in range(1, settings.MAX_PARTICIPANTS_PER_ROOM):
+        await service.add_participant(room.room_id, f"User_{i}")
+
+    # Participant supplémentaire au-delà du plafond : rejeté
+    overflow = await service.add_participant(room.room_id, "User_Overflow")
+    assert overflow is None
+
+    # Reconnexion d'un participant existant : autorisée
+    reconnect = await service.add_participant(room.room_id, "HostUser", user_id=host_id)
+    assert reconnect is not None
+
+    await service.delete_room(room.room_id)
+

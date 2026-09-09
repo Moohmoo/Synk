@@ -9,6 +9,7 @@ import socketio
 import uvicorn
 from httpx import ASGITransport, AsyncClient
 
+from core.config import settings
 from domains.room.schemas.websocket import ClientEventType, ServerEventType
 from main import app
 
@@ -196,3 +197,51 @@ async def test_socketio_full_lifecycle_and_events():
     finally:
         server.should_exit = True
         await server_task
+
+
+@pytest.mark.asyncio
+async def test_socketio_connect_room_full_refused(monkeypatch):
+    """Valide le refus de connexion Socket.IO lorsque la capacité maximale du salon est atteinte."""
+    monkeypatch.setattr(settings, "MAX_PARTICIPANTS_PER_ROOM", 1)
+    port = 8766
+    server_url = f"http://127.0.0.1:{port}"
+
+    config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning")
+    server = uvicorn.Server(config)
+    server_task = asyncio.create_task(server.serve())
+
+    while not server.started:
+        await asyncio.sleep(0.05)
+
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url=server_url
+        ) as http_client:
+            create_resp = await http_client.post(
+                "/api/v1/rooms", json={"username": "Alice_Solo"}
+            )
+            assert create_resp.status_code == 201
+            room_data = create_resp.json()
+            room_id = room_data["room_id"]
+            host_token = room_data["host_token"]
+            user_id = room_data["user_id"]
+
+        alice = SocketTestClient(server_url)
+        await alice.connect(
+            auth={
+                "room_id": room_id,
+                "username": "Alice_Solo",
+                "token": host_token,
+                "user_id": user_id,
+            }
+        )
+
+        bob = SocketTestClient(server_url)
+        with pytest.raises(socketio.exceptions.ConnectionError):
+            await bob.connect(auth={"room_id": room_id, "username": "Bob_Late"})
+
+        await alice.disconnect()
+    finally:
+        server.should_exit = True
+        await server_task
+
