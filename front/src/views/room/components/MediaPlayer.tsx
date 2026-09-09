@@ -1,10 +1,10 @@
 import ReactPlayer from "react-player";
 import { useTranslation } from "react-i18next";
-import { RoomPlayerController } from "../hooks/useRoomPlayer";
+import { PlayerController } from "../hooks/usePlayerController";
 import { Tv, AlertCircle, Play } from "lucide-react";
 
 interface MediaPlayerProps {
-  controller: RoomPlayerController;
+  controller: PlayerController;
   volume?: number;
   isMuted?: boolean;
   isFullscreen?: boolean;
@@ -13,7 +13,7 @@ interface MediaPlayerProps {
 
 /**
  * Lecteur multimédia universel (YouTube, Twitch, Vimeo, SoundCloud, flux directs...).
- * Composant de présentation pur s'appuyant sur RoomPlayerController.
+ * Composant de présentation pur s'appuyant sur PlayerController.
  */
 export function MediaPlayer({
   controller,
@@ -26,17 +26,12 @@ export function MediaPlayer({
   const {
     videoRef,
     mediaUrl,
-    isPlaying,
-    isEnded,
+    status,
     isPlayDisabled,
     needsAutoplayUnlock,
-    hasError,
     togglePlay,
     unlockAutoplay,
-    onTimeUpdate,
-    onDurationChange,
-    onEnded,
-    onError,
+    playerProps,
   } = controller;
 
   return (
@@ -45,7 +40,7 @@ export function MediaPlayer({
         isFullscreen ? "flex-1 max-h-[calc(100vh-140px)]" : "max-w-4xl"
       } aspect-video bg-[#0a0a0c] rounded-2xl border border-white/10 shadow-2xl shadow-black/80 relative z-10 flex items-center justify-center overflow-hidden`}
     >
-      {!mediaUrl ? (
+      {status === "idle" ? (
         <div className="flex flex-col items-center justify-center gap-3 text-zinc-600 p-8 text-center select-none">
           <div className="w-16 h-16 border border-zinc-800 bg-zinc-900/50 flex items-center justify-center">
             <Tv className="w-8 h-8 text-zinc-700" />
@@ -67,21 +62,14 @@ export function MediaPlayer({
               key={mediaUrl}
               ref={videoRef}
               src={mediaUrl}
-              playing={isPlaying && !isEnded}
+              playing={status === "playing"}
               volume={isMuted ? 0 : volume / 100}
               muted={isMuted}
               controls={false}
               width="100%"
               height="100%"
               style={{ width: "100%", height: "100%", display: "block" }}
-              onTimeUpdate={onTimeUpdate}
-              onDurationChange={() => {
-                if (videoRef.current?.duration) {
-                  onDurationChange(videoRef.current.duration);
-                }
-              }}
-              onEnded={onEnded}
-              onError={onError}
+              {...playerProps}
               config={{
                 youtube: {
                   color: "white",
@@ -123,7 +111,7 @@ export function MediaPlayer({
           )}
 
           {/* Message d'erreur flux inaccessible */}
-          {hasError && (
+          {status === "error" && (
             <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#0a0a0c]/95 p-6 text-center select-none backdrop-blur-sm pointer-events-auto">
               <AlertCircle className="w-10 h-10 text-rose-500 mb-3" />
               <p className="text-sm font-semibold text-zinc-200 mb-1">

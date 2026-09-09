@@ -15,10 +15,10 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { RoomSettings } from "@/types/room";
 import { formatTime } from "@/lib/utils";
-import { RoomPlayerController } from "../hooks/useRoomPlayer";
+import { PlayerController } from "../hooks/usePlayerController";
 
 interface PlayerControlsProps {
-  controller: RoomPlayerController;
+  controller: PlayerController;
   roomSettings: RoomSettings;
   isHost: boolean;
   volume?: number;
@@ -48,16 +48,17 @@ export function PlayerControls({
   const {
     duration,
     displayTime,
-    isPlaying,
-    isEnded,
+    status,
     isBehind,
     isPlayDisabled,
     isSeekDisabled,
     togglePlay,
     catchUp,
-    startScrubbing,
-    commitScrubbing,
+    scrub,
+    seek,
   } = controller;
+
+  const isAtEnd = status === "ended";
 
   return (
     <div className="w-full max-w-4xl bg-[#141417]/90 backdrop-blur-md border border-white/10 rounded-xl p-3.5 sm:p-4 flex flex-col gap-3 select-none mt-3 shadow-lg relative z-10">
@@ -73,8 +74,8 @@ export function PlayerControls({
             max={duration > 0 ? duration : 100}
             step={1}
             disabled={isSeekDisabled}
-            onValueChange={([val]) => startScrubbing(val)}
-            onValueCommit={([val]) => commitScrubbing(val)}
+            onValueChange={([val]) => scrub(val)}
+            onValueCommit={([val]) => seek(val)}
           />
         </div>
 
@@ -88,14 +89,14 @@ export function PlayerControls({
         <div className="flex items-center gap-3">
           {/* Lecture / Pause / Replay unifié */}
           <Button
-            variant={isEnded ? "teal" : isPlaying ? "secondary" : "teal"}
+            variant={isAtEnd ? "teal" : status === "playing" ? "secondary" : "teal"}
             size="icon"
             disabled={isPlayDisabled}
             onClick={togglePlay}
           >
-            {isEnded ? (
+            {isAtEnd ? (
               <RotateCcw className="w-4 h-4" />
-            ) : isPlaying ? (
+            ) : status === "playing" ? (
               <Pause className="w-4 h-4 text-[#0ac8b9]" />
             ) : (
               <Play className="w-4 h-4 fill-current" />

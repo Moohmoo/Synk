@@ -274,7 +274,11 @@ async def on_play(sid: str, data: Any) -> None:
         return
     session, payload = guard
 
-    updates: dict[str, Any] = {"is_playing": True, "current_time": payload.current_time}
+    updates: dict[str, Any] = {
+        "is_playing": True,
+        "current_time": payload.current_time,
+        "is_restart": payload.is_restart,
+    }
     if payload.duration and payload.duration > 0:
         updates["duration"] = payload.duration
 

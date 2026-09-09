@@ -3,50 +3,58 @@ import { PlayerState } from "@/types/room";
 import { calculateReferenceTime } from "@/lib/utils";
 import { DESYNC_THRESHOLD_SECONDS } from "@/lib/constants";
 
-export interface UseRoomPlayerOptions {
+export type PlaybackStatus = "idle" | "playing" | "paused" | "ended" | "buffering" | "error";
+
+export interface UsePlayerControllerOptions {
   player: PlayerState;
   isHost: boolean;
   isLocked: boolean;
   isRateLimited?: (action: string) => boolean;
-  sendPlay: (currentTime?: number, duration?: number) => void;
+  sendPlay: (currentTime?: number, duration?: number, isRestart?: boolean) => void;
   sendPause: (currentTime?: number, duration?: number) => void;
   sendSeek: (targetTime: number, duration?: number) => void;
 }
 
-export interface RoomPlayerController {
+export interface PlayerController {
+  // Référence DOM vers le lecteur vidéo
   videoRef: React.RefObject<HTMLVideoElement>;
+
+  // Source média résolue
   mediaUrl: string;
 
-  // Temps et durée (Source de vérité unifiée)
+  // Machine d'état unifiée (remplace la forêt de booléens)
+  status: PlaybackStatus;
+
+  // Position et Durée (Uniques sources de vérité)
   currentTime: number;
   duration: number;
   displayTime: number;
-  scrubbingTime: number | null;
 
-  // États du lecteur
-  isPlaying: boolean;
-  isEnded: boolean;
+  // Détection de retard (Bouton Rattraper)
   isBehind: boolean;
   needsAutoplayUnlock: boolean;
-  hasError: boolean;
 
-  // Permissions & Rate-limiting
+  // Permissions & Limiteurs de débit
   isPlayDisabled: boolean;
   isSeekDisabled: boolean;
 
-  // Actions utilisateur
+  // Commandes explicites de l'utilisateur
+  play: () => void;
+  pause: () => void;
   togglePlay: () => void;
-  seek: (targetTime: number) => void;
+  replay: () => void;
+  seek: (time: number) => void;
   catchUp: () => void;
-  startScrubbing: (time: number) => void;
-  commitScrubbing: (time: number) => void;
+  scrub: (time: number | null) => void;
   unlockAutoplay: () => void;
 
-  // Événements multimédias
-  onTimeUpdate: () => void;
-  onDurationChange: (duration: number) => void;
-  onEnded: () => void;
-  onError: () => void;
+  // Props prêtes à l'emploi pour le composant ReactPlayer
+  playerProps: {
+    onTimeUpdate: () => void;
+    onDurationChange: () => void;
+    onEnded: () => void;
+    onError: () => void;
+  };
 }
 
 function resolveMediaUrl(player: PlayerState): string {
@@ -60,10 +68,9 @@ function resolveMediaUrl(player: PlayerState): string {
 }
 
 /**
- * Contrôleur unifié du lecteur vidéo et de la synchronisation en salon.
- * Élimine l'éparpillement des variables de durée et de timing.
+ * Hook central orchestrant le lecteur vidéo, la machine à états et la synchronisation salon.
  */
-export function useRoomPlayer({
+export function usePlayerController({
   player,
   isHost,
   isLocked,
@@ -71,11 +78,12 @@ export function useRoomPlayer({
   sendPlay,
   sendPause,
   sendSeek,
-}: UseRoomPlayerOptions): RoomPlayerController {
+}: UsePlayerControllerOptions): PlayerController {
   const videoRef = useRef<HTMLVideoElement>(null);
 
+  // États locaux de lecture
   const [currentTime, setCurrentTime] = useState<number>(0);
-  const [internalDuration, setInternalDuration] = useState<number>(0);
+  const [mediaElementDuration, setMediaElementDuration] = useState<number>(0);
   const [scrubbingTime, setScrubbingTime] = useState<number | null>(null);
   const [isLocallyEnded, setIsLocallyEnded] = useState<boolean>(false);
   const [needsAutoplayUnlock, setNeedsAutoplayUnlock] = useState<boolean>(false);
@@ -83,35 +91,40 @@ export function useRoomPlayer({
 
   const lastHandledUpdateRef = useRef<number>(player.last_updated_at);
 
-  const mediaUrl = useMemo(() => resolveMediaUrl(player), [
-    player.media_url,
-    player.media_id,
-    player.provider,
-  ]);
+  const mediaUrl = useMemo(
+    () => resolveMediaUrl(player),
+    [player.media_url, player.media_id, player.provider]
+  );
 
-  // Durée unifiée : durée salon si connue, sinon durée détectée par l'élément vidéo
-  const duration = player.duration && player.duration > 0 ? player.duration : internalDuration;
+  // Durée unifiée (priorité au serveur, repli sur la durée détectée par l'élément vidéo)
+  const duration = player.duration && player.duration > 0 ? player.duration : mediaElementDuration;
 
-  // Position affichée (priorité au curseur de scrubbing en cours)
+  // Position affichée dans la timeline (priorité au déplacement du slider)
   const displayTime = scrubbingTime !== null ? scrubbingTime : currentTime;
-
-  // Statut de fin de média
-  const isEnded = isLocallyEnded || (duration > 0 && currentTime >= duration - 0.5);
 
   // Position théorique du salon
   const roomTime = calculateReferenceTime({ ...player, duration });
   const isRoomAtEnd = duration > 0 && roomTime >= duration - 0.5;
 
-  // Détection de désynchronisation (Rattrapage requis)
+  // Machine d'état unifiée : un seul statut exclusif
+  const status: PlaybackStatus = useMemo(() => {
+    if (!mediaUrl) return "idle";
+    if (hasError) return "error";
+    if (isLocallyEnded || (duration > 0 && currentTime >= duration - 0.5)) return "ended";
+    if (player.is_playing) return "playing";
+    return "paused";
+  }, [mediaUrl, hasError, isLocallyEnded, duration, currentTime, player.is_playing]);
+
+  // Détection de désynchronisation : en retard de plus de 3s par rapport au salon
   const isBehind =
     player.is_playing &&
     duration > 0 &&
-    !isEnded &&
+    status !== "ended" &&
     !isRoomAtEnd &&
     scrubbingTime === null &&
     roomTime - currentTime > DESYNC_THRESHOLD_SECONDS;
 
-  // Restriction d'actions pour les invités si le salon est verrouillé ou rate-limited
+  // Permissions de contrôle
   const isRestrictedForGuest = isLocked && !isHost;
   const isPlayDisabled =
     isRestrictedForGuest ||
@@ -129,11 +142,11 @@ export function useRoomPlayer({
     setNeedsAutoplayUnlock(false);
     setIsLocallyEnded(false);
     setCurrentTime(0);
-    setInternalDuration(0);
+    setMediaElementDuration(0);
     setScrubbingTime(null);
   }, [mediaUrl]);
 
-  // Synchronisation avec les ordres officiels du salon (PLAY, PAUSE, SEEK, REPLAY)
+  // Synchronisation temporelle avec les ordres du salon (PLAY, PAUSE, SEEK, ROLLBACK)
   useEffect(() => {
     if (lastHandledUpdateRef.current === player.last_updated_at) return;
     lastHandledUpdateRef.current = player.last_updated_at;
@@ -149,24 +162,36 @@ export function useRoomPlayer({
     }
   }, [player.last_updated_at, player.current_time, player.is_playing]);
 
-  // Actions
-  const togglePlay = useCallback(() => {
+  // Commandes explicites
+  const play = useCallback(() => {
     if (isPlayDisabled) return;
+    sendPlay(currentTime, duration, false);
+  }, [isPlayDisabled, sendPlay, currentTime, duration]);
 
-    if (isEnded) {
-      if (videoRef.current) videoRef.current.currentTime = 0;
-      setCurrentTime(0);
-      setIsLocallyEnded(false);
-      sendPlay(0, duration);
-      return;
+  const pause = useCallback(() => {
+    if (isPlayDisabled) return;
+    sendPause(currentTime, duration);
+  }, [isPlayDisabled, sendPause, currentTime, duration]);
+
+  const replay = useCallback(() => {
+    if (isPlayDisabled) return;
+    if (videoRef.current) {
+      videoRef.current.currentTime = 0;
     }
+    setCurrentTime(0);
+    setIsLocallyEnded(false);
+    sendPlay(0, duration, true);
+  }, [isPlayDisabled, sendPlay, duration]);
 
-    if (player.is_playing) {
-      sendPause(currentTime, duration);
+  const togglePlay = useCallback(() => {
+    if (status === "ended") {
+      replay();
+    } else if (status === "playing") {
+      pause();
     } else {
-      sendPlay(currentTime, duration);
+      play();
     }
-  }, [isPlayDisabled, isEnded, player.is_playing, currentTime, duration, sendPlay, sendPause]);
+  }, [status, replay, pause, play]);
 
   const seek = useCallback(
     (targetTime: number) => {
@@ -189,16 +214,11 @@ export function useRoomPlayer({
     seek(safeTarget);
   }, [duration, roomTime, seek]);
 
-  const startScrubbing = useCallback((time: number) => {
-    setScrubbingTime(time);
-  }, []);
-
-  const commitScrubbing = useCallback(
-    (time: number) => {
-      seek(time);
-      setScrubbingTime(null);
+  const scrub = useCallback(
+    (time: number | null) => {
+      setScrubbingTime(time);
     },
-    [seek]
+    []
   );
 
   const unlockAutoplay = useCallback(() => {
@@ -210,24 +230,16 @@ export function useRoomPlayer({
     }
   }, []);
 
-  // Événements média DOM
+  // Callbacks DOM pour ReactPlayer
   const onTimeUpdate = useCallback(() => {
-    if (!videoRef.current || isLocallyEnded) return;
+    if (!videoRef.current || isLocallyEnded || scrubbingTime !== null) return;
     const cur = videoRef.current.currentTime;
-    if (duration > 0 && cur >= duration - 0.5) {
-      setIsLocallyEnded(true);
-      setCurrentTime(duration);
-      if (player.is_playing && !isRestrictedForGuest && !isRateLimited?.("PAUSE")) {
-        sendPause(duration, duration);
-      }
-      return;
-    }
     setCurrentTime(cur);
-  }, [isLocallyEnded, duration, player.is_playing, isRestrictedForGuest, isRateLimited, sendPause]);
+  }, [isLocallyEnded, scrubbingTime]);
 
-  const onDurationChange = useCallback((dur: number) => {
-    if (dur > 0) {
-      setInternalDuration(dur);
+  const onDurationChange = useCallback(() => {
+    if (videoRef.current?.duration) {
+      setMediaElementDuration(videoRef.current.duration);
     }
   }, []);
 
@@ -251,26 +263,27 @@ export function useRoomPlayer({
   return {
     videoRef,
     mediaUrl,
+    status,
     currentTime,
     duration,
     displayTime,
-    scrubbingTime,
-    isPlaying: player.is_playing,
-    isEnded,
     isBehind,
     needsAutoplayUnlock,
-    hasError,
     isPlayDisabled,
     isSeekDisabled,
+    play,
+    pause,
     togglePlay,
+    replay,
     seek,
     catchUp,
-    startScrubbing,
-    commitScrubbing,
+    scrub,
     unlockAutoplay,
-    onTimeUpdate,
-    onDurationChange,
-    onEnded,
-    onError,
+    playerProps: {
+      onTimeUpdate,
+      onDurationChange,
+      onEnded,
+      onError,
+    },
   };
 }

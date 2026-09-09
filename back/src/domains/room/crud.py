@@ -12,6 +12,7 @@ from domains.room.schemas.room import (
     Room,
     RoomSettings,
 )
+from domains.room.sync import calculate_reference_position
 
 
 class RoomService:
@@ -107,8 +108,6 @@ class RoomService:
             and room.player.duration
             and room.player.duration > 0
         ):
-            from domains.room.sync import calculate_reference_position
-
             ref_pos = calculate_reference_position(room.player)
             if ref_pos >= room.player.duration:
                 room.player.is_playing = False
@@ -306,6 +305,7 @@ class RoomService:
         is_playing: bool | None = None,
         current_time: float | None = None,
         duration: float | None = None,
+        is_restart: bool = False,
         media_url: str | None = None,
         media_id: str | None = None,
         provider: str | None = None,
@@ -325,17 +325,15 @@ class RoomService:
 
         # Garde d'idempotence sur l'état de lecture :
         # Évite les écritures Redis superflues et les tempêtes de diffusion
-        # si l'action ne modifie pas l'état réel de lecture (sauf en cas de Replay depuis la fin).
+        # si l'action ne modifie pas l'état réel de lecture (sauf en cas de Replay explicite).
         if (
             is_playing is not None
             and is_playing == room.player.is_playing
             and media_url is None
             and media_id is None
         ):
-            from domains.room.sync import calculate_reference_position
-
             ref_pos = calculate_reference_position(room.player)
-            is_restarting = (
+            is_restarting = is_restart or (
                 current_time is not None and current_time < 1.0 and ref_pos >= 1.0
             )
 

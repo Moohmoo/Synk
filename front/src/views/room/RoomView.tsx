@@ -11,7 +11,7 @@ import { useUIStore } from "@/stores/uiStore";
 import { MediaPlayer } from "./components/MediaPlayer";
 import { PlayerControls } from "./components/PlayerControls";
 import { RoomSessionInfo } from "./components/RoomSessionInfo";
-import { useRoomPlayer } from "./hooks/useRoomPlayer";
+import { usePlayerController } from "./hooks/usePlayerController";
 
 export function RoomView() {
   const { roomId = "" } = useParams<{ roomId: string }>();
@@ -81,7 +81,7 @@ export function RoomView() {
   });
 
   // Contrôleur unifié du lecteur multimédia (temps, lecture, rattrapage, durée)
-  const playerController = useRoomPlayer({
+  const playerController = usePlayerController({
     player,
     isHost,
     isLocked: roomSettings.is_locked,
