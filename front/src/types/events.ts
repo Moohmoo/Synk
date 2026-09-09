@@ -1,4 +1,4 @@
-import { PlayerState } from "./room";
+import { PlayerState, Room, Participant, RoomSettings } from "./room";
 
 export type ClientEventType =
   | "PLAY"
@@ -20,6 +20,36 @@ export type ServerEventType =
   | "SETTINGS_UPDATED"
   | "ERROR"
   | "HOST_PROMOTED";
+
+export interface RoomSyncPayload {
+  room: Room;
+  your_id?: string;
+  your_username?: string;
+}
+
+export interface ParticipantJoinedPayload {
+  user: Participant;
+}
+
+export interface ParticipantLeftPayload {
+  user_id: string;
+  username: string;
+  new_host_id?: string | null;
+}
+
+export interface HeartbeatAckPayload {
+  client_sent_at: number;
+  ping_ms: number;
+}
+
+export interface PingUpdatedPayload {
+  user_id: string;
+  ping_ms: number;
+}
+
+export interface SettingsUpdatedPayload {
+  settings: RoomSettings;
+}
 
 export interface HostPromotedPayload {
   host_token: string;

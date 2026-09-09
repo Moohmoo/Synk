@@ -6,12 +6,18 @@ import {
   ChatMessage,
   Participant,
   PlayerState,
-  Room,
   RoomSettings,
 } from "@/types/room";
 import {
   ErrorPayload,
   PlayerUpdatedPayload,
+  RoomSyncPayload,
+  ParticipantJoinedPayload,
+  ParticipantLeftPayload,
+  HeartbeatAckPayload,
+  PingUpdatedPayload,
+  SettingsUpdatedPayload,
+  HostPromotedPayload,
 } from "@/types/events";
 import { formatErrorMessage } from "@/lib/errorMapper";
 import { sessionManager } from "@/lib/session";
@@ -25,6 +31,33 @@ interface UseSyncRoomOptions {
   wsBaseUrl?: string;
 }
 
+/**
+ * Valide et arrondit les valeurs temporelles de lecture avant transmission au serveur.
+ */
+function sanitizePlaybackTimes(
+  currentTime?: number,
+  duration?: number
+): { roundedPos: number; validDur?: number } {
+  const pos = typeof currentTime === "number" && !isNaN(currentTime) ? currentTime : 0;
+  const roundedPos = Math.round(pos * 100) / 100;
+  const validDur = duration && duration > 0 ? Math.round(duration * 100) / 100 : undefined;
+  return { roundedPos, validDur };
+}
+
+/**
+ * Vérifie si le nom d'utilisateur correspond à la session locale.
+ */
+function isSelfUser(
+  targetUsername: string,
+  currentUsername: string,
+  initialUsername: string
+): boolean {
+  return targetUsername === currentUsername || targetUsername === initialUsername;
+}
+
+/**
+ * Hook central orchestrant la connexion WebSocket et la synchronisation multijoueur du salon.
+ */
 export function useSyncRoom({
   roomId,
   username,
@@ -33,7 +66,9 @@ export function useSyncRoom({
   wsBaseUrl = (import.meta as any).env?.VITE_WS_URL || "ws://localhost:8000",
 }: UseSyncRoomOptions) {
   const { t } = useTranslation(["room", "global", "errors"]);
-  const { isRateLimited, getRemainingCooldown, lockAction, resetAction } = useRateLimiter();
+  const { isRateLimited, getRemainingCooldown, lockAction } = useRateLimiter();
+
+  // États du salon et de la session
   const [isConnected, setIsConnected] = useState(false);
   const [currentUsername, setCurrentUsername] = useState(username);
   const [currentUserId, setCurrentUserId] = useState<string | null>(userId || null);
@@ -55,6 +90,7 @@ export function useSyncRoom({
   const [myPing, setMyPing] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
+  // Références stables pour les callbacks asynchrones du WebSocket
   const socketRef = useRef<Socket | null>(null);
   const currentUsernameRef = useRef(username);
   const currentUserIdRef = useRef<string | null>(userId || null);
@@ -70,84 +106,104 @@ export function useSyncRoom({
   myPingRef.current = myPing;
   lockActionRef.current = lockAction;
 
-  // Actions utilisateur vers le serveur Socket.IO (stables & protégées contre le spam)
-  const sendPlay = useCallback((currentTime?: number, duration?: number, isRestart: boolean = false) => {
-    if (isRateLimited("PLAY")) return;
-    const pos = typeof currentTime === "number" && !isNaN(currentTime) ? currentTime : 0;
-    const roundedPos = Math.round(pos * 100) / 100;
-    const validDur = duration && duration > 0 ? Math.round(duration * 100) / 100 : undefined;
-    socketRef.current?.emit("PLAY", {
-      current_time: roundedPos,
-      duration: validDur,
-      is_restart: isRestart,
-    });
-    setPlayer((prev) => ({
-      ...prev,
-      is_playing: true,
-      current_time: roundedPos,
-      duration: validDur || prev.duration,
-      last_updated_at: Date.now(),
-    }));
-  }, [isRateLimited]);
+  // Actions utilisateur vers le serveur Socket.IO (avec Optimistic UI)
+  const sendPlay = useCallback(
+    (currentTime?: number, duration?: number, isRestart: boolean = false) => {
+      if (isRateLimited("PLAY")) return;
+      const { roundedPos, validDur } = sanitizePlaybackTimes(currentTime, duration);
 
-  const sendPause = useCallback((currentTime?: number, duration?: number) => {
-    if (isRateLimited("PAUSE")) return;
-    const pos = typeof currentTime === "number" && !isNaN(currentTime) ? currentTime : 0;
-    const roundedPos = Math.round(pos * 100) / 100;
-    const validDur = duration && duration > 0 ? Math.round(duration * 100) / 100 : undefined;
-    socketRef.current?.emit("PAUSE", {
-      current_time: roundedPos,
-      duration: validDur,
-    });
-    setPlayer((prev) => ({
-      ...prev,
-      is_playing: false,
-      current_time: roundedPos,
-      duration: validDur || prev.duration,
-      last_updated_at: Date.now(),
-    }));
-  }, [isRateLimited]);
+      socketRef.current?.emit("PLAY", {
+        current_time: roundedPos,
+        duration: validDur,
+        is_restart: isRestart,
+      });
 
-  const sendSeek = useCallback((targetTime: number, duration?: number) => {
-    if (isRateLimited("SEEK")) return;
-    const validDur = duration && duration > 0 ? Math.round(duration * 100) / 100 : undefined;
-    socketRef.current?.emit("SEEK", {
-      target_time: targetTime,
-      duration: validDur,
-    });
-    setPlayer((prev) => ({
-      ...prev,
-      current_time: targetTime,
-      duration: validDur || prev.duration,
-      last_updated_at: Date.now(),
-    }));
-  }, [isRateLimited]);
+      setPlayer((prev) => ({
+        ...prev,
+        is_playing: true,
+        current_time: roundedPos,
+        duration: validDur || prev.duration,
+        last_updated_at: Date.now(),
+      }));
+    },
+    [isRateLimited]
+  );
 
-  const changeMedia = useCallback((url: string) => {
-    if (isRateLimited("CHANGE_MEDIA")) return;
-    const trimmed = url.trim();
-    if (!trimmed) return;
-    socketRef.current?.emit("CHANGE_MEDIA", { url: trimmed });
-    setPlayer((prev) => ({
-      ...prev,
-      is_playing: false,
-      current_time: 0,
-      duration: 0,
-      last_updated_at: Date.now(),
-    }));
-  }, [isRateLimited]);
+  const sendPause = useCallback(
+    (currentTime?: number, duration?: number) => {
+      if (isRateLimited("PAUSE")) return;
+      const { roundedPos, validDur } = sanitizePlaybackTimes(currentTime, duration);
 
-  const sendChat = useCallback((content: string) => {
-    if (isRateLimited("CHAT_MESSAGE")) return;
-    const trimmed = content.trim();
-    if (!trimmed) return;
-    socketRef.current?.emit("CHAT_MESSAGE", { content: trimmed });
-  }, [isRateLimited]);
+      socketRef.current?.emit("PAUSE", {
+        current_time: roundedPos,
+        duration: validDur,
+      });
+
+      setPlayer((prev) => ({
+        ...prev,
+        is_playing: false,
+        current_time: roundedPos,
+        duration: validDur || prev.duration,
+        last_updated_at: Date.now(),
+      }));
+    },
+    [isRateLimited]
+  );
+
+  const sendSeek = useCallback(
+    (targetTime: number, duration?: number) => {
+      if (isRateLimited("SEEK")) return;
+      const { roundedPos: safeTarget, validDur } = sanitizePlaybackTimes(targetTime, duration);
+
+      socketRef.current?.emit("SEEK", {
+        target_time: safeTarget,
+        duration: validDur,
+      });
+
+      setPlayer((prev) => ({
+        ...prev,
+        current_time: safeTarget,
+        duration: validDur || prev.duration,
+        last_updated_at: Date.now(),
+      }));
+    },
+    [isRateLimited]
+  );
+
+  const changeMedia = useCallback(
+    (url: string) => {
+      if (isRateLimited("CHANGE_MEDIA")) return;
+      const trimmed = url.trim();
+      if (!trimmed) return;
+
+      socketRef.current?.emit("CHANGE_MEDIA", { url: trimmed });
+      setPlayer((prev) => ({
+        ...prev,
+        is_playing: false,
+        current_time: 0,
+        duration: 0,
+        last_updated_at: Date.now(),
+      }));
+    },
+    [isRateLimited]
+  );
+
+  const sendChat = useCallback(
+    (content: string) => {
+      if (isRateLimited("CHAT_MESSAGE")) return;
+      const trimmed = content.trim();
+      if (!trimmed) return;
+
+      socketRef.current?.emit("CHAT_MESSAGE", { content: trimmed });
+    },
+    [isRateLimited]
+  );
 
   const updateSettings = useCallback(
     (isLocked: boolean) => {
       if (isRateLimited("UPDATE_SETTINGS")) return;
       if (roomSettings.is_locked === isLocked) return;
+
       socketRef.current?.emit("UPDATE_SETTINGS", { is_locked: isLocked });
     },
     [isRateLimited, roomSettings.is_locked]
@@ -177,6 +233,7 @@ export function useSyncRoom({
 
     socketRef.current = socket;
 
+    // --- 1. Cycle de connexion ---
     socket.on("connect", () => {
       setIsConnected(true);
       setError(null);
@@ -197,12 +254,14 @@ export function useSyncRoom({
       toast.error(err.message, { id: "socket-connect-error" });
     });
 
-    socket.on("ROOM_SYNC", (payload: any) => {
-      const roomData: Room = payload.room;
+    // --- 2. Synchronisation de la salle et du lecteur ---
+    socket.on("ROOM_SYNC", (payload: RoomSyncPayload) => {
+      const roomData = payload.room;
       setParticipants(roomData.participants);
       setPlayer(roomData.player);
       authoritativePlayerRef.current = roomData.player;
       setRoomSettings(roomData.settings);
+
       if (payload.your_username) {
         setCurrentUsername(payload.your_username);
         currentUsernameRef.current = payload.your_username;
@@ -217,7 +276,7 @@ export function useSyncRoom({
         });
       }
 
-      // Si le serveur indique qu'on n'est pas hôte, purger l'ancien token hôte
+      // Si le serveur indique qu'on n'est pas hôte, purger l'ancien token hôte local
       const myId = payload.your_id || currentUserIdRef.current || userId;
       const myName = payload.your_username || currentUsernameRef.current || username;
       const me = (roomData.participants || []).find(
@@ -231,96 +290,25 @@ export function useSyncRoom({
     socket.on("PLAYER_UPDATED", (payload: PlayerUpdatedPayload) => {
       setPlayer(payload.player);
       authoritativePlayerRef.current = payload.player;
-      const isSelf =
-        payload.triggered_by === currentUsernameRef.current ||
-        payload.triggered_by === username;
 
+      const isSelf = isSelfUser(payload.triggered_by, currentUsernameRef.current, username);
       if (payload.triggered_by && !isSelf) {
-        if (payload.action === "PLAY") {
-          toast.info(tRef.current("toast.play", { user: payload.triggered_by }), {
-            id: "player-sync-action",
-          });
-        } else if (payload.action === "PAUSE") {
-          toast.info(tRef.current("toast.pause", { user: payload.triggered_by }), {
-            id: "player-sync-action",
-          });
-        } else if (payload.action === "SEEK") {
-          toast.info(tRef.current("toast.seek", { user: payload.triggered_by }), {
-            id: "player-sync-action",
-          });
-        } else if (payload.action === "CHANGE_MEDIA") {
-          toast.info(tRef.current("toast.loadMedia", { user: payload.triggered_by }), {
+        const toastKeyMap: Record<string, string> = {
+          PLAY: "toast.play",
+          PAUSE: "toast.pause",
+          SEEK: "toast.seek",
+          CHANGE_MEDIA: "toast.loadMedia",
+        };
+        const translationKey = toastKeyMap[payload.action];
+        if (translationKey) {
+          toast.info(tRef.current(translationKey, { user: payload.triggered_by }), {
             id: "player-sync-action",
           });
         }
       }
     });
 
-    socket.on("PARTICIPANT_JOINED", (payload: { user: Participant }) => {
-      const newParticipant = payload.user;
-      setParticipants((prev) => {
-        const filtered = prev.filter((p) => p.id !== newParticipant.id);
-        return [...filtered, newParticipant];
-      });
-      const isSelfJoined =
-        newParticipant.username === currentUsernameRef.current ||
-        newParticipant.username === username;
-      if (!isSelfJoined) {
-        toast.info(tRef.current("toast.userJoined", { user: newParticipant.username }));
-      }
-    });
-
-    socket.on("PARTICIPANT_LEFT", (payload: { user_id: string; username: string; new_host_id?: string | null }) => {
-      const { user_id, new_host_id } = payload;
-      setParticipants((prev) => {
-        const leaving = prev.find((p) => p.id === user_id);
-        const isSelfLeft =
-          leaving &&
-          (leaving.username === currentUsernameRef.current ||
-            leaving.username === username);
-        if (leaving && !isSelfLeft) {
-          toast.info(tRef.current("toast.userLeft", { user: leaving.username }));
-        }
-        return prev
-          .filter((p) => p.id !== user_id)
-          .map((p) => (p.id === new_host_id ? { ...p, is_host: true } : p));
-      });
-      if (new_host_id && (currentUserIdRef.current === new_host_id || userId === new_host_id)) {
-        toast.info(tRef.current("toast.hostTransferredToYou"), {
-          id: "host-transferred",
-        });
-      }
-    });
-
-    socket.on("HOST_PROMOTED", (payload: { host_token: string }) => {
-      if (payload.host_token) {
-        sessionManager.setHostToken(roomId, payload.host_token);
-        toast.info(tRef.current("toast.hostTransferredToYou"), {
-          id: "host-transferred",
-        });
-      }
-    });
-
-    socket.on("CHAT_BROADCAST", (payload: ChatMessage) => {
-      setMessages((prev) => [...prev, payload]);
-    });
-
-    socket.on("HEARTBEAT_ACK", (payload: { client_sent_at: number; ping_ms: number }) => {
-      if (payload.client_sent_at) {
-        const rtt = Math.max(0, Date.now() - payload.client_sent_at);
-        setMyPing(Math.round(rtt / 2));
-      } else {
-        setMyPing(payload.ping_ms || 0);
-      }
-    });
-
-    socket.on("PING_UPDATED", (payload: { user_id: string; ping_ms: number }) => {
-      setParticipants((prev) =>
-        prev.map((p) => (p.id === payload.user_id ? { ...p, ping_ms: payload.ping_ms } : p))
-      );
-    });
-
-    socket.on("SETTINGS_UPDATED", (payload: { settings: RoomSettings }) => {
+    socket.on("SETTINGS_UPDATED", (payload: SettingsUpdatedPayload) => {
       setRoomSettings(payload.settings);
       if (payload.settings.is_locked) {
         toast.warning(tRef.current("toast.roomLocked"), { id: "room-lock-status" });
@@ -329,6 +317,62 @@ export function useSyncRoom({
       }
     });
 
+    // --- 3. Gestion des participants et rôles ---
+    socket.on("PARTICIPANT_JOINED", (payload: ParticipantJoinedPayload) => {
+      const newParticipant = payload.user;
+      setParticipants((prev) => {
+        const filtered = prev.filter((p) => p.id !== newParticipant.id);
+        return [...filtered, newParticipant];
+      });
+
+      if (!isSelfUser(newParticipant.username, currentUsernameRef.current, username)) {
+        toast.info(tRef.current("toast.userJoined", { user: newParticipant.username }));
+      }
+    });
+
+    socket.on("PARTICIPANT_LEFT", (payload: ParticipantLeftPayload) => {
+      const { user_id, new_host_id } = payload;
+      setParticipants((prev) => {
+        const leaving = prev.find((p) => p.id === user_id);
+        if (leaving && !isSelfUser(leaving.username, currentUsernameRef.current, username)) {
+          toast.info(tRef.current("toast.userLeft", { user: leaving.username }));
+        }
+        return prev
+          .filter((p) => p.id !== user_id)
+          .map((p) => (p.id === new_host_id ? { ...p, is_host: true } : p));
+      });
+    });
+
+    socket.on("HOST_PROMOTED", (payload: HostPromotedPayload) => {
+      if (payload.host_token) {
+        sessionManager.setHostToken(roomId, payload.host_token);
+        toast.info(tRef.current("toast.hostTransferredToYou"), {
+          id: "host-transferred",
+        });
+      }
+    });
+
+    // --- 4. Tchat et métriques réseau ---
+    socket.on("CHAT_BROADCAST", (payload: ChatMessage) => {
+      setMessages((prev) => [...prev, payload]);
+    });
+
+    socket.on("HEARTBEAT_ACK", (payload: HeartbeatAckPayload) => {
+      if (payload.client_sent_at) {
+        const rtt = Math.max(0, Date.now() - payload.client_sent_at);
+        setMyPing(Math.round(rtt / 2));
+      } else {
+        setMyPing(payload.ping_ms || 0);
+      }
+    });
+
+    socket.on("PING_UPDATED", (payload: PingUpdatedPayload) => {
+      setParticipants((prev) =>
+        prev.map((p) => (p.id === payload.user_id ? { ...p, ping_ms: payload.ping_ms } : p))
+      );
+    });
+
+    // --- 5. Erreurs et Rate Limiting ---
     socket.on("ERROR", (payload: ErrorPayload) => {
       const localizedMsg = formatErrorMessage(payload, tRef.current);
       setError(localizedMsg);
@@ -345,7 +389,7 @@ export function useSyncRoom({
           lockActionRef.current("PAUSE", retryAfter);
         }
 
-        // Rollback sur l'état officiel du salon en cas de rejet d'une commande
+        // Rollback sur l'état faisant autorité côté serveur
         if (!action || action === "SEEK" || action === "PLAY" || action === "PAUSE") {
           setPlayer({
             ...authoritativePlayerRef.current,
