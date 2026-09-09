@@ -9,6 +9,8 @@ from core.rate_limiter import (
     RateLimiter,
     check_ws_rate_limit,
     create_http_rate_limiter,
+    get_client_ip,
+    get_ws_client_ip,
     rate_limiter,
 )
 from main import app, lifespan
@@ -172,3 +174,45 @@ async def test_http_rate_limiter_triggers_429(redis_client):
         assert exc.retry_after >= 1
 
     await test_limiter.reset("127.0.0.1", "test_route")
+
+
+def test_get_client_ip_anti_spoofing():
+    """Valide que les en-têtes X-Forwarded-For forgés sont ignorés pour les clients non-proxys."""
+    class MockClient:
+        def __init__(self, host: str):
+            self.host = host
+
+    class MockRequest:
+        def __init__(self, host: str, headers: dict[str, str]):
+            self.client = MockClient(host)
+            self.headers = headers
+
+    # 1. Client direct non-proxy forgant X-Forwarded-For -> ignoré, IP réelle conservée
+    untrusted = MockRequest("198.51.100.22", {"x-forwarded-for": "10.0.0.1, 10.0.0.2"})
+    assert get_client_ip(untrusted) == "198.51.100.22"
+
+    # 2. Proxy local de confiance -> extrait la véritable IP cliente externe
+    trusted = MockRequest("127.0.0.1", {"x-forwarded-for": "203.0.113.195, 127.0.0.1"})
+    assert get_client_ip(trusted) == "203.0.113.195"
+
+    # 3. Client direct sans headers -> IP directe
+    direct = MockRequest("192.168.1.50", {})
+    assert get_client_ip(direct) == "192.168.1.50"
+
+
+def test_get_ws_client_ip_anti_spoofing():
+    """Valide la résolution d'IP anti-spoofing pour les connexions WebSocket."""
+    # 1. Non-proxy avec header HTTP_X_FORWARDED_FOR forgé
+    environ_untrusted = {
+        "REMOTE_ADDR": "198.51.100.5",
+        "HTTP_X_FORWARDED_FOR": "10.0.0.1",
+    }
+    assert get_ws_client_ip(environ_untrusted) == "198.51.100.5"
+
+    # 2. Proxy local de confiance avec proxy ASGI scope client
+    environ_trusted = {
+        "asgi.scope": {"client": ("127.0.0.1", 54321)},
+        "HTTP_X_FORWARDED_FOR": "203.0.113.88, 127.0.0.1",
+    }
+    assert get_ws_client_ip(environ_trusted) == "203.0.113.88"
+

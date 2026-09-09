@@ -14,28 +14,46 @@ from core.logger import logger
 from db.database import DatabaseService
 
 
+def _resolve_ip(direct_ip: str, forwarded: str | None, real_ip: str | None = None) -> str:
+    """Résout l'adresse IP cliente réelle en vérifiant la confiance du proxy direct."""
+    if direct_ip in settings.TRUSTED_PROXIES:
+        if forwarded:
+            ips = [ip.strip() for ip in forwarded.split(",") if ip.strip()]
+            for ip in reversed(ips):
+                if ip not in settings.TRUSTED_PROXIES:
+                    return ip
+        if real_ip and real_ip.strip():
+            return real_ip.strip()
+    return direct_ip
+
+
 def get_client_ip(request: Request) -> str:
-    """Extrait l'adresse IP du client en respectant les proxys inverses."""
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        client_ip = forwarded.split(",")[0].strip()
-        if client_ip:
-            return client_ip
-    if request.client and request.client.host:
-        return request.client.host
-    return "127.0.0.1"
+    """Extrait l'adresse IP du client HTTP de manière sécurisée (anti-spoofing)."""
+    direct_ip = request.client.host if request.client and request.client.host else "127.0.0.1"
+    return _resolve_ip(
+        direct_ip,
+        request.headers.get("x-forwarded-for"),
+        request.headers.get("x-real-ip"),
+    )
 
 
-# Quotas par action WebSocket : (max_requêtes, fenêtre_secondes)
-WS_ACTION_LIMITS: dict[str, tuple[int, int]] = {
-    "UPDATE_SETTINGS": (2, 2),
-    "CHANGE_MEDIA": (2, 4),
-    "PLAY": (3, 2),
-    "PAUSE": (3, 2),
-    "SEEK": (4, 2),
-    "CHAT_MESSAGE": (5, 5),
-    "HEARTBEAT": (2, 4),
-}
+def get_ws_client_ip(environ: dict[str, Any]) -> str:
+    """Extrait l'adresse IP du client WebSocket de manière sécurisée (anti-spoofing)."""
+    scope = environ.get("asgi.scope")
+    if scope and "client" in scope and scope["client"]:
+        direct_ip = scope["client"][0]
+    else:
+        direct_ip = environ.get("REMOTE_ADDR") or "127.0.0.1"
+
+    return _resolve_ip(
+        direct_ip,
+        environ.get("HTTP_X_FORWARDED_FOR"),
+        environ.get("HTTP_X_REAL_IP"),
+    )
+
+
+# Quotas par action WebSocket (défini dans config)
+WS_ACTION_LIMITS: dict[str, tuple[int, int]] = settings.WS_ACTION_LIMITS
 
 
 class RateLimiter:
@@ -171,7 +189,7 @@ async def check_ws_rate_limit(user_id: str, action: str) -> tuple[bool, int]:
     if not allowed:
         return False, wait_sec
 
-    limit = WS_ACTION_LIMITS.get(action)
+    limit = settings.WS_ACTION_LIMITS.get(action)
     if limit:
         max_req, window = limit
         return await rate_limiter.check(user_id, action, max_req, window)

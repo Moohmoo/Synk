@@ -54,7 +54,15 @@ class RoomService:
 
     async def create_room(self, username: str) -> tuple[Room, str]:
         """Crée un nouveau salon atomiquement dans Redis avec son hôte."""
-        room_id = self._generate_room_code()
+        room_id = ""
+        for _ in range(3):
+            candidate = self._generate_room_code()
+            if not await self.room_exists(candidate):
+                room_id = candidate
+                break
+        if not room_id:
+            raise RuntimeError("Impossible de générer un identifiant de salon unique")
+
         user_id = self._generate_user_id()
         host_token = self._generate_host_token()
         now_ms = int(time.time() * 1000)
@@ -78,15 +86,16 @@ class RoomService:
             ],
         )
 
+        initial_ttl = settings.ROOM_UNCLAIMED_TTL_SECONDS
         pipe = self.redis.pipeline()
-        pipe.set(self._room_key(room_id), room.model_dump_json())
-        pipe.expire(self._room_key(room_id), settings.ROOM_TTL_SECONDS)
-        pipe.set(self._host_token_key(room_id), host_token)
-        pipe.expire(self._host_token_key(room_id), settings.ROOM_TTL_SECONDS)
-        await pipe.execute()
+        pipe.set(self._room_key(room_id), room.model_dump_json(), ex=initial_ttl, nx=True)
+        pipe.set(self._host_token_key(room_id), host_token, ex=initial_ttl)
+        results = await pipe.execute()
+        if not results[0]:
+            raise RuntimeError(f"Collision détectée lors de l'enregistrement du salon {room_id}")
 
         logger.info(
-            f"[ROOM:CREATE] Salon {room_id} créé par {username} ({user_id}) | TTL={settings.ROOM_TTL_SECONDS}s"
+            f"[ROOM:CREATE] Salon {room_id} créé par {username} ({user_id}) | TTL={initial_ttl}s"
         )
         return room, host_token
 
@@ -189,6 +198,13 @@ class RoomService:
             )
             room.participants[existing_index] = participant
         else:
+            # Contrôle du plafond de participants (protection anti-flooding)
+            if len(room.participants) >= settings.MAX_PARTICIPANTS_PER_ROOM:
+                logger.warning(
+                    f"[ROOM:JOIN] Salon {room_id} complet ({len(room.participants)}/{settings.MAX_PARTICIPANTS_PER_ROOM})"
+                )
+                return None
+
             # Nouvel arrivant : accepte le pseudo tel quel sans suffixage (Figma/Docs style)
             participant = Participant(
                 id=uid,

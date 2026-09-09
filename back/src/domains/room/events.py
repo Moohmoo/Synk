@@ -9,8 +9,9 @@ from typing import Any
 from pydantic import BaseModel, ValidationError
 from socketio.exceptions import ConnectionRefusedError
 
+from core.config import settings
 from core.logger import logger
-from core.rate_limiter import check_ws_rate_limit
+from core.rate_limiter import check_ws_rate_limit, get_ws_client_ip, rate_limiter
 from core.socket import sio
 from db.manager import DatabaseManager
 from domains.media.extractor import media_extractor
@@ -161,7 +162,7 @@ async def _authenticate(creds: dict[str, str | None]) -> tuple[Room, Participant
             room_id, username, user_id=creds["user_id"], is_host=is_host
         )
         if not result:
-            raise ConnectionRefusedError("Impossible de rejoindre le salon")
+            raise ConnectionRefusedError("Le salon a atteint sa capacité maximale")
         return result
 
 
@@ -205,6 +206,16 @@ async def _send_initial_sync(sid: str, room: Room, participant: Participant) -> 
 @sio.event
 async def connect(sid: str, environ: dict[str, Any], auth: Any = None) -> None:
     """Authentifie le participant, initialise sa session et synchronise le salon."""
+    client_ip = get_ws_client_ip(environ)
+    allowed, wait_sec = await rate_limiter.check(
+        client_ip, "ws_connect", settings.RATE_LIMIT_WS_CONNECT_PER_MIN, 60
+    )
+    if not allowed:
+        logger.warning(
+            f"[SIO:CONNECT] Rate limit de connexion dépassé pour {client_ip} (attente {wait_sec}s)"
+        )
+        raise ConnectionRefusedError("RATE_LIMITED")
+
     creds = _extract_auth(environ, auth)
     room, participant = await _authenticate(creds)
 
