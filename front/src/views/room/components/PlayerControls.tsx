@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   Play,
   Pause,
@@ -14,22 +13,18 @@ import {
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { PlayerState, RoomSettings } from "@/types/room";
-import { formatTime, calculateReferenceTime } from "@/lib/utils";
-import { DESYNC_THRESHOLD_SECONDS } from "@/lib/constants";
+import { RoomSettings } from "@/types/room";
+import { formatTime } from "@/lib/utils";
+import { PlayerController } from "../hooks/usePlayerController";
 
 interface PlayerControlsProps {
-  player: PlayerState;
+  controller: PlayerController;
   roomSettings: RoomSettings;
   isHost: boolean;
-  currentTime?: number;
-  duration?: number;
   volume?: number;
   isMuted?: boolean;
   isFullscreen?: boolean;
-  isRateLimited?: (action: string) => boolean;
-  onTogglePlay: () => void;
-  onSeek: (time: number) => void;
+  isLockDisabled?: boolean;
   onToggleLock: () => void;
   onVolumeChange?: (volume: number) => void;
   onToggleMute?: () => void;
@@ -37,49 +32,33 @@ interface PlayerControlsProps {
 }
 
 export function PlayerControls({
-  player,
+  controller,
   roomSettings,
   isHost,
-  currentTime = 0,
-  duration = 0,
   volume = 100,
   isMuted = false,
   isFullscreen = false,
-  isRateLimited,
-  onTogglePlay,
-  onSeek,
+  isLockDisabled = false,
   onToggleLock,
   onVolumeChange,
   onToggleMute,
   onToggleFullscreen,
 }: PlayerControlsProps) {
   const { t } = useTranslation("room");
-  const isLockedForGuest = roomSettings.is_locked && !isHost;
-  const [scrubbingTime, setScrubbingTime] = useState<number | null>(null);
+  const {
+    duration,
+    displayTime,
+    status,
+    isBehind,
+    isPlayDisabled,
+    isSeekDisabled,
+    togglePlay,
+    catchUp,
+    scrub,
+    seek,
+  } = controller;
 
-  const totalDuration = duration > 0 ? duration : (player.duration || 0);
-  const displayTime = scrubbingTime !== null ? scrubbingTime : currentTime;
-  const isSeekDisabled =
-    isLockedForGuest ||
-    totalDuration === 0 ||
-    !player.media_id ||
-    Boolean(isRateLimited?.("SEEK"));
-  const isPlayDisabled =
-    isLockedForGuest ||
-    !player.media_id ||
-    Boolean(isRateLimited?.("PLAY") || isRateLimited?.("PAUSE"));
-  const isLockDisabled = !isHost || Boolean(isRateLimited?.("UPDATE_SETTINGS"));
-  const isAtEnd = totalDuration > 0 && displayTime >= Math.max(0, totalDuration - 0.5);
-
-  const roomTime = calculateReferenceTime({ ...player, duration: totalDuration });
-  const isRoomAtEnd = totalDuration > 0 && roomTime >= Math.max(0, totalDuration - 0.5);
-  const isBehind =
-    player.is_playing &&
-    totalDuration > 0 &&
-    !isAtEnd &&
-    !isRoomAtEnd &&
-    scrubbingTime === null &&
-    roomTime - currentTime > DESYNC_THRESHOLD_SECONDS;
+  const isAtEnd = status === "ended";
 
   return (
     <div className="w-full max-w-4xl bg-[#141417]/90 backdrop-blur-md border border-white/10 rounded-xl p-3.5 sm:p-4 flex flex-col gap-3 select-none mt-3 shadow-lg relative z-10">
@@ -91,20 +70,17 @@ export function PlayerControls({
 
         <div className="flex-1">
           <Slider
-            value={[Math.min(displayTime, totalDuration > 0 ? totalDuration : 0)]}
-            max={totalDuration > 0 ? totalDuration : 100}
+            value={[Math.min(displayTime, duration > 0 ? duration : 0)]}
+            max={duration > 0 ? duration : 100}
             step={1}
             disabled={isSeekDisabled}
-            onValueChange={([val]) => setScrubbingTime(val)}
-            onValueCommit={([val]) => {
-              onSeek(val);
-              setScrubbingTime(null);
-            }}
+            onValueChange={([val]) => scrub(val)}
+            onValueCommit={([val]) => seek(val)}
           />
         </div>
 
         <span className="text-xs font-mono text-zinc-600">
-          {formatTime(totalDuration)}
+          {formatTime(duration)}
         </span>
       </div>
 
@@ -113,14 +89,14 @@ export function PlayerControls({
         <div className="flex items-center gap-3">
           {/* Lecture / Pause / Replay unifié */}
           <Button
-            variant={isAtEnd ? "teal" : player.is_playing ? "secondary" : "teal"}
+            variant={isAtEnd ? "teal" : status === "playing" ? "secondary" : "teal"}
             size="icon"
             disabled={isPlayDisabled}
-            onClick={onTogglePlay}
+            onClick={togglePlay}
           >
             {isAtEnd ? (
               <RotateCcw className="w-4 h-4" />
-            ) : player.is_playing ? (
+            ) : status === "playing" ? (
               <Pause className="w-4 h-4 text-[#0ac8b9]" />
             ) : (
               <Play className="w-4 h-4 fill-current" />
@@ -165,13 +141,7 @@ export function PlayerControls({
               variant="outline"
               size="sm"
               disabled={isSeekDisabled}
-              onClick={() => {
-                const safeTarget =
-                  totalDuration > 0
-                    ? Math.min(roomTime, Math.max(0, totalDuration - 0.5))
-                    : roomTime;
-                onSeek(safeTarget);
-              }}
+              onClick={catchUp}
               className="text-[#0ac8b9] border-[#0ac8b9]/40 hover:bg-[#0ac8b9]/10 gap-1.5 h-8 px-2.5 text-xs font-mono transition-all animate-in fade-in duration-150 cursor-pointer"
               title={t("controls.catchUp")}
             >

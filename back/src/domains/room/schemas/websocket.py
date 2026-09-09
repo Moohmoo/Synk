@@ -49,6 +49,7 @@ class WebSocketEvent(BaseModel):
 class PlayPayload(BaseModel):
     current_time: float = Field(default=0.0, ge=0.0)
     duration: float | None = Field(default=None, ge=0.0)
+    is_restart: bool = Field(default=False)
 
 
 class PausePayload(BaseModel):

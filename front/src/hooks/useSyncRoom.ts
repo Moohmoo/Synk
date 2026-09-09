@@ -71,7 +71,7 @@ export function useSyncRoom({
   lockActionRef.current = lockAction;
 
   // Actions utilisateur vers le serveur Socket.IO (stables & protégées contre le spam)
-  const sendPlay = useCallback((currentTime?: number, duration?: number) => {
+  const sendPlay = useCallback((currentTime?: number, duration?: number, isRestart: boolean = false) => {
     if (isRateLimited("PLAY")) return;
     const pos = typeof currentTime === "number" && !isNaN(currentTime) ? currentTime : 0;
     const roundedPos = Math.round(pos * 100) / 100;
@@ -79,6 +79,7 @@ export function useSyncRoom({
     socketRef.current?.emit("PLAY", {
       current_time: roundedPos,
       duration: validDur,
+      is_restart: isRestart,
     });
     setPlayer((prev) => ({
       ...prev,
