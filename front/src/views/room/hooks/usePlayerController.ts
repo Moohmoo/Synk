@@ -151,10 +151,11 @@ export function usePlayerController({
     if (lastHandledUpdateRef.current === player.last_updated_at) return;
     lastHandledUpdateRef.current = player.last_updated_at;
 
-    setIsLocallyEnded(false);
-    setScrubbingTime(null);
-
     const target = calculateReferenceTime({ ...player, duration });
+    const isAtEnd = duration > 0 && target >= duration - 0.5;
+
+    setIsLocallyEnded(isAtEnd);
+    setScrubbingTime(null);
     setCurrentTime(target);
 
     if (videoRef.current) {
@@ -203,14 +204,26 @@ export function usePlayerController({
       if (isSeekDisabled) return;
       const clamped =
         duration > 0 ? Math.min(Math.max(0, targetTime), duration) : Math.max(0, targetTime);
+      const isAtEnd = duration > 0 && clamped >= duration - 0.5;
+
       if (videoRef.current) {
         videoRef.current.currentTime = clamped;
       }
       setCurrentTime(clamped);
-      setIsLocallyEnded(false);
-      sendSeek(clamped, duration);
+
+      if (isAtEnd) {
+        setIsLocallyEnded(true);
+        if (player.is_playing && !isRestrictedForGuest && !isRateLimited?.("PAUSE")) {
+          sendPause(clamped, duration);
+        } else {
+          sendSeek(clamped, duration);
+        }
+      } else {
+        setIsLocallyEnded(false);
+        sendSeek(clamped, duration);
+      }
     },
-    [isSeekDisabled, duration, sendSeek]
+    [isSeekDisabled, duration, player.is_playing, isRestrictedForGuest, isRateLimited, sendPause, sendSeek]
   );
 
   const catchUp = useCallback(() => {
@@ -239,8 +252,17 @@ export function usePlayerController({
   const onTimeUpdate = useCallback(() => {
     if (!videoRef.current || isLocallyEnded) return;
     const cur = videoRef.current.currentTime;
+    if (duration > 0 && cur >= duration - 0.5) {
+      setIsLocallyEnded(true);
+      setCurrentTime(duration);
+      if (player.is_playing && !isRestrictedForGuest && !isRateLimited?.("PAUSE")) {
+        sendPause(duration, duration);
+      }
+      return;
+    }
+    if (cur === 0 && duration > 2 && currentTime >= duration - 1) return;
     setCurrentTime(cur);
-  }, [isLocallyEnded]);
+  }, [isLocallyEnded, duration, currentTime, player.is_playing, isRestrictedForGuest, isRateLimited, sendPause]);
 
   const onDurationChange = useCallback(() => {
     if (videoRef.current?.duration) {
