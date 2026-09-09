@@ -33,3 +33,15 @@ export function calculateReferenceTime(player: {
   const target = player.current_time + elapsed;
   return player.duration && player.duration > 0 ? Math.min(target, player.duration) : target;
 }
+
+/**
+ * Extrait l'identifiant unique du salon depuis une chaîne brute ou une URL complète.
+ * (ex: "code123", "https://synk.app/room/code123?join=true" -> "code123")
+ */
+export function extractRoomCode(raw: string): string {
+  const trimmed = raw.trim();
+  if (trimmed.includes("/room/")) {
+    return trimmed.split("/room/").pop()?.split("?")[0].split("#")[0] || "";
+  }
+  return trimmed;
+}

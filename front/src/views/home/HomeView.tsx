@@ -6,6 +6,7 @@ import { roomApi } from "@/services/roomApi";
 import { validateUsername } from "@/lib/validation";
 import { formatErrorMessage } from "@/lib/errorMapper";
 import { sessionManager } from "@/lib/session";
+import { extractRoomCode } from "@/lib/utils";
 import { toast } from "@/components/ui/sonner";
 import { useUIStore } from "@/stores/uiStore";
 
@@ -18,8 +19,7 @@ export function HomeView() {
 
   const [mode, setMode] = useState<"create" | "join">("create");
   const [joinStep, setJoinStep] = useState<"code" | "username">("code");
-  const [createUsername, setCreateUsername] = useState(() => sessionManager.getLastUsername());
-  const [joinUsername, setJoinUsername] = useState(() => sessionManager.getLastUsername());
+  const [username, setUsername] = useState(() => sessionManager.getLastUsername());
   const [roomCode, setRoomCode] = useState("");
   const [validatedRoomCode, setValidatedRoomCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -30,12 +30,10 @@ export function HomeView() {
     return () => setGlowColor("cyan");
   }, [mode, setGlowColor]);
 
-  const extractRoomCode = (raw: string) => {
-    const trimmed = raw.trim();
-    if (trimmed.includes("/room/")) {
-      return trimmed.split("/room/").pop()?.split("?")[0].split("#")[0] || "";
+  const clearJoinParam = () => {
+    if (searchParams.has("join")) {
+      setSearchParams({}, { replace: true });
     }
-    return trimmed;
   };
 
   // Traitement automatique d'une invitation via ?join=ROOM_ID
@@ -59,9 +57,7 @@ export function HomeView() {
         } else {
           toast.error(formatErrorMessage("ROOM_NOT_FOUND", t), { id: "home-join-not-found" });
           setJoinStep("code");
-          if (searchParams.has("join")) {
-            setSearchParams({}, { replace: true });
-          }
+          clearJoinParam();
         }
       })
       .catch((err) => {
@@ -71,34 +67,45 @@ export function HomeView() {
       .finally(() => {
         setIsLoading(false);
       });
-  }, [searchParams, setSearchParams, t]);
+  }, [searchParams, t]);
 
   const handleSwitchMode = (newMode: "create" | "join") => {
     setMode(newMode);
     if (newMode === "create") {
       setJoinStep("code");
-      if (searchParams.has("join")) {
-        setSearchParams({}, { replace: true });
-      }
+      clearJoinParam();
     }
     setTimeout(() => inputRef.current?.focus(), 0);
   };
 
   const handleCancelValidatedCode = () => {
     setJoinStep("code");
-    if (searchParams.has("join")) {
-      setSearchParams({}, { replace: true });
-    }
+    clearJoinParam();
     setTimeout(() => inputRef.current?.focus(), 0);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (mode === "join" && joinStep === "username") {
-      if ((e.key === "Backspace" && !joinUsername) || e.key === "Escape") {
+      if ((e.key === "Backspace" && !username) || e.key === "Escape") {
         e.preventDefault();
         handleCancelValidatedCode();
       }
     }
+  };
+
+  /**
+   * Valide le pseudo courant, affiche une notification d'erreur si invalide
+   * et retourne le pseudo nettoyé ou null.
+   */
+  const validateAndGetUsername = (): string | null => {
+    const valError = validateUsername(username, (key) =>
+      t(key, { ns: "validation" })
+    );
+    if (valError) {
+      toast.error(valError, { id: "home-val-error" });
+      return null;
+    }
+    return username.trim();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -106,20 +113,14 @@ export function HomeView() {
     if (isLoading) return;
 
     if (mode === "create") {
-      const valError = validateUsername(createUsername, (key) =>
-        t(key, { ns: "validation" })
-      );
-      if (valError) {
-        toast.error(valError, { id: "home-val-error" });
-        return;
-      }
-      const username = createUsername.trim();
+      const cleanUsername = validateAndGetUsername();
+      if (!cleanUsername) return;
 
       setIsLoading(true);
       try {
-        const data = await roomApi.createRoom(username);
+        const data = await roomApi.createRoom(cleanUsername);
         sessionManager.setRoomSession(data.room_id, {
-          username,
+          username: cleanUsername,
           token: data.host_token,
           userId: data.user_id,
         });
@@ -153,19 +154,33 @@ export function HomeView() {
         setIsLoading(false);
       }
     } else {
-      const valError = validateUsername(joinUsername, (key) =>
-        t(key, { ns: "validation" })
-      );
-      if (valError) {
-        toast.error(valError, { id: "home-val-error" });
-        return;
-      }
-      const username = joinUsername.trim();
+      const cleanUsername = validateAndGetUsername();
+      if (!cleanUsername) return;
 
-      sessionManager.setRoomSession(validatedRoomCode, { username });
+      sessionManager.setRoomSession(validatedRoomCode, { username: cleanUsername });
       navigate(`/room/${validatedRoomCode}`);
     }
   };
+
+  const isUsernameInput = mode === "create" || joinStep === "username";
+
+  const placeholder =
+    mode === "create"
+      ? t("home.createPlaceholder")
+      : joinStep === "code"
+      ? t("home.joinCodePlaceholder")
+      : t("home.joinUsernamePlaceholder");
+
+  const buttonText =
+    mode === "create"
+      ? undefined
+      : joinStep === "code"
+      ? isLoading
+        ? t("home.checking")
+        : t("home.next")
+      : isLoading
+      ? t("home.connecting")
+      : t("home.join");
 
   return (
     <div className="relative flex flex-col items-center justify-center h-full pt-10 pb-32 w-full max-w-full px-6 md:px-12">
@@ -203,42 +218,18 @@ export function HomeView() {
         {/* L'Omnibox d'accueil */}
         <Omnibox
           ref={inputRef}
-          value={
-            mode === "create"
-              ? createUsername
-              : joinStep === "code"
-              ? roomCode
-              : joinUsername
-          }
+          value={isUsernameInput ? username : roomCode}
           onChange={(e) => {
-            if (mode === "create") {
-              setCreateUsername(e.target.value);
-            } else if (joinStep === "code") {
-              setRoomCode(e.target.value);
+            if (isUsernameInput) {
+              setUsername(e.target.value);
             } else {
-              setJoinUsername(e.target.value);
+              setRoomCode(e.target.value);
             }
           }}
           onKeyDown={handleKeyDown}
           mode={mode}
-          placeholder={
-            mode === "create"
-              ? t("home.createPlaceholder")
-              : joinStep === "code"
-              ? t("home.joinCodePlaceholder")
-              : t("home.joinUsernamePlaceholder")
-          }
-          buttonText={
-            mode === "create"
-              ? undefined
-              : joinStep === "code"
-              ? isLoading
-                ? t("home.checking")
-                : t("home.next")
-              : isLoading
-              ? t("home.connecting")
-              : t("home.join")
-          }
+          placeholder={placeholder}
+          buttonText={buttonText}
           badge={
             mode === "join" && joinStep === "username"
               ? {
