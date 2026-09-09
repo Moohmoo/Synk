@@ -96,10 +96,27 @@ class RoomService:
             return None
 
         try:
-            return Room.model_validate_json(raw_data)
+            room = Room.model_validate_json(raw_data)
         except (ValidationError, ValueError) as e:
             logger.error(f"[ROOM] Échec de désérialisation du salon {room_id} : {e}")
             return None
+
+        # Si le salon est en lecture mais que la fin est atteinte, clore proprement
+        if (
+            room.player.is_playing
+            and room.player.duration
+            and room.player.duration > 0
+        ):
+            from domains.room.sync import calculate_reference_position
+
+            ref_pos = calculate_reference_position(room.player)
+            if ref_pos >= room.player.duration:
+                room.player.is_playing = False
+                room.player.current_time = room.player.duration
+                room.player.last_updated_at = int(time.time() * 1000)
+                await self.save_room(room, ttl=settings.ROOM_TTL_SECONDS)
+
+        return room
 
     async def save_room(self, room: Room, ttl: int | None = None) -> None:
         """Persiste l'état d'un salon dans Redis et renouvelle le TTL de façon atomique."""

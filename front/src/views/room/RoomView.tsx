@@ -143,6 +143,8 @@ export function RoomView() {
     }
     changeMedia(cleanUrl);
     setMediaUrl("");
+    setLocalDuration(0);
+    setCurrentTime(0);
   };
 
   const handleTogglePlay = (time?: number) => {
@@ -257,6 +259,9 @@ export function RoomView() {
               const finalTime = mediaDuration > 0 ? mediaDuration : (videoRef.current?.duration || 0);
               if (finalTime > 0) {
                 setCurrentTime(finalTime);
+              }
+              if (player.is_playing && !isLockedForGuest && !isRateLimited("PAUSE")) {
+                sendPause(finalTime, mediaDuration);
               }
             }}
             onTogglePlay={() => handleTogglePlay()}

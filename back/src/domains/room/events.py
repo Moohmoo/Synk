@@ -171,7 +171,15 @@ async def _send_initial_sync(sid: str, room: Room, participant: Participant) -> 
     room_dict = room.model_dump()
     if room.player.is_playing:
         ref_pos = calculate_reference_position(room.player, now_ms=now_ms)
-        room_dict["player"]["current_time"] = ref_pos
+        if (
+            room.player.duration
+            and room.player.duration > 0
+            and ref_pos >= room.player.duration
+        ):
+            room_dict["player"]["is_playing"] = False
+            room_dict["player"]["current_time"] = room.player.duration
+        else:
+            room_dict["player"]["current_time"] = ref_pos
         room_dict["player"]["last_updated_at"] = now_ms
 
     await sio.emit(
@@ -348,8 +356,8 @@ async def on_change_media(sid: str, data: Any) -> None:
         sid,
         session,
         action="CHANGE_MEDIA",
-        updates={"is_playing": False, "current_time": 0.0, **media_info},
-        extra_broadcast=media_info,
+        updates={"is_playing": False, "current_time": 0.0, "duration": 0.0, **media_info},
+        extra_broadcast={"duration": 0.0, **media_info},
     )
 
 
