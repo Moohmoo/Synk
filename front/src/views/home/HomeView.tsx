@@ -184,14 +184,6 @@ export function HomeView() {
 
   return (
     <div className="relative flex flex-col items-center justify-start w-full max-w-full px-6 md:px-12 pt-8 sm:pt-12 md:pt-16">
-      {/* Watermark typographique monumental d'arrière-plan */}
-      <div
-        aria-hidden="true"
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none select-none text-[12rem] sm:text-[16rem] md:text-[22rem] font-black tracking-tighter text-white/[0.02] -z-0"
-      >
-        SYNK
-      </div>
-
       {/* Conteneur principal */}
       <div className="relative z-10 flex flex-col items-center w-full">
         {/* Titre & Sous-titre contextuels et dynamiques */}
