@@ -9,6 +9,7 @@ interface MediaPlayerProps {
   isMuted?: boolean;
   isFullscreen?: boolean;
   onToggleFullscreen?: () => void;
+  emptySlot?: React.ReactNode;
 }
 
 /**
@@ -21,6 +22,7 @@ export function MediaPlayer({
   isMuted = false,
   isFullscreen = false,
   onToggleFullscreen,
+  emptySlot,
 }: MediaPlayerProps) {
   const { t } = useTranslation("room");
   const {
@@ -41,19 +43,21 @@ export function MediaPlayer({
       } aspect-video bg-[#0a0a0c] rounded-2xl border border-white/10 shadow-2xl shadow-black/80 relative z-10 flex items-center justify-center overflow-hidden`}
     >
       {status === "idle" ? (
-        <div className="flex flex-col items-center justify-center gap-3 text-zinc-600 p-8 text-center select-none">
-          <div className="w-16 h-16 border border-zinc-800 bg-zinc-900/50 flex items-center justify-center">
-            <Tv className="w-8 h-8 text-zinc-700" />
-          </div>
-          <div>
-            <div className="text-sm font-mono uppercase tracking-wider text-zinc-400 font-semibold">
-              {t("player.waitingTitle")}
+        emptySlot ?? (
+          <div className="flex flex-col items-center justify-center gap-3 text-zinc-600 p-8 text-center select-none">
+            <div className="w-16 h-16 border border-zinc-800 bg-zinc-900/50 flex items-center justify-center">
+              <Tv className="w-8 h-8 text-zinc-700" />
             </div>
-            <div className="text-xs text-zinc-600 font-mono mt-1">
-              {t("player.waitingSubtitle")}
+            <div>
+              <div className="text-sm font-mono uppercase tracking-wider text-zinc-400 font-semibold">
+                {t("player.waitingTitle")}
+              </div>
+              <div className="text-xs text-zinc-600 font-mono mt-1">
+                {t("player.waitingSubtitle")}
+              </div>
             </div>
           </div>
-        </div>
+        )
       ) : (
         <div className="w-full h-full relative flex items-center justify-center select-none overflow-hidden">
           {/* Lecteur vidéo universel */}

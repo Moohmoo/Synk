@@ -1,7 +1,15 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useNavigate, Navigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { Tv, Link2 } from "lucide-react";
 import { Omnibox } from "@/components/shared";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { RightSidebarSlot } from "@/components/RightSidebarSlot";
 import { roomApi } from "@/services/roomApi";
 import { sessionManager } from "@/lib/session";
@@ -34,6 +42,7 @@ export function RoomView() {
   const [isInitializing, setIsInitializing] = useState(true);
   const [roomNotFound, setRoomNotFound] = useState(false);
   const [mediaUrlInput, setMediaUrlInput] = useState("");
+  const [isChangeMediaOpen, setIsChangeMediaOpen] = useState(false);
 
   // Effet 1 : Vérification d'existence du salon côté serveur (HTTP) & Glow
   useEffect(() => {
@@ -149,7 +158,22 @@ export function RoomView() {
     }
     changeMedia(cleanUrl);
     setMediaUrlInput("");
+    setIsChangeMediaOpen(false);
   };
+
+  // Raccourci global Cmd+K / Ctrl+K pour ouvrir la commande de changement de média
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        if (!isLockedForGuest && !isRateLimited("CHANGE_MEDIA")) {
+          setIsChangeMediaOpen((open) => !open);
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isLockedForGuest, isRateLimited]);
 
   if (roomNotFound) {
     return (
@@ -183,6 +207,40 @@ export function RoomView() {
     );
   }
 
+  const emptyDropzone = (
+    <div className="flex flex-col items-center w-full max-w-xl px-4 select-none">
+      <div className="w-12 h-12 rounded-xl bg-zinc-900/80 border border-white/10 flex items-center justify-center mb-4 shadow-inner">
+        <Tv className="w-6 h-6 text-[#0ac8b9]" />
+      </div>
+      <h2 className="text-xs sm:text-sm font-mono font-bold tracking-widest uppercase text-zinc-300 mb-1">
+        {t("player.waitingTitle")}
+      </h2>
+      <p className="text-[11px] font-mono text-zinc-500 mb-6 text-center">
+        {t("player.waitingSubtitle")}
+      </p>
+
+      <Omnibox
+        value={mediaUrlInput}
+        onChange={(e) => setMediaUrlInput(e.target.value)}
+        onSubmit={handleLoadMedia}
+        mode="join"
+        placeholder={t("header.urlPlaceholder")}
+        buttonText={t("header.load")}
+        disabled={isLockedForGuest || isRateLimited("CHANGE_MEDIA")}
+        maxLength={2048}
+        className="w-full relative z-20 shadow-2xl"
+        autoFocus
+      />
+
+      <div className="flex flex-wrap items-center justify-center gap-2 mt-5 text-[10px] font-mono text-zinc-500 uppercase tracking-wider">
+        <span className="px-2 py-0.5 rounded bg-zinc-900/60 border border-white/5">YouTube</span>
+        <span className="px-2 py-0.5 rounded bg-zinc-900/60 border border-white/5">Twitch</span>
+        <span className="px-2 py-0.5 rounded bg-zinc-900/60 border border-white/5">Vimeo</span>
+        <span className="px-2 py-0.5 rounded bg-zinc-900/60 border border-white/5">Direct / HLS</span>
+      </div>
+    </div>
+  );
+
   return (
     <>
       <RightSidebarSlot>
@@ -197,19 +255,6 @@ export function RoomView() {
       </RightSidebarSlot>
 
       <div className="flex-1 flex flex-col items-center justify-start min-w-0 w-full">
-        {/* LA BARRE DE COMMANDE (URL) : Omnibox réutilisée au-dessus du lecteur */}
-        <Omnibox
-          value={mediaUrlInput}
-          onChange={(e) => setMediaUrlInput(e.target.value)}
-          onSubmit={handleLoadMedia}
-          mode="join"
-          placeholder={t("header.urlPlaceholder")}
-          buttonText={t("header.load")}
-          disabled={isLockedForGuest || isRateLimited("CHANGE_MEDIA")}
-          maxLength={2048}
-          className="w-full max-w-4xl mb-6 relative z-20"
-        />
-
         {/* ESPACE CINÉMA UNIFIÉ : Lecteur & Barre de Contrôle */}
         <div
           ref={cinemaContainerRef}
@@ -226,6 +271,7 @@ export function RoomView() {
             isMuted={isMuted}
             isFullscreen={isFullscreen}
             onToggleFullscreen={toggleFullscreen}
+            emptySlot={emptyDropzone}
           />
 
           {/* Barre de Contrôle du Lecteur & Verrou d'hôte */}
@@ -237,6 +283,8 @@ export function RoomView() {
             isMuted={isMuted}
             isFullscreen={isFullscreen}
             isLockDisabled={!isHost || Boolean(isRateLimited("UPDATE_SETTINGS"))}
+            isChangeMediaDisabled={isLockedForGuest || Boolean(isRateLimited("CHANGE_MEDIA"))}
+            onChangeMedia={() => setIsChangeMediaOpen(true)}
             onToggleLock={() => {
               if (!isHost || isRateLimited("UPDATE_SETTINGS")) return;
               updateSettings(!roomSettings.is_locked);
@@ -247,6 +295,36 @@ export function RoomView() {
           />
         </div>
       </div>
+
+      {/* Palette de commande (Modale) pour changer de média en cours de session */}
+      <Dialog open={isChangeMediaOpen} onOpenChange={setIsChangeMediaOpen}>
+        <DialogContent className="sm:max-w-xl bg-[#141417]/95 border-white/10 backdrop-blur-xl p-6">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-sm font-mono tracking-wider text-white">
+              <Link2 className="w-4 h-4 text-[#0ac8b9]" />
+              <span>{t("header.changeMediaTitle")}</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs text-zinc-400 font-sans">
+              {t("header.changeMediaSubtitle")}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="mt-2">
+            <Omnibox
+              value={mediaUrlInput}
+              onChange={(e) => setMediaUrlInput(e.target.value)}
+              onSubmit={handleLoadMedia}
+              mode="join"
+              placeholder={t("header.urlPlaceholder")}
+              buttonText={t("header.load")}
+              disabled={isLockedForGuest || isRateLimited("CHANGE_MEDIA")}
+              maxLength={2048}
+              className="w-full relative z-20"
+              autoFocus
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
