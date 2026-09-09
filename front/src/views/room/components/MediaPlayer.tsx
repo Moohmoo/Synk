@@ -115,12 +115,14 @@ export function MediaPlayer({
             <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#0a0a0c]/95 p-6 text-center select-none backdrop-blur-sm pointer-events-auto">
               <AlertCircle className="w-10 h-10 text-rose-500 mb-3" />
               <p className="text-sm font-semibold text-zinc-200 mb-1">
-                {t("player.unsupportedProvider", {
+                {t("player.errorTitle", {
                   defaultValue: "Impossible de charger ce média.",
                 })}
               </p>
               <p className="text-xs text-zinc-500 max-w-sm leading-relaxed">
-                Le flux est restreint par son propriétaire ou l'URL fournie n'est pas accessible.
+                {t("player.errorDescription", {
+                  defaultValue: "Le flux est restreint par son propriétaire ou l'URL fournie n'est pas accessible.",
+                })}
               </p>
             </div>
           )}

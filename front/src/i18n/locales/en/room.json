@@ -19,6 +19,8 @@
     "waitingTitle": "WAITING FOR A MEDIA STREAM",
     "waitingSubtitle": "Paste a media link above to start synchronized playback.",
     "unsupportedProvider": "Platform \"{{provider}}\" is not currently supported.",
+    "errorTitle": "Unable to load this media.",
+    "errorDescription": "The stream is restricted by its owner or the provided URL is inaccessible.",
     "syncOverlayTitle": "PLAYBACK IN PROGRESS IN ROOM",
     "syncOverlaySubtitle": "Click to synchronize and enable audio"
   },
