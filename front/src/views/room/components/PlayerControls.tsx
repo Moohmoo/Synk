@@ -75,6 +75,7 @@ export function PlayerControls({
   const isRoomAtEnd = totalDuration > 0 && roomTime >= Math.max(0, totalDuration - 0.5);
   const isBehind =
     player.is_playing &&
+    totalDuration > 0 &&
     !isAtEnd &&
     !isRoomAtEnd &&
     scrubbingTime === null &&
@@ -164,7 +165,13 @@ export function PlayerControls({
               variant="outline"
               size="sm"
               disabled={isSeekDisabled}
-              onClick={() => onSeek(roomTime)}
+              onClick={() => {
+                const safeTarget =
+                  totalDuration > 0
+                    ? Math.min(roomTime, Math.max(0, totalDuration - 0.5))
+                    : roomTime;
+                onSeek(safeTarget);
+              }}
               className="text-[#0ac8b9] border-[#0ac8b9]/40 hover:bg-[#0ac8b9]/10 gap-1.5 h-8 px-2.5 text-xs font-mono transition-all animate-in fade-in duration-150 cursor-pointer"
               title={t("controls.catchUp")}
             >
