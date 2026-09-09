@@ -221,32 +221,32 @@ export function HomeView() {
           </div>
         </div>
 
-        {/* Le sélecteur de mode : deux gouttes connectées par un pont rectangulaire */}
-        <div className="relative flex items-center mb-8 mx-auto select-none">
-          {/* Goutte Gauche (Créer) */}
+        {/* Le sélecteur de mode : Capsule avec pilule à effet ressort élastique (Spring) */}
+        <div className="relative inline-flex items-center p-1 mb-8 bg-[#141417] rounded-full border border-white/10 mx-auto select-none shadow-inner">
+          {/* Pilule coulissante active (physique de goutte d'eau / ressort) */}
+          <div
+            className={`absolute top-1 bottom-1 left-1 w-[130px] rounded-full bg-[#27272a] border border-white/15 shadow-md transition-all duration-500 [transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)] ${
+              mode === "create"
+                ? "translate-x-0 shadow-red-500/15"
+                : "translate-x-[130px] shadow-cyan-500/15"
+            }`}
+          />
+
           <button
             type="button"
             onClick={() => handleSwitchMode("create")}
-            className={`relative z-10 px-5 py-2 rounded-full text-xs font-semibold tracking-wide transition-all duration-300 border ${
-              mode === "create"
-                ? "bg-[#27272a] text-white border-white/15 shadow-lg shadow-red-500/10"
-                : "bg-[#18181b] text-zinc-500 border-white/5 hover:text-zinc-300"
+            className={`relative z-10 w-[130px] text-center px-4 py-2 rounded-full text-xs font-semibold tracking-wide transition-colors duration-300 ${
+              mode === "create" ? "text-white" : "text-zinc-500 hover:text-zinc-300"
             }`}
           >
             {t("home.createTab")}
           </button>
 
-          {/* Pont rectangulaire reliant les deux gouttes */}
-          <div className="w-5 h-2.5 bg-[#18181b] border-y border-white/5 -mx-1.5 z-0" />
-
-          {/* Goutte Droite (Rejoindre) */}
           <button
             type="button"
             onClick={() => handleSwitchMode("join")}
-            className={`relative z-10 px-5 py-2 rounded-full text-xs font-semibold tracking-wide transition-all duration-300 border ${
-              mode === "join"
-                ? "bg-[#27272a] text-white border-white/15 shadow-lg shadow-cyan-500/10"
-                : "bg-[#18181b] text-zinc-500 border-white/5 hover:text-zinc-300"
+            className={`relative z-10 w-[130px] text-center px-4 py-2 rounded-full text-xs font-semibold tracking-wide transition-colors duration-300 ${
+              mode === "join" ? "text-white" : "text-zinc-500 hover:text-zinc-300"
             }`}
           >
             {t("home.joinTab")}
