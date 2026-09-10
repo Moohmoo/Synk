@@ -4,6 +4,9 @@ import { Youtube, Twitch, Radio } from "lucide-react";
 interface PlatformItem {
   name: string;
   icon: React.ComponentType<{ className?: string }>;
+  hoverBorder: string;
+  hoverText: string;
+  hoverIcon: string;
 }
 
 function VimeoIcon({ className = "w-3 h-3" }: { className?: string }) {
@@ -15,10 +18,34 @@ function VimeoIcon({ className = "w-3 h-3" }: { className?: string }) {
 }
 
 const PLATFORMS: PlatformItem[] = [
-  { name: "YouTube", icon: Youtube },
-  { name: "Twitch", icon: Twitch },
-  { name: "Vimeo", icon: VimeoIcon },
-  { name: "Direct / HLS", icon: Radio },
+  {
+    name: "YouTube",
+    icon: Youtube,
+    hoverBorder: "hover:border-[#ff0000]/30",
+    hoverText: "hover:text-zinc-200",
+    hoverIcon: "group-hover:text-[#ff0000]",
+  },
+  {
+    name: "Twitch",
+    icon: Twitch,
+    hoverBorder: "hover:border-[#a970ff]/30",
+    hoverText: "hover:text-zinc-200",
+    hoverIcon: "group-hover:text-[#a970ff]",
+  },
+  {
+    name: "Vimeo",
+    icon: VimeoIcon,
+    hoverBorder: "hover:border-[#1ab7ea]/30",
+    hoverText: "hover:text-zinc-200",
+    hoverIcon: "group-hover:text-[#1ab7ea]",
+  },
+  {
+    name: "Direct / HLS",
+    icon: Radio,
+    hoverBorder: "hover:border-[#0ac8b9]/30",
+    hoverText: "hover:text-zinc-200",
+    hoverIcon: "group-hover:text-[#0ac8b9]",
+  },
 ];
 
 export interface PlatformBadgesProps {
@@ -28,7 +55,7 @@ export interface PlatformBadgesProps {
 
 /**
  * Badges canoniques monochromes des plateformes de streaming supportées.
- * Conçu pour être extensible sans jamais déborder de l'écran.
+ * Conçu pour révéler la couleur de chaque marque subtilement au survol (micro-interaction).
  */
 export function PlatformBadges({ className = "", maxVisible = 4 }: PlatformBadgesProps) {
   const visiblePlatforms = PLATFORMS.slice(0, maxVisible);
@@ -38,12 +65,12 @@ export function PlatformBadges({ className = "", maxVisible = 4 }: PlatformBadge
     <div
       className={`flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 text-[10px] font-mono text-zinc-400 select-none ${className}`}
     >
-      {visiblePlatforms.map(({ name, icon: Icon }) => (
+      {visiblePlatforms.map(({ name, icon: Icon, hoverBorder, hoverText, hoverIcon }) => (
         <span
           key={name}
-          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#121215] border border-white/5 text-zinc-400 hover:text-zinc-200 hover:border-white/10 transition-colors"
+          className={`group inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#121215] border border-white/5 text-zinc-400 cursor-default transition-all duration-200 ${hoverBorder} ${hoverText}`}
         >
-          <Icon className="w-3 h-3 text-zinc-500 shrink-0" />
+          <Icon className={`w-3 h-3 text-zinc-500 transition-colors duration-200 ${hoverIcon} shrink-0`} />
           <span className="tracking-wider uppercase">{name}</span>
         </span>
       ))}
