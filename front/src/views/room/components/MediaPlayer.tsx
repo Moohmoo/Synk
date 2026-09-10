@@ -1,7 +1,7 @@
 import ReactPlayer from "react-player";
 import { useTranslation } from "react-i18next";
 import { PlayerController } from "@/hooks/usePlayerController";
-import { Tv, AlertCircle, Play } from "lucide-react";
+import { AlertCircle, Play } from "lucide-react";
 
 interface MediaPlayerProps {
   controller: PlayerController;
@@ -51,26 +51,12 @@ export function MediaPlayer({
         !isFullscreen && status === "idle"
           ? "min-h-[260px] sm:aspect-video py-6 sm:py-0"
           : ""
-      } bg-[#0a0a0c] relative z-10 flex items-center justify-center overflow-hidden`}
+      } bg-[#0a0a0c] relative z-10 flex items-center justify-center select-none overflow-hidden`}
     >
       {status === "idle" ? (
-        emptySlot ?? (
-          <div className="flex flex-col items-center justify-center gap-3 text-zinc-600 p-8 text-center select-none">
-            <div className="w-16 h-16 border border-zinc-800 bg-zinc-900/50 flex items-center justify-center">
-              <Tv className="w-8 h-8 text-zinc-700" />
-            </div>
-            <div>
-              <div className="text-sm font-mono uppercase tracking-wider text-zinc-400 font-semibold">
-                {t("player.waitingTitle")}
-              </div>
-              <div className="text-xs text-zinc-600 font-mono mt-1">
-                {t("player.waitingSubtitle")}
-              </div>
-            </div>
-          </div>
-        )
+        emptySlot
       ) : (
-        <div className="w-full h-full relative flex items-center justify-center select-none overflow-hidden">
+        <>
           {/*
             Lecteur vidéo universel :
             - playsInline : obligatoire pour iOS Safari afin d'éviter le basculement forcé vers le player natif plein écran Apple.
@@ -88,7 +74,6 @@ export function MediaPlayer({
               playsInline
               width="100%"
               height="100%"
-              style={{ width: "100%", height: "100%", display: "block" }}
               {...playerProps}
               config={{
                 youtube: {
@@ -150,7 +135,7 @@ export function MediaPlayer({
               </p>
             </div>
           )}
-        </div>
+        </>
       )}
     </div>
   );
