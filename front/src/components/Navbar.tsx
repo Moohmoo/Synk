@@ -26,7 +26,7 @@ export function Navbar({ className = "" }: NavbarProps) {
   };
 
   return (
-    <header className={`w-full h-16 flex-shrink-0 z-20 bg-[#09090b]/80 backdrop-blur-md border-b border-white/10 select-none ${className}`}>
+    <header className={`w-full h-16 flex-shrink-0 z-20 bg-[#111114] shadow-md select-none ${className}`}>
       <div className="w-full max-w-[1400px] mx-auto h-full flex items-center justify-between px-4 sm:px-6">
         {/* Section gauche : Menu mobile (< xl) + Logo */}
         <div className="flex items-center gap-3">
