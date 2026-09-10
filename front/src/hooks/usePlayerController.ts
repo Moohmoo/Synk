@@ -269,6 +269,8 @@ export function usePlayerController({
         .play()
         .then(() => setNeedsAutoplayUnlock(false))
         .catch(() => {});
+    } else {
+      setNeedsAutoplayUnlock(false);
     }
   }, []);
 

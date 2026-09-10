@@ -13,3 +13,4 @@ export const useUIStore = create<UIState>((set) => ({
   setGlowColor: (glowColor) => set({ glowColor }),
   resetUI: () => set({ glowColor: "cyan" }),
 }));
+

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useParams, useNavigate, Navigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Tv, Link2, Users } from "lucide-react";
@@ -27,6 +27,7 @@ import { MediaPlayer } from "./components/MediaPlayer";
 import { PlayerControls } from "./components/PlayerControls";
 import { RoomSessionInfo } from "./components/RoomSessionInfo";
 import { usePlayerController } from "@/hooks/usePlayerController";
+import { useCinemaMode } from "@/hooks/useCinemaMode";
 
 export function RoomView() {
   const { roomId = "" } = useParams<{ roomId: string }>();
@@ -114,7 +115,6 @@ export function RoomView() {
     return saved !== null ? Number(saved) : 100;
   });
   const [isMuted, setIsMuted] = useState<boolean>(false);
-  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const cinemaContainerRef = useRef<HTMLDivElement>(null);
 
   const handleVolumeChange = (newVolume: number) => {
@@ -131,26 +131,24 @@ export function RoomView() {
     }
   };
 
-  // Effet 2 : Écouteur natif de bascule plein écran du navigateur
-  useEffect(() => {
-    const onFullscreenChange = () => {
-      setIsFullscreen(Boolean(document.fullscreenElement));
-    };
-    document.addEventListener("fullscreenchange", onFullscreenChange);
-    return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
-  }, []);
-
-  const toggleFullscreen = () => {
-    if (!cinemaContainerRef.current) return;
-    if (!document.fullscreenElement) {
-      cinemaContainerRef.current.requestFullscreen().catch(() => {});
-    } else {
-      document.exitFullscreen().catch(() => {});
-    }
-  };
-
   const effectiveUserId = currentUserId || userId;
   const isLockedForGuest = roomSettings.is_locked && !isHost;
+
+  // Ergonomie cinéma unifiée : plein écran, auto-hide des contrôles et raccourcis universels
+  const { isFullscreen, areControlsVisible, toggleFullscreen, resetControlsTimeout } =
+    useCinemaMode({
+      containerRef: cinemaContainerRef,
+      controller: playerController,
+      volume,
+      isMuted,
+      onVolumeChange: handleVolumeChange,
+      onToggleMute: handleToggleMute,
+      onChangeMedia: () => {
+        if (!isLockedForGuest && !isRateLimited("CHANGE_MEDIA")) {
+          setIsChangeMediaOpen((open) => !open);
+        }
+      },
+    });
 
   const handleLoadMedia = (e: React.FormEvent) => {
     e.preventDefault();
@@ -168,20 +166,6 @@ export function RoomView() {
     setMediaUrlInput("");
     setIsChangeMediaOpen(false);
   };
-
-  // Raccourci global Cmd+K / Ctrl+K pour ouvrir la commande de changement de média
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault();
-        if (!isLockedForGuest && !isRateLimited("CHANGE_MEDIA")) {
-          setIsChangeMediaOpen((open) => !open);
-        }
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isLockedForGuest, isRateLimited]);
 
   if (roomNotFound) {
     return (
@@ -313,9 +297,15 @@ export function RoomView() {
         {/* ESPACE CINÉMA UNIFIÉ : Lecteur & Barre de Contrôle */}
         <div
           ref={cinemaContainerRef}
+          onMouseMove={isFullscreen ? resetControlsTimeout : undefined}
+          onTouchStart={isFullscreen ? resetControlsTimeout : undefined}
           className={
             isFullscreen
-              ? "fixed inset-0 z-50 bg-[#0a0a0c] flex flex-col items-center justify-center p-4 sm:p-6 w-full h-full"
+              ? `fixed inset-0 z-50 w-full h-full bg-black flex items-center justify-center overflow-hidden select-none ${
+                  !areControlsVisible && playerController.status === "playing"
+                    ? "cursor-none"
+                    : "cursor-default"
+                }`
               : "w-full max-w-4xl flex flex-col items-center"
           }
         >
@@ -329,25 +319,50 @@ export function RoomView() {
             emptySlot={emptyDropzone}
           />
 
-          {/* Barre de Contrôle du Lecteur & Verrou d'hôte */}
-          <PlayerControls
-            controller={playerController}
-            roomSettings={roomSettings}
-            isHost={isHost}
-            volume={volume}
-            isMuted={isMuted}
-            isFullscreen={isFullscreen}
-            isLockDisabled={!isHost || Boolean(isRateLimited("UPDATE_SETTINGS"))}
-            isChangeMediaDisabled={isLockedForGuest || Boolean(isRateLimited("CHANGE_MEDIA"))}
-            onChangeMedia={() => setIsChangeMediaOpen(true)}
-            onToggleLock={() => {
-              if (!isHost || isRateLimited("UPDATE_SETTINGS")) return;
-              updateSettings(!roomSettings.is_locked);
-            }}
-            onVolumeChange={handleVolumeChange}
-            onToggleMute={handleToggleMute}
-            onToggleFullscreen={toggleFullscreen}
-          />
+          {/* Dégradé immersif en bas d'écran (Plein écran uniquement) pour la lisibilité des contrôles */}
+          {isFullscreen && (
+            <div
+              className={`absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none transition-opacity duration-300 z-20 ${
+                areControlsVisible ? "opacity-100" : "opacity-0"
+              }`}
+            />
+          )}
+
+          {/* 
+            Barre de Contrôle du Lecteur & Verrou d'hôte :
+            - En mode normal : disposée directement sous le lecteur.
+            - En mode plein écran : superposition flottante (overlay) avec auto-hide après 3s d'inactivité.
+          */}
+          <div
+            className={
+              isFullscreen
+                ? `absolute bottom-3 sm:bottom-5 left-1/2 -translate-x-1/2 w-[calc(100%-1.5rem)] sm:w-[calc(100%-2rem)] max-w-4xl z-30 transition-all duration-300 ${
+                    areControlsVisible
+                      ? "opacity-100 translate-y-0 pointer-events-auto"
+                      : "opacity-0 translate-y-4 pointer-events-none"
+                  }`
+                : "w-full flex justify-center"
+            }
+          >
+            <PlayerControls
+              controller={playerController}
+              roomSettings={roomSettings}
+              isHost={isHost}
+              volume={volume}
+              isMuted={isMuted}
+              isFullscreen={isFullscreen}
+              isLockDisabled={!isHost || Boolean(isRateLimited("UPDATE_SETTINGS"))}
+              isChangeMediaDisabled={isLockedForGuest || Boolean(isRateLimited("CHANGE_MEDIA"))}
+              onChangeMedia={() => setIsChangeMediaOpen(true)}
+              onToggleLock={() => {
+                if (!isHost || isRateLimited("UPDATE_SETTINGS")) return;
+                updateSettings(!roomSettings.is_locked);
+              }}
+              onVolumeChange={handleVolumeChange}
+              onToggleMute={handleToggleMute}
+              onToggleFullscreen={toggleFullscreen}
+            />
+          </div>
         </div>
       </div>
 

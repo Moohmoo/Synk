@@ -44,12 +44,14 @@ export function MediaPlayer({
   return (
     <div
       className={`w-full ${
-        isFullscreen ? "flex-1 max-h-[calc(100vh-140px)]" : "max-w-4xl"
+        isFullscreen
+          ? "w-full h-full max-w-none max-h-none rounded-none border-0 shadow-none"
+          : "max-w-4xl aspect-video rounded-2xl border border-white/10 shadow-2xl shadow-black/80"
       } ${
-        status === "idle"
+        !isFullscreen && status === "idle"
           ? "min-h-[260px] sm:aspect-video py-6 sm:py-0"
-          : "aspect-video"
-      } bg-[#0a0a0c] rounded-2xl border border-white/10 shadow-2xl shadow-black/80 relative z-10 flex items-center justify-center overflow-hidden`}
+          : ""
+      } bg-[#0a0a0c] relative z-10 flex items-center justify-center overflow-hidden`}
     >
       {status === "idle" ? (
         emptySlot ?? (
@@ -69,7 +71,11 @@ export function MediaPlayer({
         )
       ) : (
         <div className="w-full h-full relative flex items-center justify-center select-none overflow-hidden">
-          {/* Lecteur vidéo universel */}
+          {/*
+            Lecteur vidéo universel :
+            - playsInline : obligatoire pour iOS Safari afin d'éviter le basculement forcé vers le player natif plein écran Apple.
+            - playerVars.playsinline : paramètre officiel YouTube pour conserver la vidéo incrustée sur mobile.
+          */}
           <div className="w-full h-full pointer-events-none">
             <ReactPlayer
               key={mediaUrl}
@@ -79,6 +85,7 @@ export function MediaPlayer({
               volume={isMuted ? 0 : volume / 100}
               muted={isMuted}
               controls={false}
+              playsInline
               width="100%"
               height="100%"
               style={{ width: "100%", height: "100%", display: "block" }}
@@ -93,11 +100,15 @@ export function MediaPlayer({
             />
           </div>
 
-          {/* Écran tactile cinéma : 1 clic = toggle play/pause, 2 clics = plein écran */}
+          {/* 
+            Écran tactile cinéma :
+            - touch-manipulation : élimine le délai de 300ms et prévient le zoom double-tap involontaire sur mobile.
+            - 1 clic = bascule play/pause, 2 clics = plein écran.
+          */}
           <div
             onClick={togglePlay}
             onDoubleClick={onToggleFullscreen}
-            className={`absolute inset-0 z-10 ${
+            className={`absolute inset-0 z-10 touch-manipulation ${
               isPlayDisabled ? "cursor-not-allowed" : "cursor-pointer"
             }`}
           />
