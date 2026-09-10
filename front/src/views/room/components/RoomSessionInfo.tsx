@@ -71,7 +71,7 @@ function ParticipantItem({
   );
 }
 
-interface RoomSessionInfoProps {
+export interface RoomSessionInfoProps {
   roomId: string;
   isConnected: boolean;
   ping?: number;
