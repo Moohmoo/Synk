@@ -4,8 +4,6 @@ import { Youtube, Twitch, Radio } from "lucide-react";
 interface PlatformItem {
   name: string;
   icon: React.ComponentType<{ className?: string }>;
-  hoverBorder: string;
-  hoverText: string;
   hoverIcon: string;
 }
 
@@ -21,29 +19,21 @@ const PLATFORMS: PlatformItem[] = [
   {
     name: "YouTube",
     icon: Youtube,
-    hoverBorder: "hover:border-[#ff0000]/30",
-    hoverText: "hover:text-zinc-200",
     hoverIcon: "group-hover:text-[#ff0000]",
   },
   {
     name: "Twitch",
     icon: Twitch,
-    hoverBorder: "hover:border-[#a970ff]/30",
-    hoverText: "hover:text-zinc-200",
     hoverIcon: "group-hover:text-[#a970ff]",
   },
   {
     name: "Vimeo",
     icon: VimeoIcon,
-    hoverBorder: "hover:border-[#1ab7ea]/30",
-    hoverText: "hover:text-zinc-200",
     hoverIcon: "group-hover:text-[#1ab7ea]",
   },
   {
-    name: "Direct / HLS",
+    name: "Direct (HLS)",
     icon: Radio,
-    hoverBorder: "hover:border-[#0ac8b9]/30",
-    hoverText: "hover:text-zinc-200",
     hoverIcon: "group-hover:text-[#0ac8b9]",
   },
 ];
@@ -54,8 +44,8 @@ export interface PlatformBadgesProps {
 }
 
 /**
- * Badges canoniques monochromes des plateformes de streaming supportées.
- * Conçu pour révéler la couleur de chaque marque subtilement au survol (micro-interaction).
+ * Ligne canonique des plateformes de streaming supportées.
+ * Conçue pour révéler la couleur de chaque marque subtilement au survol (micro-interaction).
  */
 export function PlatformBadges({ className = "", maxVisible = 4 }: PlatformBadgesProps) {
   const visiblePlatforms = PLATFORMS.slice(0, maxVisible);
@@ -63,22 +53,29 @@ export function PlatformBadges({ className = "", maxVisible = 4 }: PlatformBadge
 
   return (
     <div
-      className={`flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 text-[10px] font-mono text-zinc-400 select-none ${className}`}
+      className={`flex flex-wrap items-center justify-center gap-x-3.5 gap-y-1.5 text-xs font-sans select-none ${className}`}
     >
-      {visiblePlatforms.map(({ name, icon: Icon, hoverBorder, hoverText, hoverIcon }) => (
-        <span
-          key={name}
-          className={`group inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#121215] border border-white/5 text-zinc-400 cursor-default transition-all duration-200 ${hoverBorder} ${hoverText}`}
-        >
-          <Icon className={`w-3 h-3 text-zinc-500 transition-colors duration-200 ${hoverIcon} shrink-0`} />
-          <span className="tracking-wider uppercase">{name}</span>
-        </span>
+      {visiblePlatforms.map(({ name, icon: Icon, hoverIcon }, index) => (
+        <React.Fragment key={name}>
+          {index > 0 && (
+            <span className="text-zinc-700/60 select-none text-xs" aria-hidden="true">
+              /
+            </span>
+          )}
+          <span className="group inline-flex items-center gap-1.5 py-0.5 text-zinc-400 hover:text-zinc-200 transition-colors duration-200 cursor-default">
+            <Icon className={`w-3.5 h-3.5 text-zinc-500 transition-colors duration-200 ${hoverIcon} shrink-0`} />
+            <span className="text-xs font-medium tracking-normal">{name}</span>
+          </span>
+        </React.Fragment>
       ))}
 
       {remainingCount > 0 && (
-        <span className="inline-flex items-center px-2 py-1 rounded-md bg-[#121215]/60 border border-white/5 text-zinc-500 text-[10px]">
-          +{remainingCount}
-        </span>
+        <>
+          <span className="text-zinc-700/60 select-none text-xs" aria-hidden="true">
+            /
+          </span>
+          <span className="text-zinc-500 text-xs font-medium">+{remainingCount}</span>
+        </>
       )}
     </div>
   );

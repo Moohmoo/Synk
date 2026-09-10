@@ -29,7 +29,7 @@ export function Navbar({ className = "" }: NavbarProps) {
     <header className={`w-full h-16 flex-shrink-0 z-20 bg-[#111114] shadow-md select-none ${className}`}>
       <div className="w-full max-w-[1400px] mx-auto h-full flex items-center justify-between px-4 sm:px-6">
         {/* Section gauche : Menu mobile (< xl) + Logo */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 shrink-0">
           <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
             <SheetTrigger asChild>
               <button
@@ -42,8 +42,8 @@ export function Navbar({ className = "" }: NavbarProps) {
             </SheetTrigger>
             <SheetContent side="left" className="w-72 p-4 pt-6">
               <SheetHeader className="mb-6 px-2">
-                <SheetTitle>
-                  <Logo />
+                <SheetTitle className="w-fit">
+                  <Logo onClick={() => setMobileNavOpen(false)} />
                 </SheetTitle>
               </SheetHeader>
               <LeftNavContent onItemClick={() => setMobileNavOpen(false)} />
@@ -54,27 +54,30 @@ export function Navbar({ className = "" }: NavbarProps) {
         </div>
 
         {/* Section droite : Toggle de langue FR / EN */}
-        <div className="flex items-center p-0.5 bg-black/40 border border-white/10 rounded-lg text-xs font-mono">
+        <div className="flex items-center gap-1.5 text-xs font-mono select-none">
           <button
             type="button"
             onClick={() => changeLanguage("fr")}
             aria-label="Changer la langue en français"
-            className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors duration-150 cursor-pointer ${
+            className={`px-1.5 py-0.5 text-[11px] font-semibold tracking-wider transition-all duration-150 cursor-pointer border-b-2 ${
               currentLang === "fr"
-                ? "bg-[#1e1e24] text-[#0ac8b9] shadow-sm"
-                : "text-zinc-500 hover:text-zinc-300"
+                ? "text-[#0ac8b9] border-[#0ac8b9] bg-gradient-to-t from-[#0ac8b9]/15 to-transparent"
+                : "text-zinc-500 border-transparent hover:text-zinc-300 hover:border-[#0ac8b9]/40"
             }`}
           >
             FR
           </button>
+          <span className="text-zinc-700 select-none text-[10px]" aria-hidden="true">
+            /
+          </span>
           <button
             type="button"
             onClick={() => changeLanguage("en")}
             aria-label="Switch language to English"
-            className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors duration-150 cursor-pointer ${
+            className={`px-1.5 py-0.5 text-[11px] font-semibold tracking-wider transition-all duration-150 cursor-pointer border-b-2 ${
               currentLang === "en"
-                ? "bg-[#1e1e24] text-[#0ac8b9] shadow-sm"
-                : "text-zinc-500 hover:text-zinc-300"
+                ? "text-[#0ac8b9] border-[#0ac8b9] bg-gradient-to-t from-[#0ac8b9]/15 to-transparent"
+                : "text-zinc-500 border-transparent hover:text-zinc-300 hover:border-[#0ac8b9]/40"
             }`}
           >
             EN

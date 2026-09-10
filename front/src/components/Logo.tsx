@@ -1,8 +1,21 @@
 import { Link } from "react-router-dom";
+import { cn } from "@/lib/utils";
 
-export function Logo() {
+export interface LogoProps {
+  className?: string;
+  onClick?: () => void;
+}
+
+export function Logo({ className, onClick }: LogoProps = {}) {
   return (
-    <Link className="group flex items-center gap-1.5 cursor-pointer transition-colors duration-200" to="/">
+    <Link
+      to="/"
+      onClick={onClick}
+      className={cn(
+        "group inline-flex items-center gap-2 w-fit shrink-0 cursor-pointer transition-colors duration-200",
+        className
+      )}
+    >
       <svg 
         width="24" 
         height="24" 
@@ -22,7 +35,7 @@ export function Logo() {
         />
       </svg>
 
-      <span className="text-lg font-black tracking-tight text-white group-hover:text-[#0ac8b9] transition-colors duration-200">
+      <span className="text-base font-extrabold tracking-widest text-white group-hover:text-[#0ac8b9] transition-colors duration-200">
         SYNK
       </span>
     </Link>
