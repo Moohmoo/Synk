@@ -47,5 +47,8 @@
       "missingRoomCode": "Veuillez renseigner le code du salon.",
       "generic": "Une erreur inattendue est survenue."
     }
+  },
+  "platforms": {
+    "comingSoon": "Bientôt disponible"
   }
 }

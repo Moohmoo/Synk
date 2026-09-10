@@ -1,10 +1,17 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { Youtube, Twitch, Radio } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface PlatformItem {
   name: string;
   icon: React.ComponentType<{ className?: string }>;
   hoverIcon: string;
+  isSupported: boolean;
 }
 
 function VimeoIcon({ className = "w-3 h-3" }: { className?: string }) {
@@ -20,21 +27,25 @@ const PLATFORMS: PlatformItem[] = [
     name: "YouTube",
     icon: Youtube,
     hoverIcon: "group-hover:text-[#ff0000]",
+    isSupported: true,
   },
   {
     name: "Twitch",
     icon: Twitch,
     hoverIcon: "group-hover:text-[#a970ff]",
+    isSupported: false,
   },
   {
     name: "Vimeo",
     icon: VimeoIcon,
     hoverIcon: "group-hover:text-[#1ab7ea]",
+    isSupported: false,
   },
   {
     name: "Direct (HLS)",
     icon: Radio,
     hoverIcon: "group-hover:text-[#0ac8b9]",
+    isSupported: false,
   },
 ];
 
@@ -45,9 +56,11 @@ export interface PlatformBadgesProps {
 
 /**
  * Ligne canonique des plateformes de streaming supportées.
- * Conçue pour révéler la couleur de chaque marque subtilement au survol (micro-interaction).
+ * - YouTube : actif, révèle sa couleur de marque au survol.
+ * - Twitch, Vimeo & Direct : désactivés (bêta MVP), opacité atténuée, curseur not-allowed et tooltip explicatif.
  */
 export function PlatformBadges({ className = "", maxVisible = 4 }: PlatformBadgesProps) {
+  const { t } = useTranslation("global");
   const visiblePlatforms = PLATFORMS.slice(0, maxVisible);
   const remainingCount = PLATFORMS.length - maxVisible;
 
@@ -55,19 +68,45 @@ export function PlatformBadges({ className = "", maxVisible = 4 }: PlatformBadge
     <div
       className={`flex flex-wrap items-center justify-center gap-x-3.5 gap-y-1.5 text-xs font-sans select-none ${className}`}
     >
-      {visiblePlatforms.map(({ name, icon: Icon, hoverIcon }, index) => (
-        <React.Fragment key={name}>
-          {index > 0 && (
-            <span className="text-zinc-700/60 select-none text-xs" aria-hidden="true">
-              /
-            </span>
-          )}
-          <span className="group inline-flex items-center gap-1.5 py-0.5 text-zinc-400 hover:text-zinc-200 transition-colors duration-200 cursor-default">
-            <Icon className={`w-3.5 h-3.5 text-zinc-500 transition-colors duration-200 ${hoverIcon} shrink-0`} />
+      {visiblePlatforms.map(({ name, icon: Icon, hoverIcon, isSupported }, index) => {
+        const badgeElement = (
+          <span
+            tabIndex={isSupported ? undefined : 0}
+            className={`group inline-flex items-center gap-1.5 py-0.5 transition-colors duration-200 outline-none ${
+              isSupported
+                ? "text-zinc-400 hover:text-zinc-200 cursor-default"
+                : "text-zinc-500/70 opacity-45 cursor-not-allowed"
+            }`}
+          >
+            <Icon
+              className={`w-3.5 h-3.5 text-zinc-500 shrink-0 transition-colors duration-200 ${
+                isSupported ? hoverIcon : ""
+              }`}
+            />
             <span className="text-xs font-medium tracking-normal">{name}</span>
           </span>
-        </React.Fragment>
-      ))}
+        );
+
+        return (
+          <React.Fragment key={name}>
+            {index > 0 && (
+              <span className="text-zinc-700/60 select-none text-xs" aria-hidden="true">
+                /
+              </span>
+            )}
+            {isSupported ? (
+              badgeElement
+            ) : (
+              <Tooltip>
+                <TooltipTrigger asChild>{badgeElement}</TooltipTrigger>
+                <TooltipContent side="top" sideOffset={6}>
+                  {t("platforms.comingSoon")}
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </React.Fragment>
+        );
+      })}
 
       {remainingCount > 0 && (
         <>
