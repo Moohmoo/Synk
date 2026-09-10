@@ -1,9 +1,75 @@
 import { Copy, Crown, Check } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { Participant } from "@/types/room";
 import { toast } from "@/components/ui/sonner";
+import { getParticipantColor } from "@/lib/utils";
+
+interface ParticipantItemProps {
+  participant: Participant;
+  isMe: boolean;
+  isDuplicate: boolean;
+  youLabel: string;
+  hostLabel: string;
+}
+
+/**
+ * Ligne de participant individuelle avec avatar coloré déterministe et badges de rôle.
+ */
+function ParticipantItem({
+  participant,
+  isMe,
+  isDuplicate,
+  youLabel,
+  hostLabel,
+}: ParticipantItemProps) {
+  const initials = participant.username.slice(0, 2).toUpperCase();
+  const color = isMe
+    ? { bg: "bg-[#0ac8b9]/20", text: "text-[#0ac8b9]", border: "border-[#0ac8b9]/30" }
+    : getParticipantColor(participant.id);
+
+  return (
+    <div
+      className={`flex items-center justify-between p-2 rounded-lg border transition-colors ${
+        isMe
+          ? "bg-[#141417] border-[#0ac8b9]/25 text-white"
+          : "bg-[#141417]/50 border-white/5 text-zinc-300 hover:bg-[#141417]"
+      }`}
+    >
+      <div className="flex items-center gap-2.5 min-w-0">
+        <div
+          className={`w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-mono font-bold shrink-0 border ${color.bg} ${color.text} ${color.border}`}
+        >
+          {initials}
+        </div>
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span className="text-xs font-medium truncate">{participant.username}</span>
+          {isDuplicate && (
+            <span
+              className="text-[10px] font-mono text-zinc-500 shrink-0"
+              title={`ID: ${participant.id}`}
+            >
+              #{participant.id.slice(-4)}
+            </span>
+          )}
+          {isMe && (
+            <span className="text-[10px] text-[#0ac8b9] font-sans font-medium shrink-0">
+              {youLabel}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {participant.is_host && (
+        <Badge variant="host" className="text-[9px] py-0 px-1.5 gap-1 rounded">
+          <Crown className="w-2.5 h-2.5 text-[#0ac8b9]" />
+          <span>{hostLabel}</span>
+        </Badge>
+      )}
+    </div>
+  );
+}
 
 interface RoomSessionInfoProps {
   roomId: string;
@@ -12,28 +78,6 @@ interface RoomSessionInfoProps {
   participants: Participant[];
   currentUsername: string;
   currentUserId?: string | null;
-}
-
-// Palette de couleurs déterministes (style Figma / Miro) pour différencier visuellement les participants
-const AVATAR_COLOR_PALETTES = [
-  { bg: "bg-cyan-500/15", text: "text-[#0ac8b9]", border: "border-[#0ac8b9]/30" },
-  { bg: "bg-violet-500/15", text: "text-violet-400", border: "border-violet-500/30" },
-  { bg: "bg-emerald-500/15", text: "text-emerald-400", border: "border-emerald-500/30" },
-  { bg: "bg-amber-500/15", text: "text-amber-400", border: "border-amber-500/30" },
-  { bg: "bg-rose-500/15", text: "text-rose-400", border: "border-rose-500/30" },
-  { bg: "bg-blue-500/15", text: "text-blue-400", border: "border-blue-500/30" },
-  { bg: "bg-fuchsia-500/15", text: "text-fuchsia-400", border: "border-fuchsia-500/30" },
-  { bg: "bg-indigo-500/15", text: "text-indigo-400", border: "border-indigo-500/30" },
-];
-
-function getParticipantColor(id: string) {
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) {
-    hash = (hash << 5) - hash + id.charCodeAt(i);
-    hash |= 0;
-  }
-  const index = Math.abs(hash) % AVATAR_COLOR_PALETTES.length;
-  return AVATAR_COLOR_PALETTES[index];
 }
 
 export function RoomSessionInfo({
@@ -46,8 +90,15 @@ export function RoomSessionInfo({
 }: RoomSessionInfoProps) {
   const { t } = useTranslation(["room", "global"]);
   const [copied, setCopied] = useState(false);
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Comptabiliser les occurrences de chaque pseudo pour détecter les homonymes
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    };
+  }, []);
+
+  // Détection des homonymes (pseudos dupliqués)
   const duplicateCounts = useMemo(() => {
     return participants.reduce<Record<string, number>>((acc, p) => {
       const key = p.username.toLowerCase();
@@ -63,7 +114,8 @@ export function RoomSessionInfo({
     toast.success(t("toast.success.linkCopied", { ns: "global" }), {
       id: "copy-room-link",
     });
-    setTimeout(() => setCopied(false), 2000);
+    if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -75,7 +127,7 @@ export function RoomSessionInfo({
             {t("sidebar.info")}
           </div>
 
-          {/* Statut minimaliste Vercel-style aligné à droite */}
+          {/* Statut connexion & Ping */}
           <div className="flex items-center gap-1.5">
             <div
               className={`w-1.5 h-1.5 rounded-full ${
@@ -87,7 +139,7 @@ export function RoomSessionInfo({
             <span className="text-[11px] font-mono text-zinc-400">
               Ping :{" "}
               <span className="text-zinc-200">
-                {isConnected ? (ping !== undefined && ping > 0 ? `${ping}ms` : "1ms") : "--"}
+                {isConnected && ping !== undefined && ping > 0 ? `${ping}ms` : "--"}
               </span>
             </span>
           </div>
@@ -125,63 +177,16 @@ export function RoomSessionInfo({
         </div>
 
         <div className="space-y-1.5 max-h-[300px] overflow-y-auto pr-1">
-          {participants.map((p) => {
-            const isMe = currentUserId ? p.id === currentUserId : p.username === currentUsername;
-            const initials = p.username.slice(0, 2).toUpperCase();
-            const color = isMe
-              ? { bg: "bg-[#0ac8b9]/20", text: "text-[#0ac8b9]", border: "border-[#0ac8b9]/30" }
-              : getParticipantColor(p.id);
-            const isDuplicate = (duplicateCounts[p.username.toLowerCase()] || 0) > 1;
-
-            return (
-              <div
-                key={p.id}
-                className={`flex items-center justify-between p-2 rounded-lg border transition-colors ${
-                  isMe
-                    ? "bg-[#141417] border-[#0ac8b9]/25 text-white"
-                    : "bg-[#141417]/50 border-white/5 text-zinc-300 hover:bg-[#141417]"
-                }`}
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div
-                    className={`w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-mono font-bold shrink-0 border ${color.bg} ${color.text} ${color.border}`}
-                  >
-                    {initials}
-                  </div>
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <span className="text-xs font-medium truncate">
-                      {p.username}
-                    </span>
-                    {isDuplicate && (
-                      <span
-                        className="text-[10px] font-mono text-zinc-500 shrink-0"
-                        title={`ID: ${p.id}`}
-                      >
-                        #{p.id.slice(-4)}
-                      </span>
-                    )}
-                    {isMe && (
-                      <span className="text-[10px] text-[#0ac8b9] font-sans font-medium shrink-0">
-                        {t("participants.you")}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0">
-                  {p.is_host && (
-                    <Badge
-                      variant="host"
-                      className="text-[9px] py-0 px-1.5 gap-1 rounded"
-                    >
-                      <Crown className="w-2.5 h-2.5 text-[#0ac8b9]" />
-                      <span>{t("participants.host")}</span>
-                    </Badge>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+          {participants.map((p) => (
+            <ParticipantItem
+              key={p.id}
+              participant={p}
+              isMe={currentUserId ? p.id === currentUserId : p.username === currentUsername}
+              isDuplicate={(duplicateCounts[p.username.toLowerCase()] || 0) > 1}
+              youLabel={t("participants.you")}
+              hostLabel={t("participants.host")}
+            />
+          ))}
         </div>
       </div>
     </div>
