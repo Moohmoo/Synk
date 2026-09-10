@@ -26,18 +26,20 @@ export function useHomeFlow() {
   const { t } = useTranslation(["global", "validation", "errors"]);
   const setGlowColor = useUIStore((s) => s.setGlowColor);
 
-  const [mode, setMode] = useState<HomeMode>("create");
+  const initialJoinParam = searchParams.get("join");
+  const initialCleanCode = initialJoinParam ? extractRoomCode(initialJoinParam) : null;
+
+  const [mode, setMode] = useState<HomeMode>(() => (initialCleanCode ? "join" : "create"));
   const [joinStep, setJoinStep] = useState<JoinStep>("code");
   const [username, setUsername] = useState(() => sessionManager.getLastUsername());
-  const [roomCode, setRoomCode] = useState("");
+  const [roomCode, setRoomCode] = useState(() => initialCleanCode || "");
   const [validatedRoomCode, setValidatedRoomCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  // Synchronise la lueur d'ambiance avec le mode actif (rouge pour créer, cyan pour rejoindre)
+  // Maintient la lueur d'ambiance cyan de la marque sur l'accueil
   useEffect(() => {
-    setGlowColor(mode === "create" ? "red" : "cyan");
-    return () => setGlowColor("cyan");
-  }, [mode, setGlowColor]);
+    setGlowColor("cyan");
+  }, [setGlowColor]);
 
   const clearJoinParam = () => {
     if (searchParams.has("join")) {
