@@ -18,6 +18,115 @@ import { RoomSettings } from "@/types/room";
 import { formatTime } from "@/lib/utils";
 import { PlayerController } from "@/hooks/usePlayerController";
 
+interface VolumeControlProps {
+  volume: number;
+  isMuted: boolean;
+  onVolumeChange?: (volume: number) => void;
+  onToggleMute?: () => void;
+  muteLabel: string;
+  unmuteLabel: string;
+}
+
+/**
+ * Contrôle du volume sonore :
+ * - Sur mobile : bouton discret de bascule muet/sonore adapté au contrôle tactile.
+ * - Sur desktop : slider horizontal et indicateur numérique en pourcentage.
+ */
+function VolumeControl({
+  volume,
+  isMuted,
+  onVolumeChange,
+  onToggleMute,
+  muteLabel,
+  unmuteLabel,
+}: VolumeControlProps) {
+  return (
+    <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-2.5 py-1 bg-black/40 border border-white/5 text-xs font-mono rounded-lg">
+      <button
+        type="button"
+        onClick={onToggleMute}
+        className="text-zinc-400 hover:text-white transition-colors cursor-pointer"
+        title={isMuted ? unmuteLabel : muteLabel}
+      >
+        {isMuted || volume === 0 ? (
+          <VolumeX className="w-3.5 h-3.5 text-rose-400" />
+        ) : (
+          <Volume2 className="w-3.5 h-3.5 text-zinc-300" />
+        )}
+      </button>
+      <div className="hidden sm:block w-16 sm:w-20">
+        <Slider
+          value={[isMuted ? 0 : volume]}
+          max={100}
+          step={1}
+          onValueChange={([val]) => {
+            onVolumeChange?.(val);
+            if (isMuted && val > 0) onToggleMute?.();
+          }}
+        />
+      </div>
+      <span className="hidden sm:inline min-w-[28px] text-[11px] text-zinc-400 select-none">
+        {isMuted ? "0%" : `${volume}%`}
+      </span>
+    </div>
+  );
+}
+
+interface RoomLockButtonProps {
+  isHost: boolean;
+  isLocked: boolean;
+  isDisabled: boolean;
+  onToggleLock: () => void;
+  hostOnlyLabel: string;
+  lockedLabel: string;
+  unlockedLabel: string;
+}
+
+/**
+ * Bouton de verrouillage du salon :
+ * - Pour l'hôte : bouton d'action pour basculer le verrouillage exclusif.
+ * - Pour les invités : badge informatif discret si le salon est verrouillé.
+ */
+function RoomLockButton({
+  isHost,
+  isLocked,
+  isDisabled,
+  onToggleLock,
+  hostOnlyLabel,
+  lockedLabel,
+  unlockedLabel,
+}: RoomLockButtonProps) {
+  if (isHost) {
+    return (
+      <Button
+        variant={isLocked ? "destructive" : "secondary"}
+        size="sm"
+        disabled={isDisabled}
+        onClick={onToggleLock}
+        className="gap-1.5 h-8 px-2.5 sm:px-3 text-xs"
+        title={isLocked ? lockedLabel : unlockedLabel}
+      >
+        {isLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
+        <span className="hidden sm:inline">{isLocked ? lockedLabel : unlockedLabel}</span>
+      </Button>
+    );
+  }
+
+  if (isLocked) {
+    return (
+      <div
+        className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1 bg-black/40 border border-white/5 text-[11px] font-sans tracking-wider text-amber-400 uppercase rounded-md"
+        title={hostOnlyLabel}
+      >
+        <Lock className="w-3 h-3" />
+        <span className="hidden sm:inline">{hostOnlyLabel}</span>
+      </div>
+    );
+  }
+
+  return null;
+}
+
 interface PlayerControlsProps {
   controller: PlayerController;
   roomSettings: RoomSettings;
@@ -110,42 +219,17 @@ export function PlayerControls({
 
           <div className="h-5 w-px bg-white/5" />
 
-          {/* 
-            Réglage du Volume :
-            Sur mobile, le slider horizontal encombre la barre d'action alors que le volume
-            est ajusté matériellement par les boutons physiques de l'appareil. On masque donc
-            le slider pour ne conserver qu'un bouton toggle mute/unmute tactile et direct.
-          */}
-          <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-2.5 py-1 bg-black/40 border border-white/5 text-xs font-mono rounded-lg">
-            <button
-              type="button"
-              onClick={onToggleMute}
-              className="text-zinc-400 hover:text-white transition-colors cursor-pointer"
-              title={isMuted ? t("controls.unmute") : t("controls.mute")}
-            >
-              {isMuted || volume === 0 ? (
-                <VolumeX className="w-3.5 h-3.5 text-rose-400" />
-              ) : (
-                <Volume2 className="w-3.5 h-3.5 text-zinc-300" />
-              )}
-            </button>
-            <div className="hidden sm:block w-16 sm:w-20">
-              <Slider
-                value={[isMuted ? 0 : volume]}
-                max={100}
-                step={1}
-                onValueChange={([val]) => {
-                  onVolumeChange?.(val);
-                  if (isMuted && val > 0) onToggleMute?.();
-                }}
-              />
-            </div>
-            <span className="hidden sm:inline min-w-[28px] text-[11px] text-zinc-400 select-none">
-              {isMuted ? "0%" : `${volume}%`}
-            </span>
-          </div>
+          {/* Réglage du Volume */}
+          <VolumeControl
+            volume={volume}
+            isMuted={isMuted}
+            onVolumeChange={onVolumeChange}
+            onToggleMute={onToggleMute}
+            muteLabel={t("controls.mute")}
+            unmuteLabel={t("controls.unmute")}
+          />
 
-          {/* Bouton Rattraper : icône seule sur mobile pour éviter de déborder si retard > 3s */}
+          {/* Bouton Rattraper */}
           {isBehind && (
             <Button
               variant="outline"
@@ -180,46 +264,16 @@ export function PlayerControls({
             </Button>
           )}
 
-          {/* 
-            Bouton de verrouillage du salon (Hôte) :
-            Sur mobile, le texte complet ("Salon déverrouillé" ~160px) est masqué pour n'afficher que l'icône,
-            évitant tout débordement horizontal tout en conservant le tooltip 'title' pour l'accessibilité.
-          */}
-          {isHost ? (
-            <Button
-              variant={roomSettings.is_locked ? "destructive" : "secondary"}
-              size="sm"
-              disabled={isLockDisabled}
-              onClick={onToggleLock}
-              className="gap-1.5 h-8 px-2.5 sm:px-3 text-xs"
-              title={
-                roomSettings.is_locked
-                  ? t("controls.roomLocked")
-                  : t("controls.roomUnlocked")
-              }
-            >
-              {roomSettings.is_locked ? (
-                <Lock className="w-3.5 h-3.5" />
-              ) : (
-                <Unlock className="w-3.5 h-3.5" />
-              )}
-              <span className="hidden sm:inline">
-                {roomSettings.is_locked
-                  ? t("controls.roomLocked")
-                  : t("controls.roomUnlocked")}
-              </span>
-            </Button>
-          ) : (
-            roomSettings.is_locked && (
-              <div
-                className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1 bg-black/40 border border-white/5 text-[11px] font-sans tracking-wider text-amber-400 uppercase rounded-md"
-                title={t("controls.hostOnly")}
-              >
-                <Lock className="w-3 h-3" />
-                <span className="hidden sm:inline">{t("controls.hostOnly")}</span>
-              </div>
-            )
-          )}
+          {/* Verrou d'hôte */}
+          <RoomLockButton
+            isHost={isHost}
+            isLocked={roomSettings.is_locked}
+            isDisabled={isLockDisabled}
+            onToggleLock={onToggleLock}
+            hostOnlyLabel={t("controls.hostOnly")}
+            lockedLabel={t("controls.roomLocked")}
+            unlockedLabel={t("controls.roomUnlocked")}
+          />
 
           {onToggleFullscreen && (
             <Button
