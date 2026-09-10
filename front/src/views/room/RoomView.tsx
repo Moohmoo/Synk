@@ -27,14 +27,13 @@ import { MediaPlayer } from "./components/MediaPlayer";
 import { PlayerControls } from "./components/PlayerControls";
 import { RoomSessionInfo } from "./components/RoomSessionInfo";
 import { usePlayerController } from "@/hooks/usePlayerController";
+import { useCinemaMode } from "@/hooks/useCinemaMode";
 
 export function RoomView() {
   const { roomId = "" } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation(["room", "global"]);
   const setGlowColor = useUIStore((s) => s.setGlowColor);
-  const isFullscreen = useUIStore((s) => s.isFullscreen);
-  const setIsFullscreen = useUIStore((s) => s.setIsFullscreen);
 
   // Vérification synchrone de la session locale en mémoire
   const session = useMemo(() => (roomId ? sessionManager.getRoomSession(roomId) : null), [roomId]);
@@ -73,9 +72,8 @@ export function RoomView() {
 
     return () => {
       setGlowColor("cyan");
-      setIsFullscreen(false);
     };
-  }, [roomId, setGlowColor, setIsFullscreen]);
+  }, [roomId, setGlowColor]);
 
   // Synchronisation temps réel via WebSocket
   const {
@@ -133,123 +131,24 @@ export function RoomView() {
     }
   };
 
-  // Gestion de la visibilité des commandes en plein écran (Auto-Hide après 3s d'inactivité)
-  const [areControlsVisible, setAreControlsVisible] = useState<boolean>(true);
-  const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Réinitialise le minuteur d'auto-hide des contrôles
-  const resetControlsTimeout = useCallback(() => {
-    setAreControlsVisible(true);
-    if (controlsTimeoutRef.current) {
-      clearTimeout(controlsTimeoutRef.current);
-    }
-    // Si la vidéo est en cours de lecture, on masque les contrôles après 3s d'inactivité
-    if (playerController.status === "playing") {
-      controlsTimeoutRef.current = setTimeout(() => {
-        setAreControlsVisible(false);
-      }, 3000);
-    }
-  }, [playerController.status]);
-
-  // Si l'état de lecture change (ex: mise en pause), on réaffiche immédiatement les contrôles
-  useEffect(() => {
-    if (playerController.status !== "playing") {
-      setAreControlsVisible(true);
-      if (controlsTimeoutRef.current) {
-        clearTimeout(controlsTimeoutRef.current);
-      }
-    } else if (isFullscreen) {
-      resetControlsTimeout();
-    }
-  }, [playerController.status, isFullscreen, resetControlsTimeout]);
-
-  // Nettoyage du timer d'inactivité au démontage
-  useEffect(() => {
-    return () => {
-      if (controlsTimeoutRef.current) {
-        clearTimeout(controlsTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  // Écouteur des événements de bascule plein écran natif (W3C standard & préfixes WebKit pour Safari)
-  useEffect(() => {
-    const handleNativeFullscreenChange = () => {
-      const doc = document as Document & {
-        webkitFullscreenElement?: Element;
-      };
-      const isNative = Boolean(doc.fullscreenElement || doc.webkitFullscreenElement);
-      setIsFullscreen(isNative);
-      if (!isNative) {
-        setAreControlsVisible(true);
-      }
-    };
-
-    document.addEventListener("fullscreenchange", handleNativeFullscreenChange);
-    document.addEventListener("webkitfullscreenchange", handleNativeFullscreenChange);
-
-    // Permet de quitter le mode plein écran In-Window CSS avec la touche Échap
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isFullscreen) {
-        setIsFullscreen(false);
-        setAreControlsVisible(true);
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.removeEventListener("fullscreenchange", handleNativeFullscreenChange);
-      document.removeEventListener("webkitfullscreenchange", handleNativeFullscreenChange);
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isFullscreen]);
-
-  // Bascule universelle plein écran :
-  // - Safari iOS (iPhone) : ne supporte pas Element.requestFullscreen() sur les <div> -> repli gracieux In-Window CSS.
-  // - Desktop & Android : API Fullscreen native avec support des préfixes WebKit pour anciens navigateurs.
-  const toggleFullscreen = useCallback(() => {
-    const container = cinemaContainerRef.current;
-    if (!container) return;
-
-    const doc = document as Document & {
-      webkitFullscreenElement?: Element;
-      webkitExitFullscreen?: () => Promise<void>;
-    };
-    const isNativeActive = Boolean(doc.fullscreenElement || doc.webkitFullscreenElement);
-
-    if (isFullscreen || isNativeActive) {
-      if (isNativeActive) {
-        const exit = doc.exitFullscreen || doc.webkitExitFullscreen;
-        exit?.call(doc).catch(() => {});
-      }
-      setIsFullscreen(false);
-      setAreControlsVisible(true);
-    } else {
-      const req =
-        container.requestFullscreen ||
-        (container as unknown as { webkitRequestFullscreen?: () => Promise<void> })
-          .webkitRequestFullscreen;
-
-      if (typeof req === "function") {
-        req
-          .call(container)
-          .then(() => {
-            setIsFullscreen(true);
-          })
-          .catch(() => {
-            // Repli direct sur In-Window CSS si l'API est rejetée ou non autorisée
-            setIsFullscreen(true);
-          });
-      } else {
-        // iPhone Safari : repli immédiat In-Window CSS
-        setIsFullscreen(true);
-      }
-      resetControlsTimeout();
-    }
-  }, [isFullscreen, resetControlsTimeout]);
-
   const effectiveUserId = currentUserId || userId;
   const isLockedForGuest = roomSettings.is_locked && !isHost;
+
+  // Ergonomie cinéma unifiée : plein écran, auto-hide des contrôles et raccourcis universels
+  const { isFullscreen, areControlsVisible, toggleFullscreen, resetControlsTimeout } =
+    useCinemaMode({
+      containerRef: cinemaContainerRef,
+      controller: playerController,
+      volume,
+      isMuted,
+      onVolumeChange: handleVolumeChange,
+      onToggleMute: handleToggleMute,
+      onChangeMedia: () => {
+        if (!isLockedForGuest && !isRateLimited("CHANGE_MEDIA")) {
+          setIsChangeMediaOpen((open) => !open);
+        }
+      },
+    });
 
   const handleLoadMedia = (e: React.FormEvent) => {
     e.preventDefault();
@@ -267,20 +166,6 @@ export function RoomView() {
     setMediaUrlInput("");
     setIsChangeMediaOpen(false);
   };
-
-  // Raccourci global Cmd+K / Ctrl+K pour ouvrir la commande de changement de média
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault();
-        if (!isLockedForGuest && !isRateLimited("CHANGE_MEDIA")) {
-          setIsChangeMediaOpen((open) => !open);
-        }
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isLockedForGuest, isRateLimited]);
 
   if (roomNotFound) {
     return (
@@ -416,7 +301,7 @@ export function RoomView() {
           onTouchStart={isFullscreen ? resetControlsTimeout : undefined}
           className={
             isFullscreen
-              ? `w-full h-full bg-black flex items-center justify-center relative overflow-hidden select-none ${
+              ? `fixed inset-0 z-50 w-full h-full bg-black flex items-center justify-center overflow-hidden select-none ${
                   !areControlsVisible && playerController.status === "playing"
                     ? "cursor-none"
                     : "cursor-default"
