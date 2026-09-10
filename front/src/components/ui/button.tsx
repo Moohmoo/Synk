@@ -4,12 +4,12 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-none text-xs font-sans font-semibold uppercase tracking-wider transition-all duration-150 ease-out disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 outline-none select-none cursor-pointer",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-xs font-sans font-semibold tracking-wide transition-all duration-150 ease-out disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 outline-none select-none cursor-pointer",
   {
     variants: {
       variant: {
         primary:
-          "bg-[#ff4655] hover:bg-[#ff4655]/90 text-white font-bold border border-transparent shadow-[0_0_16px_rgba(255,70,85,0.3)] hover:shadow-[0_0_24px_rgba(255,70,85,0.5)] active:translate-y-[1px]",
+          "bg-[#0ac8b9] hover:bg-[#0ac8b9]/90 text-[#09090b] font-bold border border-transparent shadow-[0_0_16px_rgba(10,200,185,0.25)] hover:shadow-[0_0_24px_rgba(10,200,185,0.45)] active:translate-y-[1px]",
         teal:
           "bg-[#0ac8b9]/15 hover:bg-[#0ac8b9]/25 text-[#0ac8b9] border border-[#0ac8b9]/30 hover:border-[#0ac8b9]/50 active:translate-y-[1px]",
         secondary:
@@ -19,7 +19,7 @@ const buttonVariants = cva(
         ghost:
           "text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.04] active:translate-y-[1px]",
         destructive:
-          "bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-800/80 active:translate-y-[1px]",
+          "bg-[#ff4655]/15 hover:bg-[#ff4655]/25 text-[#ff4655] border border-[#ff4655]/30 active:translate-y-[1px]",
       },
       size: {
         default: "h-10 px-5 py-2",

@@ -26,7 +26,7 @@ export function Navbar({ className = "" }: NavbarProps) {
   };
 
   return (
-    <header className={`w-full h-16 flex-shrink-0 z-10 bg-[#18181b] border-b border-white/10 select-none ${className}`}>
+    <header className={`w-full h-16 flex-shrink-0 z-20 bg-[#09090b]/80 backdrop-blur-md border-b border-white/10 select-none ${className}`}>
       <div className="w-full max-w-[1400px] mx-auto h-full flex items-center justify-between px-4 sm:px-6">
         {/* Section gauche : Menu mobile (< xl) + Logo */}
         <div className="flex items-center gap-3">
@@ -54,14 +54,14 @@ export function Navbar({ className = "" }: NavbarProps) {
         </div>
 
         {/* Section droite : Toggle de langue FR / EN */}
-        <div className="flex items-center p-1 bg-black/40 border border-white/10 rounded text-xs font-mono">
+        <div className="flex items-center p-0.5 bg-black/40 border border-white/10 rounded-lg text-xs font-mono">
           <button
             type="button"
             onClick={() => changeLanguage("fr")}
             aria-label="Changer la langue en français"
-            className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-colors duration-150 ${
+            className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors duration-150 cursor-pointer ${
               currentLang === "fr"
-                ? "bg-[#27272a] text-[#0ac8b9] shadow-sm"
+                ? "bg-[#1e1e24] text-[#0ac8b9] shadow-sm"
                 : "text-zinc-500 hover:text-zinc-300"
             }`}
           >
@@ -71,9 +71,9 @@ export function Navbar({ className = "" }: NavbarProps) {
             type="button"
             onClick={() => changeLanguage("en")}
             aria-label="Switch language to English"
-            className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-colors duration-150 ${
+            className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors duration-150 cursor-pointer ${
               currentLang === "en"
-                ? "bg-[#27272a] text-[#0ac8b9] shadow-sm"
+                ? "bg-[#1e1e24] text-[#0ac8b9] shadow-sm"
                 : "text-zinc-500 hover:text-zinc-300"
             }`}
           >
