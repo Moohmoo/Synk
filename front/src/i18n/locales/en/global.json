@@ -47,5 +47,8 @@
       "missingRoomCode": "Please enter a room code.",
       "generic": "An unexpected error occurred."
     }
+  },
+  "platforms": {
+    "comingSoon": "Coming soon"
   }
 }

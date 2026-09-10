@@ -72,7 +72,20 @@ export function useSyncRoom({
   const [isConnected, setIsConnected] = useState(false);
   const [currentUsername, setCurrentUsername] = useState(username);
   const [currentUserId, setCurrentUserId] = useState<string | null>(userId || null);
-  const [participants, setParticipants] = useState<Participant[]>([]);
+  const [participants, setParticipants] = useState<Participant[]>(() => {
+    if (username) {
+      return [
+        {
+          id: userId || "self",
+          username,
+          is_host: Boolean(token),
+          ping_ms: 0,
+          joined_at: Date.now(),
+        },
+      ];
+    }
+    return [];
+  });
   const [player, setPlayer] = useState<PlayerState>({
     media_url: null,
     media_id: null,

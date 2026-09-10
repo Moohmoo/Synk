@@ -4,18 +4,21 @@ import { HomeView } from "@/views/home/HomeView";
 import { RoomView } from "@/views/room/RoomView";
 import { NotFoundView } from "@/views/NotFoundView";
 import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 export function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route element={<DashboardLayout />}>
-          <Route path="/" element={<HomeView />} />
-          <Route path="/room/:roomId" element={<RoomView />} />
-          <Route path="*" element={<NotFoundView />} />
-        </Route>
-      </Routes>
-      <Toaster />
-    </BrowserRouter>
+    <TooltipProvider delayDuration={150}>
+      <BrowserRouter>
+        <Routes>
+          <Route element={<DashboardLayout />}>
+            <Route path="/" element={<HomeView />} />
+            <Route path="/room/:roomId" element={<RoomView />} />
+            <Route path="*" element={<NotFoundView />} />
+          </Route>
+        </Routes>
+        <Toaster />
+      </BrowserRouter>
+    </TooltipProvider>
   );
 }

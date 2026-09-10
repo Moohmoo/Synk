@@ -16,6 +16,7 @@ import { RoomSessionInfo } from "./components/RoomSessionInfo";
 import { RoomDropzone } from "./components/RoomDropzone";
 import { ChangeMediaDialog } from "./components/ChangeMediaDialog";
 import { RoomMobileInfoSheet } from "./components/RoomMobileInfoSheet";
+import { RoomSkeleton } from "./components/RoomSkeleton";
 
 export function RoomView() {
   const { roomId = "" } = useParams<{ roomId: string }>();
@@ -31,12 +32,11 @@ export function RoomView() {
 
   const { username, token, userId } = session;
 
-  const [isInitializing, setIsInitializing] = useState(true);
   const [roomNotFound, setRoomNotFound] = useState(false);
   const [mediaUrlInput, setMediaUrlInput] = useState("");
   const [isChangeMediaOpen, setIsChangeMediaOpen] = useState(false);
 
-  // Effet : Vérification d'existence du salon côté serveur (HTTP)
+  // Effet : Vérification asynchrone non-bloquante de l'existence du salon (HTTP)
   useEffect(() => {
     roomApi
       .checkRoom(roomId)
@@ -45,9 +45,6 @@ export function RoomView() {
       })
       .catch(() => {
         // En cas d'erreur HTTP transitoire, le WebSocket prend le relais
-      })
-      .finally(() => {
-        setIsInitializing(false);
       });
   }, [roomId]);
 
@@ -134,14 +131,6 @@ export function RoomView() {
     );
   }
 
-  if (isInitializing) {
-    return (
-      <div className="flex-1 flex flex-col items-center justify-center py-12">
-        <div className="w-6 h-6 border-2 border-[#0ac8b9] border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
-
   const sessionInfoProps = {
     roomId,
     isConnected,
@@ -151,29 +140,37 @@ export function RoomView() {
     currentUserId: effectiveUserId,
   };
 
+  // En attente initiale de connexion pour un invité : prévient tout flash si un média tourne déjà
+  const isConnectingGuest = !isConnected && !isHost;
+
   return (
     <>
       <RightSidebarSlot>
-        <RoomSessionInfo {...sessionInfoProps} />
+        <div className="animate-fade-in">
+          <RoomSessionInfo {...sessionInfoProps} />
+        </div>
       </RightSidebarSlot>
 
-      <div className="flex-1 flex flex-col items-center justify-start min-w-0 w-full">
+      <div className="flex-1 flex flex-col items-center justify-start min-w-0 w-full animate-fade-in">
         {!isFullscreen && <RoomMobileInfoSheet {...sessionInfoProps} />}
 
-        <div
-          ref={cinemaContainerRef}
-          onMouseMove={isFullscreen ? resetControlsTimeout : undefined}
-          onTouchStart={isFullscreen ? resetControlsTimeout : undefined}
-          className={
-            isFullscreen
-              ? `fixed inset-0 z-50 w-full h-full bg-black flex items-center justify-center overflow-hidden select-none ${
-                  !areControlsVisible && playerController.status === "playing"
-                    ? "cursor-none"
-                    : "cursor-default"
-                }`
-              : "w-full max-w-4xl flex flex-col items-center"
-          }
-        >
+        {isConnectingGuest ? (
+          <RoomSkeleton />
+        ) : (
+          <div
+            ref={cinemaContainerRef}
+            onMouseMove={isFullscreen ? resetControlsTimeout : undefined}
+            onTouchStart={isFullscreen ? resetControlsTimeout : undefined}
+            className={
+              isFullscreen
+                ? `fixed inset-0 z-50 w-full h-full bg-black flex items-center justify-center overflow-hidden select-none ${
+                    !areControlsVisible && playerController.status === "playing"
+                      ? "cursor-none"
+                      : "cursor-default"
+                  }`
+                : "w-full max-w-4xl flex flex-col items-center"
+            }
+          >
           <MediaPlayer
             controller={playerController}
             volume={volume}
@@ -229,6 +226,7 @@ export function RoomView() {
             />
           </div>
         </div>
+        )}
       </div>
 
       <ChangeMediaDialog

@@ -23,7 +23,7 @@ export function RightSidebar({ children, className }: RightSidebarProps) {
 
       {/* MODULE : PROJET / INFORMATIONS */}
       <footer className="pt-4 border-t border-white/10 flex items-center justify-between text-xs text-zinc-500 shrink-0">
-        <span className="text-xs text-zinc-500">Synk v1.0.0-beta</span>
+        <span className="text-[11px] font-mono text-zinc-500 tracking-tight">Synk v1.0.0-beta</span>
         <a
           href="https://github.com"
           target="_blank"

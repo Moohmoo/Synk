@@ -47,7 +47,9 @@
     "disconnected": "Déconnecté",
     "serverPing": "Ping serveur",
     "members": "MEMBRES ({{count}})",
-    "copyTooltip": "Copier le lien d'invitation"
+    "copyTooltip": "Copier le lien d'invitation",
+    "invite": "Inviter",
+    "copied": "Copié !"
   },
   "participants": {
     "online": "CONNECTÉS ({{count}})",

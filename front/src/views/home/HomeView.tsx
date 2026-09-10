@@ -1,4 +1,4 @@
-import { Omnibox } from "@/components/shared";
+import { Omnibox, PlatformBadges } from "@/components/shared";
 import { HomeHero } from "./components/HomeHero";
 import { HomeModeToggle } from "./components/HomeModeToggle";
 import { useHomeFlow } from "@/hooks/useHomeFlow";
@@ -24,7 +24,7 @@ export function HomeView() {
   } = useHomeFlow();
 
   return (
-    <div className="relative flex-1 flex flex-col items-center justify-center w-full max-w-full px-4 sm:px-6 md:px-12 py-10">
+    <div className="relative flex-1 flex flex-col items-center justify-center w-full max-w-full px-4 sm:px-6 md:px-12 py-10 animate-fade-in">
       {/* 
         POURQUOI px-4 sm:px-6 md:px-12 : Libère 16px d'espace horizontal sur smartphone 
         pour loger confortablement le badge et l'omnibox sans débordement.
@@ -51,6 +51,9 @@ export function HomeView() {
           isLoading={isLoading}
           autoFocus
         />
+
+        {/* Badges discrets des plateformes supportées */}
+        <PlatformBadges className="mt-5" />
       </div>
     </div>
   );

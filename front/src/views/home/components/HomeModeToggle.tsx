@@ -13,18 +13,14 @@ export function HomeModeToggle({ mode, onChange }: HomeModeToggleProps) {
   const { t } = useTranslation("global");
 
   return (
-    <div className="relative flex p-1 mb-8 bg-[#18181b] rounded-md border border-white/5 mx-auto select-none">
-      <div
-        className={`absolute top-1 bottom-1 left-1 w-[120px] bg-[#27272a] rounded shadow-sm transition-transform duration-300 ease-out ${
-          mode === "create" ? "translate-x-0" : "translate-x-[120px]"
-        }`}
-      />
-
+    <div className="inline-flex items-center justify-center mb-6 select-none border-b border-white/10">
       <button
         type="button"
         onClick={() => onChange("create")}
-        className={`relative z-10 w-[120px] text-center px-3 py-1.5 text-xs font-medium transition-colors duration-300 ${
-          mode === "create" ? "text-white" : "text-zinc-500 hover:text-zinc-300"
+        className={`w-36 sm:w-44 py-2.5 text-center text-sm font-medium tracking-wide transition-all duration-200 border-b-2 -mb-px cursor-pointer ${
+          mode === "create"
+            ? "text-white border-[#0ac8b9] bg-gradient-to-t from-[#0ac8b9]/15 to-transparent"
+            : "text-zinc-500 border-transparent hover:text-zinc-300 hover:bg-gradient-to-t hover:from-[#0ac8b9]/10 hover:to-transparent hover:border-[#0ac8b9]/40"
         }`}
       >
         {t("home.createTab")}
@@ -33,8 +29,10 @@ export function HomeModeToggle({ mode, onChange }: HomeModeToggleProps) {
       <button
         type="button"
         onClick={() => onChange("join")}
-        className={`relative z-10 w-[120px] text-center px-3 py-1.5 text-xs font-medium transition-colors duration-300 ${
-          mode === "join" ? "text-white" : "text-zinc-500 hover:text-zinc-300"
+        className={`w-36 sm:w-44 py-2.5 text-center text-sm font-medium tracking-wide transition-all duration-200 border-b-2 -mb-px cursor-pointer ${
+          mode === "join"
+            ? "text-white border-[#0ac8b9] bg-gradient-to-t from-[#0ac8b9]/15 to-transparent"
+            : "text-zinc-500 border-transparent hover:text-zinc-300 hover:bg-gradient-to-t hover:from-[#0ac8b9]/10 hover:to-transparent hover:border-[#0ac8b9]/40"
         }`}
       >
         {t("home.joinTab")}
