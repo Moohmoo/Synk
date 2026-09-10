@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Tv } from "lucide-react";
-import { Omnibox } from "@/components/shared";
+import { Omnibox, PlatformBadges } from "@/components/shared";
 
 interface RoomDropzoneProps {
   value: string;
@@ -37,12 +37,7 @@ export function RoomDropzone({ value, onChange, onSubmit, disabled }: RoomDropzo
         autoFocus
       />
 
-      <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 mt-3 sm:mt-5 text-[10px] font-mono text-zinc-400 uppercase tracking-wider">
-        <span className="px-2.5 py-0.5 rounded-md bg-[#121215] border border-white/5">YouTube</span>
-        <span className="px-2.5 py-0.5 rounded-md bg-[#121215] border border-white/5">Twitch</span>
-        <span className="px-2.5 py-0.5 rounded-md bg-[#121215] border border-white/5">Vimeo</span>
-        <span className="px-2.5 py-0.5 rounded-md bg-[#121215] border border-white/5">Direct / HLS</span>
-      </div>
+      <PlatformBadges className="mt-3 sm:mt-5" />
     </div>
   );
 }

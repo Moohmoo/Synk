@@ -108,11 +108,16 @@ export const Omnibox = forwardRef<HTMLInputElement, OmniboxProps>(
           <button
             type="submit"
             disabled={isLoading || disabled}
-            className={`flex-shrink-0 px-3 sm:px-4 py-1.5 min-w-[76px] sm:w-[130px] flex items-center justify-center rounded-lg text-xs font-bold tracking-wide transition-all duration-200 ease-out bg-[#0ac8b9] text-[#09090b] hover:bg-[#0ac8b9]/90 shadow-[0_0_12px_rgba(10,200,185,0.25)] hover:shadow-[0_0_18px_rgba(10,200,185,0.4)] cursor-pointer ${
+            className={`flex-shrink-0 px-3 sm:px-4 py-1.5 min-w-[76px] sm:w-[130px] flex items-center justify-center gap-1 rounded-lg text-xs font-bold tracking-wide transition-all duration-200 ease-out bg-[#0ac8b9] text-[#09090b] hover:bg-[#0ac8b9]/90 shadow-[0_0_12px_rgba(10,200,185,0.25)] hover:shadow-[0_0_18px_rgba(10,200,185,0.4)] cursor-pointer ${
               isLoading || disabled ? "opacity-70 cursor-not-allowed" : "active:translate-y-[1px]"
             }`}
           >
-            {displayButtonText}
+            <span className="truncate">{displayButtonText}</span>
+            {!isLoading && (
+              <span className="hidden sm:inline-block text-[11px] font-mono opacity-50 font-normal select-none">
+                ↵
+              </span>
+            )}
           </button>
         </form>
       </div>

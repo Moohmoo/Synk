@@ -1,4 +1,4 @@
-import { Omnibox } from "@/components/shared";
+import { Omnibox, PlatformBadges } from "@/components/shared";
 import { HomeHero } from "./components/HomeHero";
 import { HomeModeToggle } from "./components/HomeModeToggle";
 import { useHomeFlow } from "@/hooks/useHomeFlow";
@@ -51,6 +51,9 @@ export function HomeView() {
           isLoading={isLoading}
           autoFocus
         />
+
+        {/* Badges discrets des plateformes supportées */}
+        <PlatformBadges className="mt-5" />
       </div>
     </div>
   );
