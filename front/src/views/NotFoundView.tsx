@@ -5,7 +5,13 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Tv2 } from "lucide-react";
 import { useUIStore } from "@/stores/uiStore";
 
-export function NotFoundView() {
+interface NotFoundViewProps {
+  code?: string;
+  title?: string;
+  description?: string;
+}
+
+export function NotFoundView({ code = "404", title, description }: NotFoundViewProps = {}) {
   const { t } = useTranslation("global");
   const setGlowColor = useUIStore((s) => s.setGlowColor);
 
@@ -21,14 +27,20 @@ export function NotFoundView() {
       </div>
 
       <h1 className="text-4xl font-mono font-extrabold tracking-widest text-zinc-100 mb-2">
-        404
+        {code}
       </h1>
 
-      <p className="text-xs font-mono uppercase tracking-wider text-zinc-500 mb-6">
-        {t("notFound.title")}
+      <p className="text-xs sm:text-sm font-mono uppercase tracking-wider text-zinc-400 mb-2 text-center">
+        {title ?? t("notFound.title")}
       </p>
 
-      <Link to="/">
+      {description && (
+        <p className="text-xs text-zinc-500 mb-6 max-w-sm text-center leading-relaxed font-sans">
+          {description}
+        </p>
+      )}
+
+      <Link to="/" className={description ? "" : "mt-4"}>
         <Button variant="primary" size="default" className="gap-2">
           <ArrowLeft className="w-4 h-4" />
           <span>{t("notFound.backHome")}</span>

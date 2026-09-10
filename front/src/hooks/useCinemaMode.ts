@@ -75,16 +75,13 @@ export function useCinemaMode({
     } else if (isFullscreen) {
       resetControlsTimeout();
     }
-  }, [controller.status, isFullscreen, resetControlsTimeout]);
 
-  // Nettoyage du timer au démontage
-  useEffect(() => {
     return () => {
       if (controlsTimeoutRef.current) {
         clearTimeout(controlsTimeoutRef.current);
       }
     };
-  }, []);
+  }, [controller.status, isFullscreen, resetControlsTimeout]);
 
   // Bloque le défilement de la page arrière-plan lors du plein écran In-Window CSS
   useEffect(() => {

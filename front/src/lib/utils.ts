@@ -45,3 +45,34 @@ export function extractRoomCode(raw: string): string {
   }
   return trimmed;
 }
+
+export interface AvatarPalette {
+  bg: string;
+  text: string;
+  border: string;
+}
+
+export const AVATAR_COLOR_PALETTES: AvatarPalette[] = [
+  { bg: "bg-cyan-500/15", text: "text-[#0ac8b9]", border: "border-[#0ac8b9]/30" },
+  { bg: "bg-violet-500/15", text: "text-violet-400", border: "border-violet-500/30" },
+  { bg: "bg-emerald-500/15", text: "text-emerald-400", border: "border-emerald-500/30" },
+  { bg: "bg-amber-500/15", text: "text-amber-400", border: "border-amber-500/30" },
+  { bg: "bg-rose-500/15", text: "text-rose-400", border: "border-rose-500/30" },
+  { bg: "bg-blue-500/15", text: "text-blue-400", border: "border-blue-500/30" },
+  { bg: "bg-fuchsia-500/15", text: "text-fuchsia-400", border: "border-fuchsia-500/30" },
+  { bg: "bg-indigo-500/15", text: "text-indigo-400", border: "border-indigo-500/30" },
+];
+
+/**
+ * Calcule une palette de couleurs déterministe à partir d'un identifiant
+ * pour différencier visuellement les participants.
+ */
+export function getParticipantColor(id: string): AvatarPalette {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash << 5) - hash + id.charCodeAt(i);
+    hash |= 0;
+  }
+  const index = Math.abs(hash) % AVATAR_COLOR_PALETTES.length;
+  return AVATAR_COLOR_PALETTES[index];
+}
