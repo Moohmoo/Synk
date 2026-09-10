@@ -1,7 +1,7 @@
 import { Omnibox } from "@/components/shared";
 import { HomeHero } from "./components/HomeHero";
 import { HomeModeToggle } from "./components/HomeModeToggle";
-import { useHomeFlow } from "./hooks/useHomeFlow";
+import { useHomeFlow } from "@/hooks/useHomeFlow";
 
 /**
  * Vue d'accueil principale :
