@@ -20,7 +20,7 @@ export function RoomMobileInfoSheet(props: RoomSessionInfoProps) {
         <SheetTrigger asChild>
           <button
             type="button"
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#141417]/90 border border-white/10 text-xs font-mono hover:bg-[#27272a] hover:border-white/20 transition-all cursor-pointer shadow-sm"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-sm bg-[#141417]/90 border border-white/10 border-l-2 border-l-[#0ac8b9] text-xs font-mono hover:bg-[#27272a] hover:border-white/20 transition-all cursor-pointer shadow-sm"
             aria-label={t("sidebar.info")}
           >
             <div

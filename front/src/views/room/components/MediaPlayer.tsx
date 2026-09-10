@@ -46,7 +46,7 @@ export function MediaPlayer({
       className={`w-full ${
         isFullscreen
           ? "w-full h-full max-w-none max-h-none rounded-none border-0 shadow-none"
-          : "max-w-4xl aspect-video rounded-2xl border border-white/10 shadow-2xl shadow-black/80"
+          : "max-w-4xl aspect-video rounded-sm border border-white/10 shadow-2xl shadow-black/80"
       } ${
         !isFullscreen && status === "idle"
           ? "min-h-[260px] sm:aspect-video py-6 sm:py-0"
@@ -103,9 +103,9 @@ export function MediaPlayer({
             <button
               type="button"
               onClick={unlockAutoplay}
-              className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2.5 px-4 py-2 bg-[#09090b]/95 hover:bg-[#18181b] border border-[#0ac8b9]/40 hover:border-[#0ac8b9] text-zinc-100 rounded-full shadow-xl shadow-black/50 backdrop-blur-md transition-all cursor-pointer group pointer-events-auto"
+              className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2.5 px-4 py-2 bg-[#09090b]/95 hover:bg-[#18181b] border border-[#0ac8b9]/40 hover:border-[#0ac8b9] text-zinc-100 rounded-sm shadow-xl shadow-black/50 backdrop-blur-md transition-all cursor-pointer group pointer-events-auto"
             >
-              <div className="w-6 h-6 rounded-full bg-[#0ac8b9]/20 flex items-center justify-center text-[#0ac8b9] group-hover:scale-110 transition-transform">
+              <div className="w-6 h-6 rounded-sm bg-[#0ac8b9]/20 flex items-center justify-center text-[#0ac8b9] group-hover:scale-105 transition-transform">
                 <Play className="w-3 h-3 fill-current ml-0.5" />
               </div>
               <div className="flex flex-col text-left">

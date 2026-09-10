@@ -41,7 +41,7 @@ function VolumeControl({
   unmuteLabel,
 }: VolumeControlProps) {
   return (
-    <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-2.5 py-1 bg-black/40 border border-white/5 text-xs font-mono rounded-lg">
+    <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-2.5 py-1 bg-black/40 border border-white/5 text-xs font-mono rounded-sm">
       <button
         type="button"
         onClick={onToggleMute}
@@ -115,7 +115,7 @@ function RoomLockButton({
   if (isLocked) {
     return (
       <div
-        className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1 bg-black/40 border border-white/5 text-[11px] font-sans tracking-wider text-amber-400 uppercase rounded-md"
+        className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1 bg-black/40 border border-white/5 text-[11px] font-sans tracking-wider text-amber-400 uppercase rounded-sm"
         title={hostOnlyLabel}
       >
         <Lock className="w-3 h-3" />
@@ -175,7 +175,7 @@ export function PlayerControls({
   const isAtEnd = status === "ended";
 
   return (
-    <div className="w-full max-w-4xl bg-[#141417]/90 backdrop-blur-md border border-white/10 rounded-xl p-2.5 sm:p-4 flex flex-col gap-2.5 sm:gap-3 select-none mt-3 shadow-lg relative z-10">
+    <div className="w-full max-w-4xl bg-[#141417]/90 backdrop-blur-md border border-white/10 rounded-sm p-2.5 sm:p-4 flex flex-col gap-2.5 sm:gap-3 select-none mt-3 shadow-lg relative z-10">
       {/* Barre de défilement (Timeline) */}
       <div className="w-full flex items-center gap-3">
         <span className="text-xs font-mono text-zinc-400 min-w-10">
@@ -254,13 +254,10 @@ export function PlayerControls({
               disabled={isChangeMediaDisabled}
               onClick={onChangeMedia}
               className="gap-1.5 h-8 px-2 sm:px-2.5 text-xs text-zinc-300 hover:text-white"
-              title={`${t("controls.changeMedia")} (⌘K)`}
+              title={t("controls.changeMedia")}
             >
               <Link2 className="w-3.5 h-3.5 text-[#0ac8b9]" />
               <span className="hidden sm:inline">{t("controls.changeMedia")}</span>
-              <kbd className="hidden md:inline-block px-1 py-0.5 bg-black/40 border border-white/10 rounded text-[9px] font-mono text-zinc-400">
-                ⌘K
-              </kbd>
             </Button>
           )}
 

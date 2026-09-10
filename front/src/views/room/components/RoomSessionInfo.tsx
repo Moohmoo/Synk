@@ -31,15 +31,15 @@ function ParticipantItem({
 
   return (
     <div
-      className={`flex items-center justify-between p-2 rounded-lg border transition-colors ${
+      className={`flex items-center justify-between p-2 rounded-sm border-l-[3px] transition-all duration-200 ${
         isMe
-          ? "bg-[#141417] border-[#0ac8b9]/25 text-white"
-          : "bg-[#141417]/50 border-white/5 text-zinc-300 hover:bg-[#141417]"
+          ? "bg-gradient-to-r from-[#0ac8b9]/15 to-transparent border-l-[#0ac8b9] text-white"
+          : "border-l-transparent text-zinc-300 hover:bg-white/[0.03] hover:text-white"
       }`}
     >
-      <div className="flex items-center gap-2.5 min-w-0">
+      <div className="flex items-center gap-2 min-w-0">
         <div
-          className={`w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-mono font-bold shrink-0 border ${color.bg} ${color.text} ${color.border}`}
+          className={`w-6 h-6 rounded-sm flex items-center justify-center text-[10px] font-mono font-bold shrink-0 border ${color.bg} ${color.text} ${color.border}`}
         >
           {initials}
         </div>
@@ -47,14 +47,14 @@ function ParticipantItem({
           <span className="text-xs font-medium truncate">{participant.username}</span>
           {isDuplicate && (
             <span
-              className="text-[10px] font-mono text-zinc-500 shrink-0"
+              className="text-[9px] font-mono text-zinc-500 shrink-0"
               title={`ID: ${participant.id}`}
             >
               #{participant.id.slice(-4)}
             </span>
           )}
           {isMe && (
-            <span className="text-[10px] text-[#0ac8b9] font-sans font-medium shrink-0">
+            <span className="text-[9px] text-[#0ac8b9] font-medium shrink-0">
               {youLabel}
             </span>
           )}
@@ -62,7 +62,7 @@ function ParticipantItem({
       </div>
 
       {participant.is_host && (
-        <Badge variant="host" className="text-[9px] py-0 px-1.5 gap-1 rounded">
+        <Badge variant="host" className="text-[9px] py-0 px-1.5 gap-1 rounded-sm">
           <Crown className="w-2.5 h-2.5 text-[#0ac8b9]" />
           <span>{hostLabel}</span>
         </Badge>
@@ -145,7 +145,7 @@ export function RoomSessionInfo({
           </div>
         </div>
 
-        <div className="bg-[#141417] border border-white/5 p-3.5 rounded-xl flex items-center justify-between">
+        <div className="bg-[#141417] border border-white/5 border-l-[3px] border-l-[#0ac8b9] p-3.5 rounded-sm flex items-center justify-between shadow-md">
           <div className="flex flex-col min-w-0">
             <span className="text-[10px] uppercase font-mono tracking-wider text-zinc-500">
               {t("sidebar.roomId")}
@@ -158,7 +158,7 @@ export function RoomSessionInfo({
             type="button"
             onClick={handleCopyLink}
             disabled={copied}
-            className="p-1.5 rounded-md hover:bg-white/10 text-zinc-500 hover:text-white transition-colors cursor-pointer shrink-0 ml-2 disabled:opacity-50 disabled:cursor-default"
+            className="p-1.5 rounded-sm hover:bg-white/10 text-zinc-500 hover:text-white transition-colors cursor-pointer shrink-0 ml-2 disabled:opacity-50 disabled:cursor-default"
             title={t("sidebar.copyTooltip")}
           >
             {copied ? (

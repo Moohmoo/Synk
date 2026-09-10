@@ -14,13 +14,13 @@ export function RoomDropzone({ value, onChange, onSubmit, disabled }: RoomDropzo
 
   return (
     <div className="flex flex-col items-center w-full max-w-xl px-3 sm:px-4 select-none">
-      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-zinc-900/80 border border-white/10 flex items-center justify-center mb-2 sm:mb-4 shadow-inner">
-        <Tv className="w-5 h-5 sm:w-6 sm:h-6 text-[#0ac8b9]" />
+      <div className="mb-2 sm:mb-3 flex items-center justify-center">
+        <Tv className="w-8 h-8 sm:w-9 sm:h-9 text-[#0ac8b9] drop-shadow-[0_0_12px_rgba(10,200,185,0.4)]" />
       </div>
-      <h2 className="text-sm sm:text-base font-sans font-bold tracking-tight text-zinc-200 mb-1">
+      <h2 className="text-sm sm:text-base font-bold tracking-tight text-white mb-1">
         {t("player.waitingTitle")}
       </h2>
-      <p className="text-xs font-sans text-zinc-400 mb-4 sm:mb-6 text-center max-w-sm">
+      <p className="text-xs text-zinc-400 mb-4 sm:mb-5 text-center max-w-sm leading-relaxed">
         {t("player.waitingSubtitle")}
       </p>
 
