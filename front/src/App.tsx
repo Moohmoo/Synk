@@ -1,4 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { HomeView } from "@/views/home/HomeView";
 import { RoomView } from "@/views/room/RoomView";
@@ -18,6 +20,8 @@ export function App() {
           </Route>
         </Routes>
         <Toaster />
+        <Analytics />
+        <SpeedInsights />
       </BrowserRouter>
     </TooltipProvider>
   );
