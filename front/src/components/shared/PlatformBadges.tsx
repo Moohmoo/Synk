@@ -66,31 +66,31 @@ export function PlatformBadges({ className = "", maxVisible = 4 }: PlatformBadge
 
   return (
     <div
-      className={`flex flex-wrap items-center justify-center gap-x-3.5 gap-y-1.5 text-xs font-sans select-none ${className}`}
+      className={`flex flex-wrap items-center justify-center gap-x-2 text-[10px] font-bold text-zinc-600 uppercase tracking-widest mt-6 select-none ${className}`}
     >
       {visiblePlatforms.map(({ name, icon: Icon, hoverIcon, isSupported }, index) => {
         const badgeElement = (
           <span
             tabIndex={isSupported ? undefined : 0}
-            className={`group inline-flex items-center gap-1.5 py-0.5 transition-colors duration-200 outline-none ${
+            className={`group inline-flex items-center gap-1.5 transition-colors duration-200 outline-none ${
               isSupported
                 ? "text-zinc-400 hover:text-zinc-200 cursor-default"
-                : "text-zinc-500/70 opacity-45 cursor-not-allowed"
+                : "text-zinc-600 hover:text-zinc-500 cursor-not-allowed"
             }`}
           >
             <Icon
-              className={`w-3.5 h-3.5 text-zinc-500 shrink-0 transition-colors duration-200 ${
+              className={`w-3.5 h-3.5 text-zinc-600 shrink-0 transition-colors duration-200 ${
                 isSupported ? hoverIcon : ""
               }`}
             />
-            <span className="text-xs font-medium tracking-normal">{name}</span>
+            <span>{name}</span>
           </span>
         );
 
         return (
           <React.Fragment key={name}>
             {index > 0 && (
-              <span className="text-zinc-700/60 select-none text-xs" aria-hidden="true">
+              <span className="text-zinc-800 select-none" aria-hidden="true">
                 /
               </span>
             )}
@@ -110,10 +110,10 @@ export function PlatformBadges({ className = "", maxVisible = 4 }: PlatformBadge
 
       {remainingCount > 0 && (
         <>
-          <span className="text-zinc-700/60 select-none text-xs" aria-hidden="true">
+          <span className="text-zinc-800 select-none" aria-hidden="true">
             /
           </span>
-          <span className="text-zinc-500 text-xs font-medium">+{remainingCount}</span>
+          <span className="text-zinc-600 font-bold">+{remainingCount}</span>
         </>
       )}
     </div>

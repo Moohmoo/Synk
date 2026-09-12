@@ -13,7 +13,7 @@ export function HomeHero({ mode }: HomeHeroProps) {
   const { t } = useTranslation("global");
 
   return (
-    <div className="grid grid-cols-1 grid-rows-1 place-items-center mb-6 max-w-lg text-center select-none">
+    <div className="grid grid-cols-1 grid-rows-1 place-items-center max-w-md text-center select-none">
       {/* État Mode Créer */}
       <div
         className={`col-start-1 row-start-1 flex flex-col items-center transition-all duration-300 ease-out ${
@@ -22,10 +22,10 @@ export function HomeHero({ mode }: HomeHeroProps) {
             : "opacity-0 scale-95 pointer-events-none"
         }`}
       >
-        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-white">
+        <h1 className="text-4xl md:text-5xl font-black tracking-tight text-white mb-2">
           {t("home.createTitle")}
         </h1>
-        <p className="text-xs sm:text-sm text-zinc-400 mt-2 max-w-md leading-relaxed">
+        <p className="text-sm font-medium text-zinc-400 mb-8 max-w-sm text-center">
           {t("home.createSubtitle")}
         </p>
       </div>
@@ -38,10 +38,10 @@ export function HomeHero({ mode }: HomeHeroProps) {
             : "opacity-0 scale-95 pointer-events-none"
         }`}
       >
-        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-white">
+        <h1 className="text-4xl md:text-5xl font-black tracking-tight text-white mb-2">
           {t("home.joinTitle")}
         </h1>
-        <p className="text-xs sm:text-sm text-zinc-400 mt-2 max-w-md leading-relaxed">
+        <p className="text-sm font-medium text-zinc-400 mb-8 max-w-sm text-center">
           {t("home.joinSubtitle")}
         </p>
       </div>
