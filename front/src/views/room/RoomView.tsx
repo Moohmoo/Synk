@@ -12,7 +12,8 @@ import { toast } from "@/components/ui/sonner";
 import { NotFoundView } from "@/views/NotFoundView";
 import { MediaPlayer } from "./components/MediaPlayer";
 import { PlayerControls } from "./components/PlayerControls";
-import { RoomSessionInfo } from "./components/RoomSessionInfo";
+import { RoomActivityHub } from "./components/RoomActivityHub";
+import { RoomMetaSection } from "./components/RoomMetaSection";
 import { RoomDropzone } from "./components/RoomDropzone";
 import { ChangeMediaDialog } from "./components/ChangeMediaDialog";
 import { RoomMobileInfoSheet } from "./components/RoomMobileInfoSheet";
@@ -48,12 +49,13 @@ export function RoomView() {
       });
   }, [roomId]);
 
-  // Synchronisation temps réel via WebSocket
+  // Synchronisation temps réel via WebSocket (incluant chat et participants)
   const {
     isConnected,
     participants,
     player,
     roomSettings,
+    messages,
     currentUsername,
     currentUserId,
     isHost,
@@ -62,6 +64,7 @@ export function RoomView() {
     sendPlay,
     sendPause,
     sendSeek,
+    sendChat,
     changeMedia,
     updateSettings,
   } = useSyncRoom({ roomId, username, token, userId });
@@ -131,13 +134,17 @@ export function RoomView() {
     );
   }
 
-  const sessionInfoProps = {
+  const activityHubProps = {
     roomId,
     isConnected,
     ping: myPing,
     participants,
     currentUsername,
     currentUserId: effectiveUserId,
+    messages,
+    onSendMessage: sendChat,
+    playerStatus: playerController.status,
+    isChatDisabled: !isConnected || Boolean(isRateLimited("CHAT_MESSAGE")),
   };
 
   // En attente initiale de connexion pour un invité : prévient tout flash si un média tourne déjà
@@ -146,21 +153,19 @@ export function RoomView() {
   return (
     <>
       <RightSidebarSlot>
-        <div className="animate-fade-in">
-          <RoomSessionInfo {...sessionInfoProps} />
+        <div className="h-full animate-fade-in">
+          <RoomActivityHub {...activityHubProps} />
         </div>
       </RightSidebarSlot>
 
-      <div className="flex-1 flex flex-col items-center justify-start min-w-0 w-full animate-fade-in">
-        {!isFullscreen && <RoomMobileInfoSheet {...sessionInfoProps} />}
-
+      <div className="flex-1 min-w-0 flex flex-col w-full animate-fade-in">
         {isConnectingGuest ? (
           <RoomSkeleton />
         ) : (
           <div
             ref={cinemaContainerRef}
-            onMouseMove={isFullscreen ? resetControlsTimeout : undefined}
-            onTouchStart={isFullscreen ? resetControlsTimeout : undefined}
+            onMouseMove={resetControlsTimeout}
+            onTouchStart={resetControlsTimeout}
             className={
               isFullscreen
                 ? `fixed inset-0 z-50 w-full h-full bg-black flex items-center justify-center overflow-hidden select-none ${
@@ -168,64 +173,66 @@ export function RoomView() {
                       ? "cursor-none"
                       : "cursor-default"
                   }`
-                : "w-full max-w-4xl flex flex-col items-center"
+                : "w-full flex flex-col"
             }
           >
-          <MediaPlayer
-            controller={playerController}
-            volume={volume}
-            isMuted={isMuted}
-            isFullscreen={isFullscreen}
-            onToggleFullscreen={toggleFullscreen}
-            emptySlot={
-              <RoomDropzone
-                value={mediaUrlInput}
-                onChange={setMediaUrlInput}
-                onSubmit={handleLoadMedia}
-                disabled={isChangeMediaDisabled}
-              />
-            }
-          />
-
-          {isFullscreen && (
-            <div
-              className={`absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none transition-opacity duration-300 z-20 ${
-                areControlsVisible ? "opacity-100" : "opacity-0"
-              }`}
-            />
-          )}
-
-          <div
-            className={
-              isFullscreen
-                ? `absolute bottom-3 sm:bottom-5 left-1/2 -translate-x-1/2 w-[calc(100%-1.5rem)] sm:w-[calc(100%-2rem)] max-w-4xl z-30 transition-all duration-300 ${
-                    areControlsVisible
-                      ? "opacity-100 translate-y-0 pointer-events-auto"
-                      : "opacity-0 translate-y-4 pointer-events-none"
-                  }`
-                : "w-full flex justify-center"
-            }
-          >
-            <PlayerControls
+            {/* LECTEUR VIDÉO 16:9 AVEC CONTRÔLES EN OVERLAY FLOTTANT AU SURVOL */}
+            <MediaPlayer
               controller={playerController}
-              roomSettings={roomSettings}
-              isHost={isHost}
               volume={volume}
               isMuted={isMuted}
               isFullscreen={isFullscreen}
-              isLockDisabled={!isHost || Boolean(isRateLimited("UPDATE_SETTINGS"))}
-              isChangeMediaDisabled={isChangeMediaDisabled}
-              onChangeMedia={() => setIsChangeMediaOpen(true)}
-              onToggleLock={() => {
-                if (!isHost || isRateLimited("UPDATE_SETTINGS")) return;
-                updateSettings(!roomSettings.is_locked);
-              }}
-              onVolumeChange={setVolume}
-              onToggleMute={toggleMute}
               onToggleFullscreen={toggleFullscreen}
+              areControlsVisible={areControlsVisible}
+              controlsSlot={
+                <PlayerControls
+                  controller={playerController}
+                  roomSettings={roomSettings}
+                  isHost={isHost}
+                  volume={volume}
+                  isMuted={isMuted}
+                  isFullscreen={isFullscreen}
+                  areControlsVisible={areControlsVisible}
+                  isLockDisabled={!isHost || Boolean(isRateLimited("UPDATE_SETTINGS"))}
+                  isChangeMediaDisabled={isChangeMediaDisabled}
+                  onChangeMedia={() => setIsChangeMediaOpen(true)}
+                  onToggleLock={() => {
+                    if (!isHost || isRateLimited("UPDATE_SETTINGS")) return;
+                    updateSettings(!roomSettings.is_locked);
+                  }}
+                  onVolumeChange={setVolume}
+                  onToggleMute={toggleMute}
+                  onToggleFullscreen={toggleFullscreen}
+                />
+              }
+              emptySlot={
+                <RoomDropzone
+                  value={mediaUrlInput}
+                  onChange={setMediaUrlInput}
+                  onSubmit={handleLoadMedia}
+                  disabled={isChangeMediaDisabled}
+                />
+              }
             />
+
+            {/* SOUS LE LECTEUR : SECTION MÉTA & ONGLETS (FILE D'ATTENTE & RÉGLAGES) */}
+            {!isFullscreen && (
+              <RoomMetaSection
+                mediaUrl={player.media_url}
+                provider={player.provider}
+                isConnected={isConnected}
+                ping={myPing}
+                roomSettings={roomSettings}
+                isHost={isHost}
+                onToggleLock={() => {
+                  if (!isHost || isRateLimited("UPDATE_SETTINGS")) return;
+                  updateSettings(!roomSettings.is_locked);
+                }}
+                isLockDisabled={!isHost || Boolean(isRateLimited("UPDATE_SETTINGS"))}
+                mobileSlot={<RoomMobileInfoSheet {...activityHubProps} />}
+              />
+            )}
           </div>
-        </div>
         )}
       </div>
 
