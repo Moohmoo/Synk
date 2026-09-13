@@ -70,7 +70,7 @@ export function RoomDropzone({ value, onChange, onSubmit, disabled }: RoomDropzo
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
           placeholder={t("header.urlPlaceholder", {
-            defaultValue: "Coller un lien média (YouTube, Twitch, URL directe...)",
+            defaultValue: "Coller une URL de vidéo...",
           })}
           maxLength={2048}
           autoFocus

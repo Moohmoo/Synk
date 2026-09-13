@@ -10,7 +10,7 @@
     "button": "REJOINDRE"
   },
   "header": {
-    "urlPlaceholder": "Coller un lien média (ex: https://...)",
+    "urlPlaceholder": "Coller une URL de vidéo...",
     "load": "CHARGER",
     "invite": "INVITER",
     "linkCopied": "LIEN COPIÉ !",
@@ -50,6 +50,31 @@
     "copyTooltip": "Copier le lien d'invitation",
     "invite": "Inviter",
     "copied": "Copié !"
+  },
+  "meta": {
+    "noMedia": "Aucun média en cours",
+    "syncActive": "En direct",
+    "hostControl": "Verrouillé",
+    "freeControl": "Libre",
+    "tabQueue": "File d'attente",
+    "tabSettings": "Réglages",
+    "queueEmptyTitle": "File d'attente vide",
+    "queueEmptyDesc": "Les prochains médias apparaîtront ici.",
+    "settingsLockTitle": "Accès aux commandes",
+    "settingsLockDesc": "Limiter le contrôle du lecteur à l'hôte uniquement.",
+    "settingsLatencyTitle": "Latence",
+    "settingsLatencyDesc": "Ajustement automatique du flux en temps réel."
+  },
+  "hub": {
+    "tabChat": "Chat",
+    "tabMembers": "Membres ({{count}})",
+    "chatPlaceholder": "Envoyer un message...",
+    "chatEmpty": "Aucun message pour le moment. Saluez le salon !",
+    "telemetrySync": "Synchro",
+    "telemetryBuffering": "Buffering",
+    "roleHost": "Hôte",
+    "roleViewer": "Spectateur",
+    "terminalPrompt": "synk:stream$"
   },
   "participants": {
     "online": "CONNECTÉS ({{count}})",
