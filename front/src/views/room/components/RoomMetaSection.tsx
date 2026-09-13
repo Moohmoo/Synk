@@ -62,7 +62,7 @@ export function RoomMetaSection({
       {/* 1. Ligne Méta : Titre du média et Badges d'état de la salle */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/5">
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
-          <Radio className="w-4 h-4 text-zinc-400 shrink-0" />
+          <Radio className={`w-4 h-4 ${isConnected ? "text-emerald-400" : "text-zinc-400"} shrink-0`} />
           <h1 className="text-sm sm:text-base font-semibold text-zinc-100 truncate tracking-tight">
             {displayTitle || t("meta.noMedia")}
           </h1>
@@ -76,14 +76,6 @@ export function RoomMetaSection({
         {/* Badges d'état de la salle & Déclencheur Mobile */}
         <div className="flex items-center gap-2 shrink-0">
           {mobileSlot}
-
-          {/* Badge Sync Active */}
-          <Badge
-            className="bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs font-mono py-1 px-2.5 gap-1.5"
-          >
-            <span className={`w-1.5 h-1.5 rounded-full ${isConnected ? "bg-emerald-400 animate-pulse" : "bg-zinc-600"}`} />
-            <span>{t("meta.syncActive")}</span>
-          </Badge>
 
           {/* Badge Contrôle Hôte / Libre */}
           {roomSettings.is_locked ? (
