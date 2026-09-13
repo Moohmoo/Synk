@@ -60,7 +60,7 @@ export function RoomDropzone({ value, onChange, onSubmit, disabled }: RoomDropzo
       {/* Capsule de saisie Spotlight */}
       <form
         onSubmit={onSubmit}
-        className="w-full flex items-center bg-zinc-900/90 border border-white/10 rounded-full p-1.5 pl-3.5 backdrop-blur-md shadow-2xl focus-within:border-[#0ac8b9]/60 focus-within:ring-1 focus-within:ring-[#0ac8b9]/30 transition-all"
+        className="w-full flex items-center bg-zinc-900/90 border border-white/10 rounded-full p-1.5 pl-3.5 backdrop-blur-md shadow-2xl focus-within:border-white/25 focus-within:ring-1 focus-within:ring-white/10 transition-all"
       >
         <Link2 className="w-4 h-4 text-zinc-500 shrink-0 mr-2" />
         <input
