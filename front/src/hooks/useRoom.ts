@@ -304,7 +304,6 @@ export function useRoom({
     });
 
     socket.on("connect_error", (err) => {
-      console.error("[useRoom] Erreur de connexion Socket.IO :", err.message);
       setIsConnected(false);
       setError(err.message);
       toast.error(err.message, { id: "socket-connect-error" });
