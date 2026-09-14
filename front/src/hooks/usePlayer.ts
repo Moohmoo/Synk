@@ -221,12 +221,38 @@ export function usePlayer({
 
     if (videoRef.current) {
       const local = videoRef.current.currentTime || 0;
-      if (Math.abs(local - target) > DOM_SYNC_DRIFT_THRESHOLD_SECONDS) {
+      const isAlreadySeekingToTarget =
+        pendingSeekRef.current !== null &&
+        Math.abs(pendingSeekRef.current - target) <= DOM_SYNC_DRIFT_THRESHOLD_SECONDS;
+
+      if (!isAlreadySeekingToTarget && Math.abs(local - target) > DOM_SYNC_DRIFT_THRESHOLD_SECONDS) {
         pendingSeekRef.current = target;
         videoRef.current.currentTime = target;
       }
     }
   }, [player.last_updated_at, roomTime]);
+
+  // Resynchronisation automatique au retour sur l'onglet si dérive détectée (Page Visibility API)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== "visible" || !player.is_playing) return;
+
+      const target = calculateReferenceTime({ ...player, duration });
+      if (videoRef.current) {
+        const local = videoRef.current.currentTime || 0;
+        if (Math.abs(local - target) > DOM_SYNC_DRIFT_THRESHOLD_SECONDS) {
+          pendingSeekRef.current = target;
+          videoRef.current.currentTime = target;
+          setCurrentTime(target);
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [player, duration]);
 
   // Commandes explicites de l'utilisateur
   const play = useCallback(() => {
@@ -284,10 +310,15 @@ export function usePlayer({
   );
 
   const catchUp = useCallback(() => {
+    setScrubbingTime(null);
     const safeTarget =
       duration > 0 ? Math.min(roomTime, Math.max(0, duration - END_THRESHOLD_SECONDS)) : roomTime;
-    seek(safeTarget);
-  }, [duration, roomTime, seek]);
+    pendingSeekRef.current = safeTarget;
+    if (videoRef.current) {
+      videoRef.current.currentTime = safeTarget;
+    }
+    setCurrentTime(safeTarget);
+  }, [duration, roomTime]);
 
   const scrub = useCallback((time: number | null) => {
     setScrubbingTime(time);

@@ -169,7 +169,6 @@ export function PlayerControls({
             <button
               type="button"
               onClick={catchUp}
-              disabled={isSeekDisabled}
               className="flex items-center gap-1 px-1.5 py-0.5 text-xs font-mono text-cyan-400 hover:text-cyan-300 transition-colors cursor-pointer animate-pulse"
               title={t("controls.catchUp")}
             >
