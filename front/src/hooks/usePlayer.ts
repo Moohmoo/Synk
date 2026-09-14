@@ -38,6 +38,14 @@ export interface PlayerController {
   currentTime: number;
   duration: number;
   displayTime: number;
+  roomTime: number;
+
+  // Options & Confort de visionnage
+  subtitlesEnabled: boolean;
+  toggleSubtitles: () => void;
+  isPiPSupported: boolean;
+  isPiPActive: boolean;
+  togglePictureInPicture: () => Promise<void>;
 
   // Détection de retard (Bouton Rattraper)
   isBehind: boolean;
@@ -367,6 +375,77 @@ export function usePlayer({
     }
   }, []);
 
+  // Sous-titres : mémorisation locale et bascule
+  const [subtitlesEnabled, setSubtitlesEnabled] = useState<boolean>(() => {
+    return localStorage.getItem("synk_subtitles") === "true";
+  });
+
+  const toggleSubtitles = useCallback(() => {
+    setSubtitlesEnabled((prev) => {
+      const next = !prev;
+      localStorage.setItem("synk_subtitles", String(next));
+      return next;
+    });
+  }, []);
+
+  // Raccourci clavier 'C' pour basculer les sous-titres (hors champs texte)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() !== "c") return;
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      e.preventDefault();
+      toggleSubtitles();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [toggleSubtitles]);
+
+  // Mini-lecteur (Picture-in-Picture) standard W3C
+  const isPiPSupported =
+    typeof document !== "undefined" &&
+    "pictureInPictureEnabled" in document &&
+    Boolean(document.pictureInPictureEnabled);
+
+  const [isPiPActive, setIsPiPActive] = useState<boolean>(false);
+
+  useEffect(() => {
+    const handleEnterPiP = () => setIsPiPActive(true);
+    const handleLeavePiP = () => setIsPiPActive(false);
+
+    document.addEventListener("enterpictureinpicture", handleEnterPiP);
+    document.addEventListener("leavepictureinpicture", handleLeavePiP);
+    return () => {
+      document.removeEventListener("enterpictureinpicture", handleEnterPiP);
+      document.removeEventListener("leavepictureinpicture", handleLeavePiP);
+    };
+  }, []);
+
+  const togglePictureInPicture = useCallback(async () => {
+    try {
+      if (document.pictureInPictureElement) {
+        await document.exitPictureInPicture();
+      } else if (videoRef.current) {
+        const internal =
+          (videoRef.current as unknown as { getInternalPlayer?: () => HTMLVideoElement }).getInternalPlayer?.() ||
+          videoRef.current;
+        if (internal && typeof internal.requestPictureInPicture === "function") {
+          await internal.requestPictureInPicture();
+        }
+      }
+    } catch {
+      // Ignorer silencieusement si rejeté par le navigateur (ex: pas d'activation utilisateur ou iframe cross-origin)
+    }
+  }, []);
+
   // Callbacks DOM pour ReactPlayer
   const onTimeUpdate = useCallback(() => {
     if (!videoRef.current) return;
@@ -436,6 +515,12 @@ export function usePlayer({
     currentTime,
     duration,
     displayTime,
+    roomTime,
+    subtitlesEnabled,
+    toggleSubtitles,
+    isPiPSupported,
+    isPiPActive,
+    togglePictureInPicture,
     isBehind,
     needsAutoplayUnlock,
     isPlayDisabled,

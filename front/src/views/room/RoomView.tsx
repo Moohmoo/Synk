@@ -193,6 +193,7 @@ export function RoomView() {
                   controller={playerController}
                   roomSettings={roomSettings}
                   isHost={isHost}
+                  ping={myPing}
                   isFullscreen={isFullscreen}
                   areControlsVisible={areControlsVisible}
                   isLockDisabled={!isHost || Boolean(isRateLimited("UPDATE_SETTINGS"))}

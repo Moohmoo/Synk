@@ -38,7 +38,17 @@
     "fullscreen": "Plein écran",
     "exitFullscreen": "Quitter le plein écran",
     "catchUp": "Rattraper",
-    "changeMedia": "Changer de média"
+    "changeMedia": "Changer de média",
+    "options": "Options",
+    "subtitles": "Sous-titres",
+    "pip": "Mini-lecteur (PiP)",
+    "pipExit": "Quitter le mini-lecteur",
+    "pipUnavailable": "Non disponible sur ce flux",
+    "telemetry": "TÉLÉMÉTRIE",
+    "ping": "Ping",
+    "drift": "Décalage",
+    "enabled": "Activé",
+    "disabled": "Désactivé"
   },
   "sidebar": {
     "info": "INFORMATIONS",

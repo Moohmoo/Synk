@@ -16,11 +16,13 @@ import { Slider } from "@/components/ui/slider";
 import { RoomSettings } from "@/types/room";
 import { formatTime, cn } from "@/lib/utils";
 import { PlayerController } from "@/hooks/usePlayer";
+import { PlayerSettingsMenu } from "./PlayerSettingsMenu";
 
 interface PlayerControlsProps {
   controller: PlayerController;
   roomSettings: RoomSettings;
   isHost: boolean;
+  ping?: number;
   volume?: number;
   isMuted?: boolean;
   isFullscreen?: boolean;
@@ -44,6 +46,7 @@ export function PlayerControls({
   controller,
   roomSettings,
   isHost,
+  ping,
   volume,
   isMuted,
   isFullscreen = false,
@@ -225,6 +228,9 @@ export function PlayerControls({
               <Lock className="w-4 h-4" />
             </span>
           ) : null}
+
+          {/* Menu des réglages individuels (Sous-titres, PiP, Télémétrie) */}
+          <PlayerSettingsMenu controller={controller} ping={ping} />
 
           {/* Plein écran */}
           {onToggleFullscreen && (

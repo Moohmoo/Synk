@@ -38,7 +38,17 @@
     "fullscreen": "Fullscreen",
     "exitFullscreen": "Exit fullscreen",
     "catchUp": "Catch up",
-    "changeMedia": "Change media"
+    "changeMedia": "Change media",
+    "options": "Options",
+    "subtitles": "Subtitles",
+    "pip": "Mini-player (PiP)",
+    "pipExit": "Exit mini-player",
+    "pipUnavailable": "Unavailable for this stream",
+    "telemetry": "TELEMETRY",
+    "ping": "Ping",
+    "drift": "Drift",
+    "enabled": "On",
+    "disabled": "Off"
   },
   "sidebar": {
     "info": "INFORMATION",
