@@ -21,7 +21,6 @@ import {
 } from "@/types/events";
 import { formatErrorMessage } from "@/lib/errorMapper";
 import { sessionManager } from "@/lib/session";
-import { END_THRESHOLD_SECONDS } from "@/lib/constants";
 import { useRateLimiter } from "./useRateLimiter";
 
 const DEFAULT_WS_URL = "ws://localhost:8000";
@@ -347,20 +346,11 @@ export function useRoom({
 
       const isSelf = isSelfUser(payload.triggered_by, currentUsernameRef.current, username);
       if (payload.triggered_by && !isSelf) {
-        // Ignore la notification si la pause correspond à la fin naturelle de la vidéo
-        const duration = payload.player.duration ?? 0;
-        const isNaturalEnd =
-          payload.action === "PAUSE" &&
-          duration > 0 &&
-          payload.player.current_time >= duration - END_THRESHOLD_SECONDS;
-
-        if (!isNaturalEnd) {
-          const translationKey = SYNC_ACTION_TOAST_KEYS[payload.action];
-          if (translationKey) {
-            toast.info(tRef.current(translationKey, { user: payload.triggered_by }), {
-              id: "player-sync-action",
-            });
-          }
+        const translationKey = SYNC_ACTION_TOAST_KEYS[payload.action];
+        if (translationKey) {
+          toast.info(tRef.current(translationKey, { user: payload.triggered_by }), {
+            id: "player-sync-action",
+          });
         }
       }
     });

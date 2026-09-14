@@ -203,10 +203,7 @@ export function usePlayer({
 
   const handleMediaEnded = useCallback(() => {
     setCurrentTime(duration);
-    if (player.is_playing && (!isRestrictedForGuest || duration > 0)) {
-      sendPause(duration, duration);
-    }
-  }, [duration, player.is_playing, isRestrictedForGuest, sendPause]);
+  }, [duration]);
 
   // Synchronisation temporelle impérative avec les ordres du salon (DOM)
   useEffect(() => {
