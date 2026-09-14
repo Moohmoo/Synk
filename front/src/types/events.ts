@@ -37,8 +37,15 @@ export interface ParticipantLeftPayload {
   new_host_id?: string | null;
 }
 
+export interface HeartbeatPayload {
+  client_sent_at: number;
+  ping_ms?: number;
+  current_time?: number;
+}
+
 export interface HeartbeatAckPayload {
   client_sent_at: number;
+  server_received_at?: number;
   ping_ms: number;
 }
 

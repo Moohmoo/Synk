@@ -15,7 +15,7 @@ from core.rate_limiter import check_ws_rate_limit, get_ws_client_ip, rate_limite
 from core.socket import sio
 from db.manager import DatabaseManager
 from domains.media.extractor import media_extractor
-from domains.room.schemas.room import Participant, Room
+from domains.room.schemas.room import Participant, PlayerState, Room
 from domains.room.schemas.websocket import (
     ChangeMediaPayload,
     ChatMessagePayload,
@@ -28,6 +28,9 @@ from domains.room.schemas.websocket import (
     UpdateSettingsPayload,
 )
 from domains.room.sync import calculate_reference_position
+
+# Suivi en mémoire des positions de lecture pour le calcul d'écart inter-participants
+_client_positions: dict[str, dict[str, tuple[float, int]]] = {}
 
 
 def _extract_auth(environ: dict[str, Any], auth: Any) -> dict[str, str | None]:
@@ -124,11 +127,24 @@ async def _update_and_broadcast_player(
         )
 
     if err == "LOCKED":
+        logger.warning(
+            f"[SYNC:LOCKED] {room_id} | Action {action} refusée pour {session['username']} (salon verrouillé)"
+        )
         await _send_error(sid, "LOCKED", "Le salon est verrouillé par l'hôte")
         return
     if err == "NOOP" or not updated_room:
         return
 
+    if (
+        action in ("SEEK", "CHANGE_MEDIA")
+        or (action == "PLAY" and updates.get("is_restart"))
+    ) and room_id in _client_positions:
+        _client_positions[room_id].clear()
+
+    logger.info(
+        f"[SYNC:{action}] {room_id} | {session['username']} -> "
+        f"pos={updated_room.player.current_time:.1f}s | playing={updated_room.player.is_playing}"
+    )
     payload = {
         "action": action,
         "triggered_by": session["username"],
@@ -270,6 +286,10 @@ async def disconnect(sid: str) -> None:
                 room=f"user:{new_host_id}",
             )
     logger.info(f"[SIO:LEAVE] {username} ({user_id}) <- {room_id}")
+    if room_id and username and room_id in _client_positions:
+        _client_positions[room_id].pop(username, None)
+        if not _client_positions[room_id]:
+            _client_positions.pop(room_id, None)
 
 
 # ----------------------------------------------------------------------
@@ -397,6 +417,39 @@ async def on_chat_message(sid: str, data: Any) -> None:
     )
 
 
+def _log_sync_drift(
+    room_id: str,
+    username: str,
+    client_time: float,
+    now_ms: int,
+    player: PlayerState,
+) -> None:
+    """Mesure et journalise les dérives temporelles entre pairs ou par rapport au serveur."""
+    room_positions = _client_positions.setdefault(room_id, {})
+    room_positions[username] = (client_time, now_ms)
+
+    # Comparaison inter-clients si d'autres participants sont connectés
+    peers = [
+        (user, pos + max(0.0, (now_ms - t_ms) / 1000.0))
+        for user, (pos, t_ms) in room_positions.items()
+        if user != username
+    ]
+    if peers:
+        peer_name, peer_pos = peers[0]
+        gap = abs(client_time - peer_pos)
+        tag = "[SYNC:ALERT]" if gap > 2.0 else ("[SYNC:DRIFT]" if gap > 1.0 else "[SYNC:OK]")
+        log_fn = logger.warning if gap > 2.0 else logger.info
+        log_fn(f"{tag} {room_id} | {username} ({client_time:.1f}s) vs {peer_name} ({peer_pos:.1f}s) | écart: {gap:.2f}s")
+        return
+
+    # Comparaison avec l'horloge de référence serveur
+    ref_pos = calculate_reference_position(player, now_ms=now_ms)
+    drift = ref_pos - client_time
+    tag = "[SYNC:ALERT]" if abs(drift) > 2.0 else ("[SYNC:DRIFT]" if abs(drift) > 1.0 else "[SYNC:OK]")
+    log_fn = logger.warning if abs(drift) > 2.0 else logger.info
+    log_fn(f"{tag} {room_id} | {username} local={client_time:.1f}s | réf={ref_pos:.1f}s | dérive={drift:+.2f}s")
+
+
 @sio.on(ClientEventType.HEARTBEAT)
 async def on_heartbeat(sid: str, data: Any) -> None:
     """Mesure la latence du client et renvoie un acquittement."""
@@ -410,6 +463,12 @@ async def on_heartbeat(sid: str, data: Any) -> None:
     prev_ping = session.get("ping_ms", 0)
     session["ping_ms"] = latency
     await sio.save_session(sid, session)
+
+    if payload.current_time is not None:
+        with DatabaseManager() as db:
+            room = await db.room_service.get_room(session["room_id"])
+        if room and room.player.is_playing:
+            _log_sync_drift(session["room_id"], session["username"], payload.current_time, now_ms, room.player)
 
     await sio.emit(
         ServerEventType.HEARTBEAT_ACK,

@@ -101,6 +101,7 @@ export function useRoom({
   });
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [myPing, setMyPing] = useState(0);
+  const [serverTimeOffset, setServerTimeOffset] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
 
   // Références stables pour les callbacks asynchrones du WebSocket
@@ -221,6 +222,16 @@ export function useRoom({
     },
     [isRateLimited, roomSettings.is_locked]
   );
+
+  const sendHeartbeat = useCallback((currentTime?: number) => {
+    if (socketRef.current?.connected) {
+      socketRef.current.emit("HEARTBEAT", {
+        client_sent_at: Date.now(),
+        ping_ms: myPingRef.current,
+        current_time: currentTime,
+      });
+    }
+  }, []);
 
   // Initialisation et gestion du cycle de vie Socket.IO
   useEffect(() => {
@@ -371,9 +382,19 @@ export function useRoom({
     });
 
     socket.on("HEARTBEAT_ACK", (payload: HeartbeatAckPayload) => {
+      const now = Date.now();
       if (payload.client_sent_at) {
-        const rtt = Math.max(0, Date.now() - payload.client_sent_at);
-        setMyPing(Math.round(rtt / 2));
+        const rtt = Math.max(0, now - payload.client_sent_at);
+        const oneWayDelay = rtt / 2;
+        setMyPing(Math.round(oneWayDelay));
+
+        // Formule SNTP (RFC 4330) : calcul de la dérive d'horloge entre client et serveur
+        // pour immuniser l'extrapolation temporelle contre tout décalage d'heure locale (Clock Skew).
+        if (payload.server_received_at) {
+          const estimatedServerNow = payload.server_received_at + oneWayDelay;
+          const newOffset = Math.round(estimatedServerNow - now);
+          setServerTimeOffset((prev) => (Math.abs(prev - newOffset) > 50 ? newOffset : prev));
+        }
       } else {
         setMyPing(payload.ping_ms || 0);
       }
@@ -446,6 +467,7 @@ export function useRoom({
     roomSettings,
     messages,
     myPing,
+    serverTimeOffset,
     error,
     currentUsername,
     currentUserId,
@@ -458,6 +480,7 @@ export function useRoom({
     changeMedia,
     sendChat,
     updateSettings,
+    sendHeartbeat,
   };
 }
 

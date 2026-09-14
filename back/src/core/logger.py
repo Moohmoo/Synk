@@ -5,7 +5,12 @@ import sys
 class SimpleLogger:
     """Logger simple avec sortie temps réel et préfixes explicites."""
 
-    def __init__(self, name: str = "SynkAPI", level: int = logging.INFO):
+    def __init__(self, name: str = "SynkAPI", level: int | None = None):
+        if level is None:
+            from core.config import settings
+
+            level = logging.DEBUG if settings.DEBUG else logging.INFO
+
         self.logger = logging.getLogger(name)
         self.logger.setLevel(level)
         self.logger.propagate = False

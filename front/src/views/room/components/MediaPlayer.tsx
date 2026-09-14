@@ -1,7 +1,7 @@
 import ReactPlayer from "react-player";
 import { useTranslation } from "react-i18next";
 import { PlayerController } from "@/hooks/usePlayer";
-import { AlertCircle, Play } from "lucide-react";
+import { AlertCircle, Play, RotateCcw } from "lucide-react";
 
 interface MediaPlayerProps {
   controller: PlayerController;
@@ -38,6 +38,7 @@ export function MediaPlayer({
     status,
     isPlayDisabled,
     needsAutoplayUnlock,
+    subtitlesEnabled,
     togglePlay,
     unlockAutoplay,
     playerProps,
@@ -78,6 +79,9 @@ export function MediaPlayer({
                   color: "white",
                   rel: 0,
                   iv_load_policy: 3,
+                  disablekb: 1,
+                  fs: 0,
+                  cc_load_policy: subtitlesEnabled ? 1 : 0,
                 },
               }}
             />
@@ -87,14 +91,29 @@ export function MediaPlayer({
             Écran tactile cinéma :
             - touch-manipulation : élimine le délai de 300ms et prévient le zoom double-tap involontaire sur mobile.
             - 1 clic = bascule play/pause, 2 clics = plein écran.
+            - Voile sombre et léger flou à la pause pour atténuer les recommandations YouTube.
           */}
           <div
             onClick={togglePlay}
             onDoubleClick={onToggleFullscreen}
-            className={`absolute inset-0 z-10 touch-manipulation ${
-              isPlayDisabled ? "cursor-not-allowed" : "cursor-pointer"
-            }`}
+            className={`absolute inset-0 z-10 touch-manipulation transition-all duration-300 ${
+              status === "paused" || status === "ended"
+                ? "bg-black/50 backdrop-blur-[1.5px]"
+                : "bg-transparent"
+            } ${isPlayDisabled ? "cursor-not-allowed" : "cursor-pointer"}`}
           />
+
+          {/* Bouton Replay central lorsque la vidéo est terminée */}
+          {status === "ended" && !isPlayDisabled && (
+            <button
+              type="button"
+              onClick={togglePlay}
+              className="absolute z-20 p-4 rounded-full bg-black/60 hover:bg-black/80 border border-white/20 hover:border-cyan-400 text-white/90 hover:text-cyan-300 hover:scale-110 transition-all shadow-2xl backdrop-blur-md cursor-pointer group pointer-events-auto"
+              aria-label={t("controls.rewind")}
+            >
+              <RotateCcw className="w-8 h-8 transition-transform group-hover:-rotate-45" />
+            </button>
+          )}
 
           {/* Déblocage de l'autoplay avec son si requis par le navigateur */}
           {needsAutoplayUnlock && (

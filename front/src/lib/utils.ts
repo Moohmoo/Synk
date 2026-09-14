@@ -21,15 +21,22 @@ export function formatTime(seconds: number): string {
 /**
  * Calcule la position théorique exacte du média à l'instant T
  * en tenant compte du temps écoulé depuis la dernière mise à jour.
+ *
+ * Le paramètre `serverTimeOffsetMs` applique la compensation d'horloge (formule SNTP / RFC 4330)
+ * pour éviter tout décalage d'extrapolation si l'ordinateur du client a une horloge déréglée (Clock Skew).
  */
-export function calculateReferenceTime(player: {
-  is_playing: boolean;
-  current_time: number;
-  last_updated_at: number;
-  duration?: number;
-}): number {
+export function calculateReferenceTime(
+  player: {
+    is_playing: boolean;
+    current_time: number;
+    last_updated_at: number;
+    duration?: number;
+  },
+  serverTimeOffsetMs: number = 0
+): number {
   if (!player.is_playing) return Math.max(0, player.current_time);
-  const elapsed = Math.max(0, (Date.now() - player.last_updated_at) / 1000);
+  const nowServer = Date.now() + serverTimeOffsetMs;
+  const elapsed = Math.max(0, (nowServer - player.last_updated_at) / 1000);
   const target = player.current_time + elapsed;
   return player.duration && player.duration > 0 ? Math.min(target, player.duration) : target;
 }

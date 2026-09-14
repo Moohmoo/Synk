@@ -67,6 +67,8 @@ export function RoomView() {
     sendChat,
     changeMedia,
     updateSettings,
+    sendHeartbeat,
+    serverTimeOffset,
   } = useRoom({ roomId, username, token, userId });
 
   // Contrôleur unifié du lecteur (lecture, pause, seek, rattrapage, volume et mute)
@@ -78,6 +80,8 @@ export function RoomView() {
     sendPlay,
     sendPause,
     sendSeek,
+    sendHeartbeat,
+    serverTimeOffset,
   });
 
   const cinemaContainerRef = useRef<HTMLDivElement>(null);
@@ -189,6 +193,7 @@ export function RoomView() {
                   controller={playerController}
                   roomSettings={roomSettings}
                   isHost={isHost}
+                  ping={myPing}
                   isFullscreen={isFullscreen}
                   areControlsVisible={areControlsVisible}
                   isLockDisabled={!isHost || Boolean(isRateLimited("UPDATE_SETTINGS"))}
