@@ -21,6 +21,7 @@ import {
 } from "@/types/events";
 import { formatErrorMessage } from "@/lib/errorMapper";
 import { sessionManager } from "@/lib/session";
+import { END_THRESHOLD_SECONDS } from "@/lib/constants";
 import { useRateLimiter } from "./useRateLimiter";
 
 const DEFAULT_WS_URL = "ws://localhost:8000";
@@ -346,11 +347,21 @@ export function useRoom({
 
       const isSelf = isSelfUser(payload.triggered_by, currentUsernameRef.current, username);
       if (payload.triggered_by && !isSelf) {
-        const translationKey = SYNC_ACTION_TOAST_KEYS[payload.action];
-        if (translationKey) {
-          toast.info(tRef.current(translationKey, { user: payload.triggered_by }), {
-            id: "player-sync-action",
-          });
+        // POURQUOI : Une pause en fin de média (current_time >= duration - 0.3s)
+        // est un arrêt naturel du lecteur, pas une mise en pause volontaire par un utilisateur.
+        const duration = payload.player.duration ?? 0;
+        const isNaturalEnd =
+          payload.action === "PAUSE" &&
+          duration > 0 &&
+          payload.player.current_time >= duration - END_THRESHOLD_SECONDS;
+
+        if (!isNaturalEnd) {
+          const translationKey = SYNC_ACTION_TOAST_KEYS[payload.action];
+          if (translationKey) {
+            toast.info(tRef.current(translationKey, { user: payload.triggered_by }), {
+              id: "player-sync-action",
+            });
+          }
         }
       }
     });
