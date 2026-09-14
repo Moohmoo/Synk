@@ -1,12 +1,12 @@
 import { Omnibox, PlatformBadges } from "@/components/shared";
 import { Heading } from "./components/Heading";
 import { ModeToggle } from "./components/ModeToggle";
-import { useHomeFlow } from "@/hooks/useHomeFlow";
+import { useHome } from "@/hooks/useHome";
 
 /**
  * Vue d'accueil principale :
  * Composant de mise en page sobre déléguant l'affichage à Heading/ModeToggle
- * et l'orchestration du flux à useHomeFlow.
+ * et l'orchestration du flux à useHome.
  */
 export function HomeView() {
   const {
@@ -21,7 +21,7 @@ export function HomeView() {
     placeholder,
     buttonText,
     badge,
-  } = useHomeFlow();
+  } = useHome();
 
   return (
     <div className="relative flex-1 flex flex-col items-center justify-center w-full max-w-full px-4 sm:px-6 md:px-12 py-10 animate-fade-in">

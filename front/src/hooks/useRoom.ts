@@ -23,7 +23,7 @@ import { formatErrorMessage } from "@/lib/errorMapper";
 import { sessionManager } from "@/lib/session";
 import { useRateLimiter } from "./useRateLimiter";
 
-interface UseSyncRoomOptions {
+export interface UseRoomOptions {
   roomId: string;
   username: string;
   token?: string | null;
@@ -58,13 +58,13 @@ function isSelfUser(
 /**
  * Hook central orchestrant la connexion WebSocket et la synchronisation multijoueur du salon.
  */
-export function useSyncRoom({
+export function useRoom({
   roomId,
   username,
   token,
   userId,
   wsBaseUrl = import.meta.env.VITE_WS_URL || "ws://localhost:8000",
-}: UseSyncRoomOptions) {
+}: UseRoomOptions) {
   const { t } = useTranslation(["room", "global", "errors"]);
   const { isRateLimited, getRemainingCooldown, lockAction } = useRateLimiter();
 
@@ -460,3 +460,5 @@ export function useSyncRoom({
     updateSettings,
   };
 }
+
+export default useRoom;

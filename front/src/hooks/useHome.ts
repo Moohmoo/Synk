@@ -19,7 +19,7 @@ export type JoinStep = "code" | "username";
  * - Validation des formulaires et persistance de session
  * - Effet atmosphérique (halo rouge en création, cyan en connexion)
  */
-export function useHomeFlow() {
+export function useHome() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -215,3 +215,5 @@ export function useHomeFlow() {
         : null,
   };
 }
+
+export default useHome;

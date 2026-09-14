@@ -1,11 +1,8 @@
 import { useEffect } from "react";
-import { PlayerController } from "@/hooks/usePlayerController";
+import { PlayerController } from "@/hooks/usePlayer";
 
 export interface UsePlayerShortcutsOptions {
   controller: PlayerController;
-  volume: number;
-  onVolumeChange: (volume: number) => void;
-  onToggleMute: () => void;
   toggleFullscreen: () => void;
   isFullscreen: boolean;
   resetControlsTimeout: () => void;
@@ -40,9 +37,6 @@ function isInteractiveInput(target: EventTarget | null): boolean {
  */
 export function usePlayerShortcuts({
   controller,
-  volume,
-  onVolumeChange,
-  onToggleMute,
   toggleFullscreen,
   isFullscreen,
   resetControlsTimeout,
@@ -86,21 +80,21 @@ export function usePlayerShortcuts({
         case "m":
         case "M":
           e.preventDefault();
-          onToggleMute();
+          controller.toggleMute();
           resetControlsTimeout();
           break;
 
         // Volume +5%
         case "ArrowUp":
           e.preventDefault();
-          onVolumeChange(Math.min(100, volume + 5));
+          controller.setVolume(Math.min(100, controller.volume + 5));
           resetControlsTimeout();
           break;
 
         // Volume -5%
         case "ArrowDown":
           e.preventDefault();
-          onVolumeChange(Math.max(0, volume - 5));
+          controller.setVolume(Math.max(0, controller.volume - 5));
           resetControlsTimeout();
           break;
 
@@ -153,9 +147,6 @@ export function usePlayerShortcuts({
   }, [
     controller,
     isFullscreen,
-    volume,
-    onVolumeChange,
-    onToggleMute,
     onChangeMedia,
     toggleFullscreen,
     resetControlsTimeout,

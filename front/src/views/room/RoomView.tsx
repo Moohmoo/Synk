@@ -4,11 +4,10 @@ import { useTranslation } from "react-i18next";
 import { RightSidebarSlot } from "@/components/RightSidebarSlot";
 import { roomApi } from "@/services/roomApi";
 import { sessionManager } from "@/lib/session";
-import { useSyncRoom } from "@/hooks/useSyncRoom";
-import { usePlayerController } from "@/hooks/usePlayerController";
+import { useRoom } from "@/hooks/useRoom";
+import { usePlayer } from "@/hooks/usePlayer";
 import { useCinemaMode } from "@/hooks/useCinemaMode";
 import { usePlayerShortcuts } from "@/hooks/usePlayerShortcuts";
-import { usePlayerVolume } from "@/hooks/usePlayerVolume";
 import { toast } from "@/components/ui/sonner";
 import { NotFoundView } from "@/views/NotFoundView";
 import { MediaPlayer } from "./components/MediaPlayer";
@@ -68,10 +67,10 @@ export function RoomView() {
     sendChat,
     changeMedia,
     updateSettings,
-  } = useSyncRoom({ roomId, username, token, userId });
+  } = useRoom({ roomId, username, token, userId });
 
-  // Contrôleur unifié du lecteur (lecture, pause, seek, rattrapage)
-  const playerController = usePlayerController({
+  // Contrôleur unifié du lecteur (lecture, pause, seek, rattrapage, volume et mute)
+  const playerController = usePlayer({
     player,
     isHost,
     isLocked: roomSettings.is_locked,
@@ -81,8 +80,6 @@ export function RoomView() {
     sendSeek,
   });
 
-  // Gestion du volume et du statut muet persisté
-  const { volume, isMuted, setVolume, toggleMute } = usePlayerVolume();
   const cinemaContainerRef = useRef<HTMLDivElement>(null);
 
   const effectiveUserId = currentUserId || userId;
@@ -99,9 +96,6 @@ export function RoomView() {
   // Raccourcis clavier universels (Espace, K, F, M, Flèches, C/S, Cmd+K, Échap)
   usePlayerShortcuts({
     controller: playerController,
-    volume,
-    onVolumeChange: setVolume,
-    onToggleMute: toggleMute,
     toggleFullscreen,
     isFullscreen,
     resetControlsTimeout,
@@ -187,8 +181,6 @@ export function RoomView() {
             {/* LECTEUR VIDÉO 16:9 AVEC CONTRÔLES EN OVERLAY FLOTTANT AU SURVOL */}
             <MediaPlayer
               controller={playerController}
-              volume={volume}
-              isMuted={isMuted}
               isFullscreen={isFullscreen}
               onToggleFullscreen={toggleFullscreen}
               areControlsVisible={areControlsVisible}
@@ -197,8 +189,6 @@ export function RoomView() {
                   controller={playerController}
                   roomSettings={roomSettings}
                   isHost={isHost}
-                  volume={volume}
-                  isMuted={isMuted}
                   isFullscreen={isFullscreen}
                   areControlsVisible={areControlsVisible}
                   isLockDisabled={!isHost || Boolean(isRateLimited("UPDATE_SETTINGS"))}
@@ -208,8 +198,6 @@ export function RoomView() {
                     if (!isHost || isRateLimited("UPDATE_SETTINGS")) return;
                     updateSettings(!roomSettings.is_locked);
                   }}
-                  onVolumeChange={setVolume}
-                  onToggleMute={toggleMute}
                   onToggleFullscreen={toggleFullscreen}
                 />
               }

@@ -9,6 +9,7 @@ import { ErrorPayload } from "@/types/events";
  */
 const LEGACY_MESSAGE_MAP: Record<string, string> = {
   "URL de média invalide": "INVALID_MEDIA_URL",
+  "Format ou plateforme de média non supporté": "INVALID_MEDIA_URL",
   "Le salon est verrouillé par l'hôte": "ROOM_LOCKED",
   "Le salon est actuellement verrouillé par l'hôte.": "ROOM_LOCKED",
   "Seul l'hôte peut modifier les paramètres": "FORBIDDEN_HOST_ONLY",
@@ -66,6 +67,8 @@ export function formatErrorMessage(
   // Normalisation des alias
   if (code === "LOCKED") code = "ROOM_LOCKED";
   if (code === "FORBIDDEN") code = "FORBIDDEN_HOST_ONLY";
+  if (code === "INVALID_PLAY_PAYLOAD" || code === "INVALID_PAUSE_PAYLOAD") code = "INVALID_PLAYBACK_PAYLOAD";
+  if (code === "RATE_LIMIT") code = "RATE_LIMITED";
 
   // Si le code est générique ("INVALID_PAYLOAD" ou absent) mais qu'un message brut est connu
   if ((!code || code === "INVALID_PAYLOAD") && rawMessage && LEGACY_MESSAGE_MAP[rawMessage]) {

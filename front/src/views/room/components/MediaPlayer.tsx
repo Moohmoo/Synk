@@ -1,6 +1,6 @@
 import ReactPlayer from "react-player";
 import { useTranslation } from "react-i18next";
-import { PlayerController } from "@/hooks/usePlayerController";
+import { PlayerController } from "@/hooks/usePlayer";
 import { AlertCircle, Play } from "lucide-react";
 
 interface MediaPlayerProps {
@@ -21,8 +21,8 @@ interface MediaPlayerProps {
  */
 export function MediaPlayer({
   controller,
-  volume = 100,
-  isMuted = false,
+  volume,
+  isMuted,
   isFullscreen = false,
   onToggleFullscreen,
   emptySlot,
@@ -30,6 +30,8 @@ export function MediaPlayer({
   areControlsVisible = true,
 }: MediaPlayerProps) {
   const { t } = useTranslation("room");
+  const effectiveVolume = volume ?? controller.volume;
+  const effectiveMuted = isMuted ?? controller.isMuted;
   const {
     videoRef,
     mediaUrl,
@@ -64,8 +66,8 @@ export function MediaPlayer({
               ref={videoRef}
               src={mediaUrl}
               playing={status === "playing"}
-              volume={isMuted ? 0 : volume / 100}
-              muted={isMuted}
+              volume={effectiveMuted ? 0 : effectiveVolume / 100}
+              muted={effectiveMuted}
               controls={false}
               playsInline
               width="100%"

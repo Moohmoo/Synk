@@ -15,7 +15,7 @@ import { useTranslation } from "react-i18next";
 import { Slider } from "@/components/ui/slider";
 import { RoomSettings } from "@/types/room";
 import { formatTime, cn } from "@/lib/utils";
-import { PlayerController } from "@/hooks/usePlayerController";
+import { PlayerController } from "@/hooks/usePlayer";
 
 interface PlayerControlsProps {
   controller: PlayerController;
@@ -44,8 +44,8 @@ export function PlayerControls({
   controller,
   roomSettings,
   isHost,
-  volume = 100,
-  isMuted = false,
+  volume,
+  isMuted,
   isFullscreen = false,
   areControlsVisible = true,
   isLockDisabled = false,
@@ -57,6 +57,10 @@ export function PlayerControls({
   onToggleFullscreen,
 }: PlayerControlsProps) {
   const { t } = useTranslation("room");
+  const effectiveVolume = volume ?? controller.volume;
+  const effectiveMuted = isMuted ?? controller.isMuted;
+  const handleVolumeChange = onVolumeChange ?? controller.setVolume;
+  const handleToggleMute = onToggleMute ?? controller.toggleMute;
   const {
     duration,
     displayTime,
@@ -128,11 +132,11 @@ export function PlayerControls({
           <div className="flex items-center gap-1.5">
             <button
               type="button"
-              onClick={onToggleMute}
+              onClick={handleToggleMute}
               className="p-1 text-white/80 hover:text-white transition-colors cursor-pointer"
-              title={isMuted ? t("controls.unmute") : t("controls.mute")}
+              title={effectiveMuted ? t("controls.unmute") : t("controls.mute")}
             >
-              {isMuted || volume === 0 ? (
+              {effectiveMuted || effectiveVolume === 0 ? (
                 <VolumeX className="w-4 h-4 text-rose-400" />
               ) : (
                 <Volume2 className="w-4 h-4" />
@@ -140,12 +144,12 @@ export function PlayerControls({
             </button>
             <div className="w-14 sm:w-18">
               <Slider
-                value={[isMuted ? 0 : volume]}
+                value={[effectiveMuted ? 0 : effectiveVolume]}
                 max={100}
                 step={1}
                 onValueChange={([val]) => {
-                  onVolumeChange?.(val);
-                  if (isMuted && val > 0) onToggleMute?.();
+                  handleVolumeChange(val);
+                  if (effectiveMuted && val > 0) handleToggleMute();
                 }}
                 className="cursor-pointer py-1"
                 trackClassName="h-1 bg-white/20 rounded-full"
