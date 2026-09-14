@@ -2,9 +2,32 @@ import { useState, useEffect, useRef, useCallback } from "react";
 
 const CONTROLS_HIDE_DELAY_MS = 2000;
 
-function isNativeFullscreenActive(): boolean {
-  const doc = document as Document & { webkitFullscreenElement?: Element };
+interface WebKitDocument extends Document {
+  webkitFullscreenElement?: Element;
+  webkitExitFullscreen?: () => Promise<void>;
+}
+
+interface WebKitElement extends HTMLElement {
+  webkitRequestFullscreen?: () => Promise<void>;
+}
+
+function isNativeFullscreen(): boolean {
+  const doc = document as WebKitDocument;
   return Boolean(doc.fullscreenElement || doc.webkitFullscreenElement);
+}
+
+function requestNativeFullscreen(element: HTMLElement): Promise<void> | void {
+  const el = element as WebKitElement;
+  const request = el.requestFullscreen || el.webkitRequestFullscreen;
+  if (typeof request === "function") {
+    return request.call(el);
+  }
+}
+
+function exitNativeFullscreen(): void {
+  const doc = document as WebKitDocument;
+  const exit = doc.exitFullscreen || doc.webkitExitFullscreen;
+  exit?.call(doc).catch(() => {});
 }
 
 export interface UseCinemaModeOptions {
@@ -19,11 +42,6 @@ export interface CinemaModeState {
   resetControlsTimeout: () => void;
 }
 
-/**
- * Hook d'ergonomie cinéma :
- * - Gestion du plein écran (API native W3C + WebKit Safari + repli In-Window CSS).
- * - Minuteur d'auto-masquage des contrôles lors de la lecture (2s d'inactivité souris).
- */
 export function useCinemaMode({
   containerRef,
   playerStatus,
@@ -33,10 +51,8 @@ export function useCinemaMode({
   const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const playerStatusRef = useRef(playerStatus);
 
-  // Synchronise le statut courant sans casser la stabilité des callbacks
   playerStatusRef.current = playerStatus;
 
-  // Réinitialise le minuteur d'inactivité des contrôles (référence stable)
   const resetControlsTimeout = useCallback(() => {
     setAreControlsVisible(true);
     if (controlsTimeoutRef.current) {
@@ -49,7 +65,6 @@ export function useCinemaMode({
     }
   }, []);
 
-  // Synchronise la visibilité dès que le statut de lecture change
   useEffect(() => {
     resetControlsTimeout();
     return () => {
@@ -59,7 +74,7 @@ export function useCinemaMode({
     };
   }, [playerStatus, resetControlsTimeout]);
 
-  // Bloque le défilement de la page arrière-plan lors du plein écran In-Window CSS
+  // Bloque le défilement de fond si le mode cinéma utilise le repli In-Window CSS
   useEffect(() => {
     if (!isFullscreen) return;
     const originalOverflow = document.body.style.overflow;
@@ -69,42 +84,34 @@ export function useCinemaMode({
     };
   }, [isFullscreen]);
 
-  // Bascule plein écran robuste : support W3C, WebKit Safari et repli CSS In-Window
   const toggleFullscreen = useCallback(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    const isNativeActive = isNativeFullscreenActive();
-
-    if (isFullscreen || isNativeActive) {
-      if (isNativeActive) {
-        const doc = document as Document & { webkitExitFullscreen?: () => Promise<void> };
-        const exit = doc.exitFullscreen || doc.webkitExitFullscreen;
-        exit?.call(doc).catch(() => {});
+    if (isFullscreen || isNativeFullscreen()) {
+      if (isNativeFullscreen()) {
+        exitNativeFullscreen();
       }
       setIsFullscreen(false);
       setAreControlsVisible(true);
     } else {
-      const req =
-        container.requestFullscreen ||
-        (container as unknown as { webkitRequestFullscreen?: () => Promise<void> }).webkitRequestFullscreen;
-
-      if (typeof req === "function") {
-        req.call(container).finally(() => setIsFullscreen(true));
+      // Tente le plein écran natif W3C/WebKit, bascule sur le repli In-Window CSS si refusé (ex: iOS)
+      const reqPromise = requestNativeFullscreen(container);
+      if (reqPromise) {
+        reqPromise.catch(() => setIsFullscreen(true));
       } else {
-        // iPhone Safari : repli immédiat In-Window CSS
         setIsFullscreen(true);
       }
       resetControlsTimeout();
     }
   }, [isFullscreen, containerRef, resetControlsTimeout]);
 
-  // Écouteur des changements natifs de plein écran (ex: touche Échap gérée par l'OS/navigateur)
+  // Synchronisation avec la sortie native du plein écran (ex: touche Échap gérée par l'OS)
   useEffect(() => {
     const handleNativeChange = () => {
-      const isNative = isNativeFullscreenActive();
-      setIsFullscreen(isNative);
-      if (!isNative) {
+      const active = isNativeFullscreen();
+      setIsFullscreen(active);
+      if (!active) {
         setAreControlsVisible(true);
       }
     };

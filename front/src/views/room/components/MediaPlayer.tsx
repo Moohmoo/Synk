@@ -11,7 +11,6 @@ interface MediaPlayerProps {
   onToggleFullscreen?: () => void;
   emptySlot?: React.ReactNode;
   controlsSlot?: React.ReactNode;
-  areControlsVisible?: boolean;
 }
 
 /**
@@ -27,7 +26,6 @@ export function MediaPlayer({
   onToggleFullscreen,
   emptySlot,
   controlsSlot,
-  areControlsVisible = true,
 }: MediaPlayerProps) {
   const { t } = useTranslation("room");
   const effectiveVolume = volume ?? controller.volume;
