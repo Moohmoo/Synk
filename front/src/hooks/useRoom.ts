@@ -110,7 +110,6 @@ export function useRoom({
   const currentUserIdRef = useRef<string | null>(userId || null);
   const myPingRef = useRef(0);
   const tRef = useRef(t);
-  const lockActionRef = useRef(lockAction);
   const authoritativePlayerRef = useRef<PlayerState>(player);
 
   // Synchronisation synchrone des refs à chaque render
@@ -118,7 +117,6 @@ export function useRoom({
   currentUsernameRef.current = currentUsername;
   currentUserIdRef.current = currentUserId;
   myPingRef.current = myPing;
-  lockActionRef.current = lockAction;
 
   // Actions utilisateur vers le serveur Socket.IO (avec Optimistic UI)
   const sendPlay = useCallback(
@@ -416,11 +414,11 @@ export function useRoom({
         const action = payload.action;
         const retryAfter = payload.retry_after || 2;
         if (action) {
-          lockActionRef.current(action, retryAfter);
+          lockAction(action, retryAfter);
         } else {
-          lockActionRef.current("SEEK", retryAfter);
-          lockActionRef.current("PLAY", retryAfter);
-          lockActionRef.current("PAUSE", retryAfter);
+          lockAction("SEEK", retryAfter);
+          lockAction("PLAY", retryAfter);
+          lockAction("PAUSE", retryAfter);
         }
 
         // Rollback sur l'état faisant autorité côté serveur
