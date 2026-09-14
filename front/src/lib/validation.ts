@@ -11,12 +11,12 @@ export const USERNAME_REGEX = /^[a-zA-Z0-9_\u00C0-\u017F-]{2,20}$/;
  */
 export function validateUsername(
   name: string,
-  customTranslate?: (key: string, options?: any) => string
+  customTranslate?: (key: string, options?: Record<string, unknown>) => string
 ): string | null {
   const trimmed = name.trim();
   const t =
     customTranslate ||
-    ((key: string, options?: any): string =>
+    ((key: string, options?: Record<string, unknown>): string =>
       String(i18n.t(key, { ns: "validation", ...options })));
 
   if (!trimmed) {

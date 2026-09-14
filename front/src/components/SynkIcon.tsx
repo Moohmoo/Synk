@@ -1,21 +1,21 @@
 import { cn } from "@/lib/utils";
 
-export interface LogoSynkProps {
+export interface SynkIconProps {
   className?: string;
   glow?: boolean;
   size?: number | string;
 }
 
 /**
- * LogoSynk : Emblème géométrique compact "Minimalisme Mécanique" (Charte Cyber-Tech).
+ * SynkIcon : Emblème géométrique compact "Minimalisme Mécanique" (Charte Cyber-Tech).
  * - Cadre biseauté en Cyan électrique éclatant (#0ac8b9).
  * - Double chevron central "Fast-Forward / Sync" en blanc pur avec lueur réactive.
  */
-export function LogoSynk({
+export function SynkIcon({
   className,
   glow = false,
   size = 24,
-}: LogoSynkProps) {
+}: SynkIconProps) {
   return (
     <svg
       width={size}
@@ -48,4 +48,4 @@ export function LogoSynk({
   );
 }
 
-export default LogoSynk;
+export default SynkIcon;

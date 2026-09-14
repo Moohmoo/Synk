@@ -1,14 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { PlayerController } from "@/hooks/usePlayerController";
 
 export interface UseCinemaModeOptions {
   containerRef: React.RefObject<HTMLElement>;
-  controller: PlayerController;
-  volume: number;
-  isMuted: boolean;
-  onVolumeChange: (volume: number) => void;
-  onToggleMute: () => void;
-  onChangeMedia?: () => void;
+  playerStatus?: string;
 }
 
 export interface CinemaModeState {
@@ -19,34 +13,13 @@ export interface CinemaModeState {
 }
 
 /**
- * Détecte si l'élément actuellement ciblé est un champ de saisie utilisateur
- * (évite de déclencher les raccourcis du lecteur lors de la frappe dans le chat ou l'omnibox).
- */
-function isInteractiveInput(target: EventTarget | null): boolean {
-  if (!target || !(target instanceof HTMLElement)) return false;
-  const tag = target.tagName.toLowerCase();
-  return (
-    tag === "input" ||
-    tag === "textarea" ||
-    tag === "select" ||
-    target.isContentEditable
-  );
-}
-
-/**
- * Hook d'ergonomie cinéma unifié :
+ * Hook d'ergonomie cinéma :
  * - Gestion du plein écran (API native W3C + WebKit Safari + repli In-Window CSS).
- * - Minuteur d'auto-hide des contrôles (3s en cours de lecture).
- * - Raccourcis clavier universels (Espace, F, M, Flèches, C/S, Cmd+K, Échap).
+ * - Minuteur d'auto-masquage des contrôles lors de la lecture (2s d'inactivité souris).
  */
 export function useCinemaMode({
   containerRef,
-  controller,
-  volume,
-  isMuted,
-  onVolumeChange,
-  onToggleMute,
-  onChangeMedia,
+  playerStatus,
 }: UseCinemaModeOptions): CinemaModeState {
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [areControlsVisible, setAreControlsVisible] = useState<boolean>(true);
@@ -58,16 +31,16 @@ export function useCinemaMode({
     if (controlsTimeoutRef.current) {
       clearTimeout(controlsTimeoutRef.current);
     }
-    if (controller.status === "playing") {
+    if (playerStatus === "playing") {
       controlsTimeoutRef.current = setTimeout(() => {
         setAreControlsVisible(false);
       }, 2000);
     }
-  }, [controller.status]);
+  }, [playerStatus]);
 
   // Si la vidéo n'est plus en lecture, les contrôles restent toujours visibles
   useEffect(() => {
-    if (controller.status !== "playing") {
+    if (playerStatus !== "playing") {
       setAreControlsVisible(true);
       if (controlsTimeoutRef.current) {
         clearTimeout(controlsTimeoutRef.current);
@@ -81,7 +54,7 @@ export function useCinemaMode({
         clearTimeout(controlsTimeoutRef.current);
       }
     };
-  }, [controller.status, isFullscreen, resetControlsTimeout]);
+  }, [playerStatus, isFullscreen, resetControlsTimeout]);
 
   // Bloque le défilement de la page arrière-plan lors du plein écran In-Window CSS
   useEffect(() => {
@@ -153,120 +126,6 @@ export function useCinemaMode({
     };
   }, []);
 
-  // Raccourcis clavier universels
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignorer si le focus est sur un champ de texte
-      if (isInteractiveInput(e.target)) return;
-
-      // Cmd+K ou Ctrl+K : changement de média
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault();
-        onChangeMedia?.();
-        return;
-      }
-
-      // Ignorer si d'autres modificateurs sont maintenus
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
-
-      switch (e.key) {
-        // Lecture / Pause
-        case " ":
-        case "k":
-        case "K":
-          e.preventDefault();
-          if (!controller.isPlayDisabled) {
-            controller.togglePlay();
-            resetControlsTimeout();
-          }
-          break;
-
-        // Plein écran
-        case "f":
-        case "F":
-          e.preventDefault();
-          toggleFullscreen();
-          break;
-
-        // Mute / Unmute
-        case "m":
-        case "M":
-          e.preventDefault();
-          onToggleMute();
-          resetControlsTimeout();
-          break;
-
-        // Volume +5%
-        case "ArrowUp":
-          e.preventDefault();
-          onVolumeChange(Math.min(100, volume + 5));
-          resetControlsTimeout();
-          break;
-
-        // Volume -5%
-        case "ArrowDown":
-          e.preventDefault();
-          onVolumeChange(Math.max(0, volume - 5));
-          resetControlsTimeout();
-          break;
-
-        // Reculer de 5s
-        case "ArrowLeft":
-          e.preventDefault();
-          if (!controller.isSeekDisabled) {
-            const target = Math.max(0, controller.currentTime - 5);
-            controller.seek(target);
-            resetControlsTimeout();
-          }
-          break;
-
-        // Avancer de 5s
-        case "ArrowRight":
-          e.preventDefault();
-          if (!controller.isSeekDisabled) {
-            const maxDuration =
-              controller.duration > 0 ? controller.duration : controller.currentTime + 5;
-            const target = Math.min(maxDuration, controller.currentTime + 5);
-            controller.seek(target);
-            resetControlsTimeout();
-          }
-          break;
-
-        // Rattraper le salon (Catch-up / Sync)
-        case "c":
-        case "C":
-        case "s":
-        case "S":
-          if (controller.isBehind && !controller.isSeekDisabled) {
-            e.preventDefault();
-            controller.catchUp();
-            resetControlsTimeout();
-          }
-          break;
-
-        // Sortir du plein écran avec Échap
-        case "Escape":
-          if (isFullscreen) {
-            e.preventDefault();
-            toggleFullscreen();
-          }
-          break;
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [
-    controller,
-    isFullscreen,
-    volume,
-    onVolumeChange,
-    onToggleMute,
-    onChangeMedia,
-    toggleFullscreen,
-    resetControlsTimeout,
-  ]);
-
   return {
     isFullscreen,
     areControlsVisible,
@@ -274,3 +133,5 @@ export function useCinemaMode({
     resetControlsTimeout,
   };
 }
+
+export default useCinemaMode;

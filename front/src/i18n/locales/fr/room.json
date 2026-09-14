@@ -56,6 +56,8 @@
     "syncActive": "En direct",
     "hostControl": "Verrouillé",
     "freeControl": "Libre",
+    "currentMedia": "EN COURS",
+    "hostSuffix": " (Hôte)",
     "tabQueue": "File d'attente",
     "tabSettings": "Réglages",
     "queueEmptyTitle": "File d'attente vide",
@@ -72,9 +74,12 @@
     "chatEmpty": "Aucun message pour le moment. Saluez le salon !",
     "telemetrySync": "Synchro",
     "telemetryBuffering": "Buffering",
+    "statusBuffering": "Buffering...",
+    "statusOnline": "En ligne",
     "roleHost": "Hôte",
     "roleViewer": "Spectateur",
-    "terminalPrompt": "synk:stream$"
+    "terminalPrompt": "synk:stream$",
+    "sendAria": "Envoyer le message"
   },
   "participants": {
     "online": "CONNECTÉS ({{count}})",

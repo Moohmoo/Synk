@@ -44,7 +44,7 @@ export function Breadcrumb({ className }: BreadcrumbProps) {
   items.push({ labelKey: config.labelKey });
 
   return (
-    <nav aria-label="Fil d'ariane" className={cn("flex items-center font-mono text-xs select-none", className)}>
+    <nav aria-label={t("nav.breadcrumb")} className={cn("flex items-center font-mono text-xs select-none", className)}>
       {items.map((item, index) => {
         const isLast = index === items.length - 1;
         const translatedLabel = t(item.labelKey, item.defaultLabel || item.labelKey);

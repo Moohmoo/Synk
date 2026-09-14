@@ -8,9 +8,15 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { RoomActivityHub, type RoomActivityHubProps } from "./RoomActivityHub";
+import { RoomSidePanel, type RoomSidePanelProps } from "./RoomSidePanel";
 
-export function RoomMobileInfoSheet(props: RoomActivityHubProps) {
+export type RoomDrawerProps = RoomSidePanelProps;
+
+/**
+ * Tiroir coulissant pour appareils mobiles et tablettes (< xl),
+ * donnant accès au panneau latéral (chat et membres) lorsque la barre latérale droite est masquée.
+ */
+export function RoomDrawer(props: RoomDrawerProps) {
   const [open, setOpen] = useState(false);
   const { t } = useTranslation("room");
 
@@ -45,10 +51,12 @@ export function RoomMobileInfoSheet(props: RoomActivityHubProps) {
             </SheetTitle>
           </SheetHeader>
           <div className="flex-1 min-h-0">
-            <RoomActivityHub {...props} />
+            <RoomSidePanel {...props} />
           </div>
         </SheetContent>
       </Sheet>
     </div>
   );
 }
+
+export default RoomDrawer;

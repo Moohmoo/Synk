@@ -40,7 +40,7 @@ export function formatErrorMessage(
   error: ApiError | ErrorPayload | Error | string | unknown,
   customTranslate?: TFunction
 ): string {
-  const t = customTranslate || ((key: string, options?: any) => i18n.t(key, options));
+  const t = customTranslate || ((key: string, options?: Record<string, unknown>) => i18n.t(key, options));
 
   if (!error) {
     return String(
@@ -58,9 +58,9 @@ export function formatErrorMessage(
     rawMessage = error;
     code = LEGACY_MESSAGE_MAP[error] || error;
   } else if (typeof error === "object" && error !== null) {
-    const errObj = error as any;
-    code = errObj.code;
-    rawMessage = errObj.message;
+    const errObj = error as { code?: unknown; message?: unknown };
+    if (typeof errObj.code === "string") code = errObj.code;
+    if (typeof errObj.message === "string") rawMessage = errObj.message;
   }
 
   // Normalisation des alias

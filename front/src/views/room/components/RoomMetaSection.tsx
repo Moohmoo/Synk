@@ -132,7 +132,7 @@ export function RoomMetaSection({
               <div className="flex items-center justify-between p-2.5 bg-white/[0.02] border border-white/10 rounded-sm">
                 <div className="flex items-center gap-2.5 min-w-0">
                   <span className="text-[10px] font-mono font-bold text-zinc-300 uppercase px-1.5 py-0.5 bg-zinc-800 border border-zinc-700 rounded">
-                    EN COURS
+                    {t("meta.currentMedia")}
                   </span>
                   <span className="text-xs font-medium text-zinc-200 truncate">{displayTitle}</span>
                 </div>
@@ -169,7 +169,7 @@ export function RoomMetaSection({
                 </Button>
               ) : (
                 <Badge variant="host" className="text-[11px] shrink-0 py-1 px-2.5 gap-1.5 font-sans uppercase tracking-wider">
-                  {roomSettings.is_locked ? `${t("meta.hostControl")} (Hôte)` : t("meta.freeControl")}
+                  {roomSettings.is_locked ? `${t("meta.hostControl")}${t("meta.hostSuffix")}` : t("meta.freeControl")}
                 </Badge>
               )}
             </div>

@@ -132,7 +132,7 @@ export function useHomeFlow() {
           userId: data.user_id,
         });
         navigate(`/room/${data.room_id}`);
-      } catch (err: any) {
+      } catch (err: unknown) {
         toast.error(formatErrorMessage(err, t), { id: "home-api-error" });
         setIsLoading(false);
       }
@@ -156,7 +156,7 @@ export function useHomeFlow() {
         setJoinStep("username");
         setIsLoading(false);
         setTimeout(() => inputRef.current?.focus(), 0);
-      } catch (err: any) {
+      } catch (err: unknown) {
         toast.error(formatErrorMessage(err, t), { id: "home-api-error" });
         setIsLoading(false);
       }

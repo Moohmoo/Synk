@@ -55,7 +55,7 @@ export interface HostPromotedPayload {
   host_token: string;
 }
 
-export interface WebSocketEvent<T = any> {
+export interface WebSocketEvent<T = unknown> {
   event: ClientEventType | ServerEventType;
   payload: T;
   timestamp: number;

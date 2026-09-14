@@ -63,7 +63,7 @@ export function useSyncRoom({
   username,
   token,
   userId,
-  wsBaseUrl = (import.meta as any).env?.VITE_WS_URL || "ws://localhost:8000",
+  wsBaseUrl = import.meta.env.VITE_WS_URL || "ws://localhost:8000",
 }: UseSyncRoomOptions) {
   const { t } = useTranslation(["room", "global", "errors"]);
   const { isRateLimited, getRemainingCooldown, lockAction } = useRateLimiter();

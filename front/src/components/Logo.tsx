@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { LogoSynk } from "@/components/LogoSynk";
+import { SynkIcon } from "@/components/SynkIcon";
 import { cn } from "@/lib/utils";
 
 export interface LogoProps {
@@ -18,7 +18,7 @@ export function Logo({ className, onClick, showText = true }: LogoProps = {}) {
         className
       )}
     >
-      <LogoSynk
+      <SynkIcon
         size={30}
         className="group-hover:drop-shadow-[0_0_8px_rgba(10,200,185,0.45)] transition-all duration-200"
       />

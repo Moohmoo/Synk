@@ -1,4 +1,5 @@
 import { useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -9,6 +10,7 @@ export interface RightSidebarProps {
 
 export function RightSidebar({ children, className }: RightSidebarProps) {
   const location = useLocation();
+  const { t } = useTranslation("global");
   const isRoom = location.pathname.startsWith("/room/");
 
   if (!isRoom) {
@@ -20,7 +22,9 @@ export function RightSidebar({ children, className }: RightSidebarProps) {
         )}
       >
         <div id="right-sidebar-slot" className="hidden" />
-        <span className="text-[11px] font-mono text-zinc-500 tracking-tight">Synk v1.0.0-beta</span>
+        <span className="text-[11px] font-mono text-zinc-500 tracking-tight">
+          {t("app.name")} {t("app.version")}
+        </span>
         <a
           href="https://github.com"
           target="_blank"
@@ -50,7 +54,9 @@ export function RightSidebar({ children, className }: RightSidebarProps) {
 
       {/* MODULE : PROJET / INFORMATIONS */}
       <footer className="pt-4 border-t border-white/5 flex items-center justify-between text-xs text-zinc-500 shrink-0">
-        <span className="text-[11px] font-mono text-zinc-500 tracking-tight">Synk v1.0.0-beta</span>
+        <span className="text-[11px] font-mono text-zinc-500 tracking-tight">
+          {t("app.name")} {t("app.version")}
+        </span>
         <a
           href="https://github.com"
           target="_blank"

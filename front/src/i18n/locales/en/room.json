@@ -56,6 +56,8 @@
     "syncActive": "Live",
     "hostControl": "Locked",
     "freeControl": "Open",
+    "currentMedia": "CURRENT",
+    "hostSuffix": " (Host)",
     "tabQueue": "Queue",
     "tabSettings": "Settings",
     "queueEmptyTitle": "Queue is empty",
@@ -72,9 +74,12 @@
     "chatEmpty": "No messages yet. Say hello to the room!",
     "telemetrySync": "Synced",
     "telemetryBuffering": "Buffering",
+    "statusBuffering": "Buffering...",
+    "statusOnline": "Online",
     "roleHost": "Host",
     "roleViewer": "Viewer",
-    "terminalPrompt": "synk:stream$"
+    "terminalPrompt": "synk:stream$",
+    "sendAria": "Send message"
   },
   "participants": {
     "online": "ONLINE ({{count}})",

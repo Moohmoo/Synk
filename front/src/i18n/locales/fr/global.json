@@ -12,7 +12,13 @@
     "github": "GitHub",
     "room": "Salon",
     "live": "LIVE",
-    "disconnected": "DÉCONNECTÉ"
+    "disconnected": "DÉCONNECTÉ",
+    "openMenu": "Ouvrir le menu de navigation",
+    "switchLanguageFr": "Changer la langue en français",
+    "switchLanguageEn": "Switch language to English",
+    "breadcrumb": "Fil d'Ariane",
+    "toggleExpand": "Déplier la barre latérale",
+    "toggleCollapse": "Réduire la barre latérale"
   },
   "home": {
     "createTitle": "Lancer une session",
@@ -26,6 +32,7 @@
     "joinUsernamePlaceholder": "Entrez votre pseudo...",
     "checking": "VÉRIFICATION...",
     "next": "SUIVANT",
+    "creating": "CRÉATION...",
     "connecting": "CONNEXION...",
     "join": "REJOINDRE",
     "create": "CRÉER",

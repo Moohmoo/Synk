@@ -54,7 +54,7 @@ export const Omnibox = forwardRef<HTMLInputElement, OmniboxProps>(
 
     const defaultButtonText = isLoading
       ? isCreate
-        ? "CRÉATION..."
+        ? t("home.creating")
         : t("home.connecting")
       : isCreate
       ? t("home.create")

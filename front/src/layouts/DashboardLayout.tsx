@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/sheet";
 
 export function LanguageSwitcher() {
-  const { i18n } = useTranslation("global");
+  const { i18n, t } = useTranslation("global");
   const currentLang = i18n.language?.startsWith("en") ? "en" : "fr";
 
   const changeLanguage = (lang: string) => {
@@ -28,7 +28,7 @@ export function LanguageSwitcher() {
       <button
         type="button"
         onClick={() => changeLanguage("fr")}
-        aria-label="Changer la langue en français"
+        aria-label={t("nav.switchLanguageFr")}
         className={`transition-colors cursor-pointer ${
           currentLang === "fr"
             ? "text-zinc-100 font-medium"
@@ -43,7 +43,7 @@ export function LanguageSwitcher() {
       <button
         type="button"
         onClick={() => changeLanguage("en")}
-        aria-label="Switch language to English"
+        aria-label={t("nav.switchLanguageEn")}
         className={`transition-colors cursor-pointer ${
           currentLang === "en"
             ? "text-zinc-100 font-medium"
@@ -57,6 +57,7 @@ export function LanguageSwitcher() {
 }
 
 export function DashboardLayout() {
+  const { t } = useTranslation("global");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
@@ -93,7 +94,7 @@ export function DashboardLayout() {
               type="button"
               onClick={() => setMobileMenuOpen(true)}
               className="lg:hidden p-1.5 -ml-1.5 rounded-md text-zinc-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
-              aria-label="Ouvrir le menu de navigation"
+              aria-label={t("nav.openMenu")}
             >
               <Menu className="w-5 h-5" />
             </button>

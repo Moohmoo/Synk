@@ -7,16 +7,17 @@ import { sessionManager } from "@/lib/session";
 import { useSyncRoom } from "@/hooks/useSyncRoom";
 import { usePlayerController } from "@/hooks/usePlayerController";
 import { useCinemaMode } from "@/hooks/useCinemaMode";
+import { usePlayerShortcuts } from "@/hooks/usePlayerShortcuts";
 import { usePlayerVolume } from "@/hooks/usePlayerVolume";
 import { toast } from "@/components/ui/sonner";
 import { NotFoundView } from "@/views/NotFoundView";
 import { MediaPlayer } from "./components/MediaPlayer";
 import { PlayerControls } from "./components/PlayerControls";
-import { RoomActivityHub } from "./components/RoomActivityHub";
+import { RoomSidePanel } from "./components/RoomSidePanel";
 import { RoomMetaSection } from "./components/RoomMetaSection";
 import { RoomDropzone } from "./components/RoomDropzone";
 import { ChangeMediaDialog } from "./components/ChangeMediaDialog";
-import { RoomMobileInfoSheet } from "./components/RoomMobileInfoSheet";
+import { RoomDrawer } from "./components/RoomDrawer";
 import { RoomSkeleton } from "./components/RoomSkeleton";
 
 export function RoomView() {
@@ -88,19 +89,26 @@ export function RoomView() {
   const isLockedForGuest = roomSettings.is_locked && !isHost;
   const isChangeMediaDisabled = isLockedForGuest || Boolean(isRateLimited("CHANGE_MEDIA"));
 
-  // Mode cinéma : plein écran, auto-hide des contrôles et raccourcis universels
+  // Mode cinéma : plein écran et auto-hide des contrôles au repos
   const { isFullscreen, areControlsVisible, toggleFullscreen, resetControlsTimeout } =
     useCinemaMode({
       containerRef: cinemaContainerRef,
-      controller: playerController,
-      volume,
-      isMuted,
-      onVolumeChange: setVolume,
-      onToggleMute: toggleMute,
-      onChangeMedia: () => {
-        if (!isChangeMediaDisabled) setIsChangeMediaOpen((open) => !open);
-      },
+      playerStatus: playerController.status,
     });
+
+  // Raccourcis clavier universels (Espace, K, F, M, Flèches, C/S, Cmd+K, Échap)
+  usePlayerShortcuts({
+    controller: playerController,
+    volume,
+    onVolumeChange: setVolume,
+    onToggleMute: toggleMute,
+    toggleFullscreen,
+    isFullscreen,
+    resetControlsTimeout,
+    onChangeMedia: () => {
+      if (!isChangeMediaDisabled) setIsChangeMediaOpen((open) => !open);
+    },
+  });
 
   const handleLoadMedia = (e: React.FormEvent) => {
     e.preventDefault();
@@ -134,7 +142,7 @@ export function RoomView() {
     );
   }
 
-  const activityHubProps = {
+  const sidePanelProps = {
     roomId,
     isConnected,
     ping: myPing,
@@ -154,7 +162,7 @@ export function RoomView() {
     <>
       <RightSidebarSlot>
         <div className="h-full animate-fade-in">
-          <RoomActivityHub {...activityHubProps} />
+          <RoomSidePanel {...sidePanelProps} />
         </div>
       </RightSidebarSlot>
 
@@ -229,7 +237,7 @@ export function RoomView() {
                   updateSettings(!roomSettings.is_locked);
                 }}
                 isLockDisabled={!isHost || Boolean(isRateLimited("UPDATE_SETTINGS"))}
-                mobileSlot={<RoomMobileInfoSheet {...activityHubProps} />}
+                mobileSlot={<RoomDrawer {...sidePanelProps} />}
               />
             )}
           </div>

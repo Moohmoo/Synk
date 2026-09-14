@@ -80,8 +80,8 @@ export function LeftSidebar({ className }: LeftSidebarProps = {}) {
           type="button"
           onClick={toggleSidebar}
           className="p-1.5 rounded-md text-zinc-400 hover:text-white hover:bg-zinc-900 transition-colors cursor-pointer"
-          title={isSidebarCollapsed ? "Déplier la barre latérale" : "Réduire la barre latérale"}
-          aria-label={isSidebarCollapsed ? "Déplier la barre latérale" : "Réduire la barre latérale"}
+          title={isSidebarCollapsed ? t("nav.toggleExpand") : t("nav.toggleCollapse")}
+          aria-label={isSidebarCollapsed ? t("nav.toggleExpand") : t("nav.toggleCollapse")}
         >
           {isSidebarCollapsed ? (
             <PanelLeft className="w-4 h-4 text-zinc-400 hover:text-zinc-200" />
