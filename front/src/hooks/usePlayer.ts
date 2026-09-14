@@ -175,9 +175,6 @@ export function usePlayer({
   // Durée unifiée (priorité au serveur, repli sur la durée détectée par l'élément vidéo)
   const duration = player.duration && player.duration > 0 ? player.duration : mediaElementDuration;
 
-  // Position affichée dans la timeline (priorité au déplacement du slider)
-  const displayTime = scrubbingTime !== null ? scrubbingTime : currentTime;
-
   // Position théorique du salon (compensée par l'offset d'horloge NTP)
   const roomTime = calculateReferenceTime({ ...player, duration }, serverTimeOffset);
 
@@ -194,6 +191,10 @@ export function usePlayer({
     if (player.is_playing) return "playing";
     return "paused";
   }, [mediaUrl, hasError, currentTime, duration, player.is_playing, player.current_time]);
+
+  // Position affichée dans la timeline (priorité au déplacement du slider, verrouillée à duration si ended)
+  const displayTime =
+    scrubbingTime !== null ? scrubbingTime : status === "ended" && duration > 0 ? duration : currentTime;
 
   // Détection de retard (Bouton Rattraper)
   const isBehind =
@@ -481,6 +482,12 @@ export function usePlayer({
     if (!videoRef.current) return;
     const cur = videoRef.current.currentTime;
 
+    // Si le média est terminé dans le salon, interdire aux frames résiduelles du lecteur de faire régresser la timeline
+    if (status === "ended" || (!player.is_playing && isNearEnd(player.current_time, duration))) {
+      if (currentTime !== duration) setCurrentTime(duration);
+      return;
+    }
+
     const wasSeekingToZero = pendingSeekRef.current === 0;
 
     // Ignore les frames résiduelles tant que le saut asynchrone n'a pas convergé
@@ -499,7 +506,7 @@ export function usePlayer({
     // Évite le saut parasite à 0 si YouTube boucle en fin de vidéo sans replay explicite
     if (!wasSeekingToZero && cur === 0 && duration > 2 && currentTime >= duration - 1) return;
     setCurrentTime(cur);
-  }, [duration, currentTime, pauseIfPlaying]);
+  }, [duration, currentTime, status, player.is_playing, player.current_time, pauseIfPlaying]);
 
   const onDurationChange = useCallback(() => {
     if (videoRef.current?.duration) {
