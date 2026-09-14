@@ -340,7 +340,7 @@ class RoomService:
         is_media_ended = (
             room.player.duration > 0
             and current_time is not None
-            and current_time >= room.player.duration - 0.5
+            and current_time >= room.player.duration - 0.3
             and is_playing is False
         )
         if room.settings.is_locked and not participant.is_host and not is_media_ended:
