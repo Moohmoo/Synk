@@ -1,6 +1,6 @@
 import ReactPlayer from "react-player";
 import { useTranslation } from "react-i18next";
-import { PlayerController } from "@/hooks/usePlayerController";
+import { PlayerController } from "@/hooks/usePlayer";
 import { AlertCircle, Play } from "lucide-react";
 
 interface MediaPlayerProps {
@@ -10,21 +10,28 @@ interface MediaPlayerProps {
   isFullscreen?: boolean;
   onToggleFullscreen?: () => void;
   emptySlot?: React.ReactNode;
+  controlsSlot?: React.ReactNode;
+  areControlsVisible?: boolean;
 }
 
 /**
  * Lecteur multimédia universel (YouTube, Twitch, Vimeo, SoundCloud, flux directs...).
- * Composant de présentation pur s'appuyant sur PlayerController.
+ * - Maintient strictement le ratio 16:9 cinématographique (zéro CLS).
+ * - Intègre les contrôles en overlay flottant semi-transparent au survol.
  */
 export function MediaPlayer({
   controller,
-  volume = 100,
-  isMuted = false,
+  volume,
+  isMuted,
   isFullscreen = false,
   onToggleFullscreen,
   emptySlot,
+  controlsSlot,
+  areControlsVisible = true,
 }: MediaPlayerProps) {
   const { t } = useTranslation("room");
+  const effectiveVolume = volume ?? controller.volume;
+  const effectiveMuted = isMuted ?? controller.isMuted;
   const {
     videoRef,
     mediaUrl,
@@ -36,22 +43,13 @@ export function MediaPlayer({
     playerProps,
   } = controller;
 
-  // Conteneur Cinéma Universel :
-  // - En état de lecture : aspect-video strict garanti (16:9 cinématographique sans distorsion).
-  // - En état d'attente (idle) : sur mobile (< 640px), un ratio rigide 16:9 comprimerait excessivement
-  //   le contenu d'accueil (titre, Omnibox, badges) dans ~190px de haut. On applique donc min-h-[260px]
-  //   avec padding vertical pour laisser respirer l'accueil, tout en restaurant aspect-video dès 'sm:'.
   return (
     <div
       className={`w-full ${
         isFullscreen
           ? "w-full h-full max-w-none max-h-none rounded-none border-0 shadow-none"
-          : "max-w-4xl aspect-video rounded-sm border border-white/10 shadow-2xl shadow-black/80"
-      } ${
-        !isFullscreen && status === "idle"
-          ? "min-h-[260px] sm:aspect-video py-6 sm:py-0"
-          : ""
-      } bg-[#0a0a0c] relative z-10 flex items-center justify-center select-none overflow-hidden`}
+          : "aspect-video"
+      } bg-black relative z-10 flex items-center justify-center select-none overflow-hidden group`}
     >
       {status === "idle" ? (
         emptySlot
@@ -68,8 +66,8 @@ export function MediaPlayer({
               ref={videoRef}
               src={mediaUrl}
               playing={status === "playing"}
-              volume={isMuted ? 0 : volume / 100}
-              muted={isMuted}
+              volume={effectiveMuted ? 0 : effectiveVolume / 100}
+              muted={effectiveMuted}
               controls={false}
               playsInline
               width="100%"
@@ -135,6 +133,9 @@ export function MediaPlayer({
               </p>
             </div>
           )}
+
+          {/* Contrôles de lecture Scrim Overlay */}
+          {controlsSlot}
         </>
       )}
     </div>

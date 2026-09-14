@@ -25,12 +25,12 @@ const config: Config = {
       },
       keyframes: {
         fadeIn: {
-          "0%": { opacity: "0", transform: "translateY(8px)" },
-          "100%": { opacity: "1", transform: "translateY(0)" },
+          "0%": { opacity: "0" },
+          "100%": { opacity: "1" },
         },
       },
       animation: {
-        "fade-in": "fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+        "fade-in": "fadeIn 0.25s ease-out forwards",
       },
     },
   },

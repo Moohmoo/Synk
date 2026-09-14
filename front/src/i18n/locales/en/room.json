@@ -10,7 +10,7 @@
     "button": "JOIN"
   },
   "header": {
-    "urlPlaceholder": "Paste a media link (e.g. https://...)",
+    "urlPlaceholder": "Paste a video URL...",
     "load": "LOAD",
     "invite": "INVITE",
     "linkCopied": "LINK COPIED!",
@@ -50,6 +50,36 @@
     "copyTooltip": "Copy invitation link",
     "invite": "Invite",
     "copied": "Copied!"
+  },
+  "meta": {
+    "noMedia": "No media currently playing",
+    "syncActive": "Live",
+    "hostControl": "Locked",
+    "freeControl": "Open",
+    "currentMedia": "CURRENT",
+    "hostSuffix": " (Host)",
+    "tabQueue": "Queue",
+    "tabSettings": "Settings",
+    "queueEmptyTitle": "Queue is empty",
+    "queueEmptyDesc": "Upcoming media will appear here.",
+    "settingsLockTitle": "Controls access",
+    "settingsLockDesc": "Restrict playback controls to the host.",
+    "settingsLatencyTitle": "Latency",
+    "settingsLatencyDesc": "Automatic real-time stream adjustment."
+  },
+  "hub": {
+    "tabChat": "Chat",
+    "tabMembers": "Members ({{count}})",
+    "chatPlaceholder": "Send a message...",
+    "chatEmpty": "No messages yet. Say hello to the room!",
+    "telemetrySync": "Synced",
+    "telemetryBuffering": "Buffering",
+    "statusBuffering": "Buffering...",
+    "statusOnline": "Online",
+    "roleHost": "Host",
+    "roleViewer": "Viewer",
+    "terminalPrompt": "synk:stream$",
+    "sendAria": "Send message"
   },
   "participants": {
     "online": "ONLINE ({{count}})",

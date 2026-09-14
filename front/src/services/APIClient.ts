@@ -1,7 +1,7 @@
 import axios from "axios";
 
 export const API_BASE_URL =
-  (import.meta as any).env?.VITE_API_URL || "http://localhost:8000";
+  import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 /**
  * Erreur normalisée pour tous les appels API de l'application Synk.
@@ -34,32 +34,39 @@ export class ApiError extends Error {
  * Prévient définitivement l'apparition de `[object Object]`.
  */
 export function extractApiErrorMessage(
-  errorData: any,
+  errorData: unknown,
   fallback = "Une erreur est survenue lors de la communication avec le serveur."
 ): string {
-  if (!errorData) return fallback;
+  if (!errorData || typeof errorData !== "object") return fallback;
+
+  const errObj = errorData as Record<string, unknown>;
 
   // 1. Format enveloppé Synk : { error: { message: "..." } }
-  if (typeof errorData.error?.message === "string" && errorData.error.message.trim()) {
-    return errorData.error.message;
+  if (
+    errObj.error &&
+    typeof errObj.error === "object" &&
+    typeof (errObj.error as Record<string, unknown>).message === "string" &&
+    ((errObj.error as Record<string, unknown>).message as string).trim()
+  ) {
+    return ((errObj.error as Record<string, unknown>).message as string).trim();
   }
 
   // 2. Erreur directe sous detail (ex: HTTP 404, 403, 500)
-  if (typeof errorData.detail === "string" && errorData.detail.trim()) {
-    return errorData.detail;
+  if (typeof errObj.detail === "string" && errObj.detail.trim()) {
+    return errObj.detail.trim();
   }
 
   // 3. Erreurs de validation Pydantic (HTTP 422 : liste d'erreurs loc / msg)
-  if (Array.isArray(errorData.detail) && errorData.detail.length > 0) {
-    const first = errorData.detail[0];
-    if (typeof first?.msg === "string" && first.msg.trim()) {
-      return first.msg;
+  if (Array.isArray(errObj.detail) && errObj.detail.length > 0) {
+    const first = errObj.detail[0];
+    if (first && typeof first === "object" && typeof (first as Record<string, unknown>).msg === "string") {
+      return ((first as Record<string, unknown>).msg as string).trim();
     }
   }
 
   // 4. Propriété message directe
-  if (typeof errorData.message === "string" && errorData.message.trim()) {
-    return errorData.message;
+  if (typeof errObj.message === "string" && errObj.message.trim()) {
+    return errObj.message.trim();
   }
 
   return fallback;

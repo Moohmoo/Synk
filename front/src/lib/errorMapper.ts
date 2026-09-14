@@ -9,6 +9,7 @@ import { ErrorPayload } from "@/types/events";
  */
 const LEGACY_MESSAGE_MAP: Record<string, string> = {
   "URL de média invalide": "INVALID_MEDIA_URL",
+  "Format ou plateforme de média non supporté": "INVALID_MEDIA_URL",
   "Le salon est verrouillé par l'hôte": "ROOM_LOCKED",
   "Le salon est actuellement verrouillé par l'hôte.": "ROOM_LOCKED",
   "Seul l'hôte peut modifier les paramètres": "FORBIDDEN_HOST_ONLY",
@@ -40,7 +41,7 @@ export function formatErrorMessage(
   error: ApiError | ErrorPayload | Error | string | unknown,
   customTranslate?: TFunction
 ): string {
-  const t = customTranslate || ((key: string, options?: any) => i18n.t(key, options));
+  const t = customTranslate || ((key: string, options?: Record<string, unknown>) => i18n.t(key, options));
 
   if (!error) {
     return String(
@@ -58,14 +59,16 @@ export function formatErrorMessage(
     rawMessage = error;
     code = LEGACY_MESSAGE_MAP[error] || error;
   } else if (typeof error === "object" && error !== null) {
-    const errObj = error as any;
-    code = errObj.code;
-    rawMessage = errObj.message;
+    const errObj = error as { code?: unknown; message?: unknown };
+    if (typeof errObj.code === "string") code = errObj.code;
+    if (typeof errObj.message === "string") rawMessage = errObj.message;
   }
 
   // Normalisation des alias
   if (code === "LOCKED") code = "ROOM_LOCKED";
   if (code === "FORBIDDEN") code = "FORBIDDEN_HOST_ONLY";
+  if (code === "INVALID_PLAY_PAYLOAD" || code === "INVALID_PAUSE_PAYLOAD") code = "INVALID_PLAYBACK_PAYLOAD";
+  if (code === "RATE_LIMIT") code = "RATE_LIMITED";
 
   // Si le code est générique ("INVALID_PAYLOAD" ou absent) mais qu'un message brut est connu
   if ((!code || code === "INVALID_PAYLOAD") && rawMessage && LEGACY_MESSAGE_MAP[rawMessage]) {

@@ -1,8 +1,14 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Clock, Settings } from "lucide-react";
 import { useTranslation } from "react-i18next";
-
+import { Home, PanelLeftClose, PanelLeft } from "lucide-react";
+import { Logo } from "@/components/Logo";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useUIStore } from "@/stores/uiStore";
 import { cn } from "@/lib/utils";
+
+export interface LeftSidebarProps {
+  className?: string;
+}
 
 export interface LeftNavContentProps {
   onItemClick?: () => void;
@@ -10,92 +16,111 @@ export interface LeftNavContentProps {
 }
 
 /**
- * Contenu pur de la navigation principale.
- * Réutilisable sans duplication dans la barre latérale desktop et le tiroir mobile.
+ * Contenu réutilisable des liens de navigation principale.
+ * Utilisé dans la LeftSidebar desktop et dans le Sheet mobile.
  */
-export function LeftNavContent({ onItemClick, className }: LeftNavContentProps) {
+export function LeftNavContent({ onItemClick, className }: LeftNavContentProps = {}) {
   const location = useLocation();
   const { t } = useTranslation("global");
-
-  const navItems = [
-    {
-      label: t("nav.home"),
-      path: "/",
-      icon: LayoutDashboard,
-      isActive: location.pathname === "/",
-    },
-    {
-      label: t("nav.recent"),
-      path: "#recent",
-      icon: Clock,
-      isActive: false,
-    },
-    {
-      label: t("nav.settings"),
-      path: "#settings",
-      icon: Settings,
-      isActive: false,
-    },
-  ];
+  const isHome = location.pathname === "/";
 
   return (
-    <div className={cn("flex flex-col select-none", className)}>
-      {/* Section Header */}
-      <div className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 mb-3 px-3">
-        {t("nav.section")}
-      </div>
-
-      {/* Navigation List */}
-      <nav className="space-y-1.5 mt-1">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.path}
-              to={item.path}
-              onClick={onItemClick}
-              className={`group flex items-center gap-3 px-3.5 py-2.5 text-sm font-medium tracking-wide border-l-[3px] transition-all duration-200 ${
-                item.isActive
-                  ? "text-white bg-gradient-to-r from-[#0ac8b9]/20 to-transparent border-[#0ac8b9]"
-                  : "border-transparent text-zinc-400 hover:text-white hover:bg-gradient-to-r hover:from-[#0ac8b9]/15 hover:to-transparent hover:border-[#0ac8b9]"
-              }`}
-            >
-              <Icon
-                className={`w-4 h-4 shrink-0 transition-colors duration-200 ${
-                  item.isActive
-                    ? "text-[#0ac8b9]"
-                    : "text-zinc-500 group-hover:text-[#0ac8b9]"
-                }`}
-              />
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
-    </div>
+    <nav className={cn("flex flex-col px-2.5", className)}>
+      <Link
+        to="/"
+        onClick={onItemClick}
+        className={cn(
+          "flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors duration-150",
+          isHome
+            ? "bg-white/[0.08] text-zinc-100"
+            : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]"
+        )}
+      >
+        <Home className={cn("w-4 h-4 transition-colors", isHome ? "text-zinc-100" : "text-zinc-400")} />
+        <span>{t("nav.home")}</span>
+      </Link>
+    </nav>
   );
 }
 
-export interface LeftSidebarProps {
-  className?: string;
-}
-
 /**
- * Barre latérale gauche de navigation principale.
- * Affichée uniquement sur grand écran (xl: >= 1280px) pour préserver la symétrie.
+ * Barre latérale gauche (Le Socle) de la navigation.
+ * - Repliable via useUIStore avec icône de panneau.
+ * - Logo masqué en mode compact (replié), uniquement le bouton toggle au centre.
+ * - Hauteur de header (h-14) alignée sur le Main Canvas grâce à mt-4.
+ * - Icône d'accueil universelle (Home) et contraste net de l'item actif en mode replié.
  */
 export function LeftSidebar({ className }: LeftSidebarProps = {}) {
+  const location = useLocation();
+  const { t } = useTranslation("global");
+  const isHome = location.pathname === "/";
+
+  const isSidebarCollapsed = useUIStore((state) => state.isSidebarCollapsed);
+  const toggleSidebar = useUIStore((state) => state.toggleSidebar);
+
   return (
     <aside
       className={cn(
-        "hidden xl:flex w-64 flex-col bg-transparent p-4 shrink-0 select-none h-full relative z-20",
+        "flex-shrink-0 flex flex-col relative z-10 bg-zinc-950 select-none mt-4 transition-all duration-300 ease-in-out",
+        isSidebarCollapsed ? "w-[64px]" : "w-[240px]",
         className
       )}
     >
-      <LeftNavContent />
+      {/* Conteneur Header Logo + Bouton Toggle (Hauteur h-14 strictement alignée avec le Canvas) */}
+      <div
+        className={cn(
+          "h-14 flex items-center shrink-0 mb-3 transition-all",
+          isSidebarCollapsed ? "justify-center" : "px-4 justify-between"
+        )}
+      >
+        {!isSidebarCollapsed && <Logo showText={true} />}
+
+        {/* Bouton Toggle Sidebar (Réduire / Déplier) */}
+        <button
+          type="button"
+          onClick={toggleSidebar}
+          className="p-1.5 rounded-md text-zinc-400 hover:text-white hover:bg-zinc-900 transition-colors cursor-pointer"
+          title={isSidebarCollapsed ? t("nav.toggleExpand") : t("nav.toggleCollapse")}
+          aria-label={isSidebarCollapsed ? t("nav.toggleExpand") : t("nav.toggleCollapse")}
+        >
+          {isSidebarCollapsed ? (
+            <PanelLeft className="w-4 h-4 text-zinc-400 hover:text-zinc-200" />
+          ) : (
+            <PanelLeftClose className="w-4 h-4 text-zinc-400 hover:text-zinc-200" />
+          )}
+        </button>
+      </div>
+
+      {/* Menu de navigation avec paddings internes harmonisés */}
+      {isSidebarCollapsed ? (
+        <nav className="flex flex-col px-2.5">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link
+                to="/"
+                className={cn(
+                  "flex items-center justify-center w-10 h-10 mx-auto rounded-md transition-colors duration-150",
+                  isHome
+                    ? "bg-white/[0.08] text-zinc-100"
+                    : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]"
+                )}
+              >
+                <Home className={cn("w-4 h-4 transition-colors", isHome ? "text-zinc-100" : "text-zinc-400")} />
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right" sideOffset={10}>
+              {t("nav.home")}
+            </TooltipContent>
+          </Tooltip>
+        </nav>
+      ) : (
+        <LeftNavContent />
+      )}
     </aside>
   );
 }
 
 export default LeftSidebar;
+
+
 

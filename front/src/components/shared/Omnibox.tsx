@@ -17,6 +17,7 @@ export interface OmniboxProps {
   buttonText?: string;
   isLoading?: boolean;
   disabled?: boolean;
+  submitDisabled?: boolean;
   autoFocus?: boolean;
   maxLength?: number;
   className?: string;
@@ -35,6 +36,7 @@ export const Omnibox = forwardRef<HTMLInputElement, OmniboxProps>(
       buttonText,
       isLoading = false,
       disabled = false,
+      submitDisabled = false,
       autoFocus = false,
       maxLength = 2048,
       className = "",
@@ -52,7 +54,7 @@ export const Omnibox = forwardRef<HTMLInputElement, OmniboxProps>(
 
     const defaultButtonText = isLoading
       ? isCreate
-        ? "CRÉATION..."
+        ? t("home.creating")
         : t("home.connecting")
       : isCreate
       ? t("home.create")
@@ -61,19 +63,19 @@ export const Omnibox = forwardRef<HTMLInputElement, OmniboxProps>(
     const displayButtonText = buttonText || defaultButtonText;
 
     return (
-      <div className={cn("w-full max-w-xl flex flex-col items-center", className)}>
+      <div className={cn("w-full max-w-lg flex flex-col items-center", className)}>
         <form
           onSubmit={onSubmit}
-          className="w-full bg-[#121215] border border-white/10 border-l-[3px] border-l-zinc-700 p-1.5 flex items-center shadow-2xl transition-all duration-200 overflow-hidden rounded-sm focus-within:border-l-[#0ac8b9] focus-within:border-white/20 focus-within:bg-gradient-to-r focus-within:from-[#0ac8b9]/5 focus-within:to-transparent focus-within:shadow-[0_0_24px_rgba(10,200,185,0.12)]"
+          className="w-full flex items-center bg-zinc-800/80 border border-white/10 rounded-lg p-1.5 backdrop-blur-md focus-within:border-white/20 transition-all"
         >
           {badge && (
-            <div className="flex items-center gap-1.5 bg-[#1e1e24] text-[#0ac8b9] border border-[#0ac8b9]/25 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-sm text-[11px] sm:text-xs font-mono font-semibold shrink-0 ml-0.5 sm:ml-1">
+            <div className="h-7 flex items-center gap-1.5 bg-zinc-700/60 text-[#0ac8b9] border border-[#0ac8b9]/30 px-2.5 rounded-md text-xs font-mono font-semibold shrink-0 ml-1">
               <span>{badge.text}</span>
               {badge.onRemove && (
                 <button
                   type="button"
                   onClick={badge.onRemove}
-                  className="text-zinc-400 hover:text-white transition-colors p-0.5 rounded-sm cursor-pointer"
+                  className="text-zinc-400 hover:text-white transition-colors p-0.5 rounded cursor-pointer"
                   title={t("home.changeRoom", "Changer de salon")}
                 >
                   <X className="w-3 h-3" />
@@ -82,11 +84,6 @@ export const Omnibox = forwardRef<HTMLInputElement, OmniboxProps>(
             </div>
           )}
 
-          {/* 
-            POURQUOI min-w-0 : En CSS Flexbox, un élément a 'min-width: auto' par défaut, 
-            ce qui empêche le champ de rétrécir au-delà de son contenu et provoque des débordements
-            quand le badge est affiché sur écran mobile (< 375px). min-w-0 garantit une contraction fluide.
-          */}
           <input
             ref={ref}
             type="text"
@@ -94,22 +91,17 @@ export const Omnibox = forwardRef<HTMLInputElement, OmniboxProps>(
             onChange={onChange}
             onKeyDown={onKeyDown}
             placeholder={placeholder || defaultPlaceholder}
-            className="flex-1 min-w-0 w-full bg-transparent border-none outline-none px-2 sm:px-3 text-xs sm:text-sm font-medium text-zinc-100 placeholder-zinc-500"
+            className="flex-1 h-9 bg-transparent border-none text-sm text-zinc-100 px-3 outline-none font-mono placeholder:text-zinc-500 placeholder:font-mono text-left"
             autoFocus={autoFocus}
             maxLength={maxLength}
             disabled={isLoading || disabled}
           />
 
-          {/* 
-            POURQUOI min-w-[76px] sm:w-[130px] : Évite d'occuper plus d'un tiers de l'écran utile 
-            sur smartphone avec un bouton rigide de 130px, tout en préservant le format canonique 
-            large sur grand écran.
-          */}
           <button
             type="submit"
-            disabled={isLoading || disabled}
-            className={`flex-shrink-0 px-3 sm:px-4 py-1.5 min-w-[76px] sm:w-[130px] flex items-center justify-center rounded-sm text-xs font-bold tracking-wide transition-all duration-200 ease-out bg-[#0ac8b9] text-[#09090b] hover:bg-[#0ac8b9]/90 shadow-[0_0_12px_rgba(10,200,185,0.25)] hover:shadow-[0_0_18px_rgba(10,200,185,0.4)] cursor-pointer ${
-              isLoading || disabled ? "opacity-70 cursor-not-allowed" : "active:translate-y-[1px]"
+            disabled={isLoading || disabled || submitDisabled}
+            className={`h-9 px-4 sm:px-6 bg-[#0ac8b9] text-[#09090b] text-xs font-bold rounded-md hover:bg-[#0ac8b9]/90 transition-all shadow-[0_0_15px_rgba(10,200,185,0.2)] flex-shrink-0 cursor-pointer flex items-center justify-center ${
+              isLoading || disabled || submitDisabled ? "opacity-70 cursor-not-allowed" : "active:translate-y-[1px]"
             }`}
           >
             <span className="truncate">{displayButtonText}</span>

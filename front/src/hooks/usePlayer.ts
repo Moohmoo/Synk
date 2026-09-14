@@ -11,7 +11,7 @@ import {
 // Ré-export pour rétrocompatibilité et co-localisation
 export type { PlaybackStatus };
 
-export interface UsePlayerControllerOptions {
+export interface UsePlayerOptions {
   player: PlayerState;
   isHost: boolean;
   isLocked: boolean;
@@ -19,6 +19,7 @@ export interface UsePlayerControllerOptions {
   sendPlay: (currentTime?: number, duration?: number, isRestart?: boolean) => void;
   sendPause: (currentTime?: number, duration?: number) => void;
   sendSeek: (targetTime: number, duration?: number) => void;
+  initialVolume?: number;
 }
 
 export interface PlayerController {
@@ -43,6 +44,12 @@ export interface PlayerController {
   // Permissions & Limiteurs de débit
   isPlayDisabled: boolean;
   isSeekDisabled: boolean;
+
+  // Volume local et sourdine persistée
+  volume: number;
+  isMuted: boolean;
+  setVolume: (volume: number) => void;
+  toggleMute: () => void;
 
   // Commandes explicites de l'utilisateur
   play: () => void;
@@ -85,9 +92,9 @@ export function resolveMediaUrl(player: PlayerState): string {
 }
 
 /**
- * Hook central orchestrant le lecteur vidéo, la machine à états et la synchronisation salon.
+ * Hook central orchestrant le lecteur vidéo, la machine à états, le volume et la synchronisation salon.
  */
-export function usePlayerController({
+export function usePlayer({
   player,
   isHost,
   isLocked,
@@ -95,8 +102,31 @@ export function usePlayerController({
   sendPlay,
   sendPause,
   sendSeek,
-}: UsePlayerControllerOptions): PlayerController {
+  initialVolume = 100,
+}: UsePlayerOptions): PlayerController {
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Volume local et sourdine persistée
+  const [volume, setVolumeState] = useState<number>(() => {
+    const saved = localStorage.getItem("synk_volume");
+    return saved !== null ? Number(saved) : initialVolume;
+  });
+  const [isMuted, setIsMuted] = useState<boolean>(false);
+
+  const setVolume = useCallback((newVolume: number) => {
+    setVolumeState(newVolume);
+    localStorage.setItem("synk_volume", String(newVolume));
+  }, []);
+
+  const toggleMute = useCallback(() => {
+    setIsMuted((prevMuted) => {
+      if (prevMuted) {
+        if (volume === 0) setVolume(50);
+        return false;
+      }
+      return true;
+    });
+  }, [volume, setVolume]);
 
   // Source média résolue
   const mediaUrl = useMemo(
@@ -333,6 +363,10 @@ export function usePlayerController({
     needsAutoplayUnlock,
     isPlayDisabled,
     isSeekDisabled,
+    volume,
+    isMuted,
+    setVolume,
+    toggleMute,
     play,
     pause,
     togglePlay,
@@ -350,3 +384,6 @@ export function usePlayerController({
     },
   };
 }
+
+export const usePlayerController = usePlayer;
+export default usePlayer;

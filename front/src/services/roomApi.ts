@@ -21,8 +21,8 @@ export const roomApi = {
         `/api/v1/rooms/${roomId}`
       );
       return response.data;
-    } catch (err: any) {
-      if (err.status === 404) {
+    } catch (err: unknown) {
+      if ((err as { status?: number })?.status === 404) {
         return { exists: false, participant_count: 0 };
       }
       throw err;
