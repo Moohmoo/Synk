@@ -29,6 +29,9 @@ from domains.room.schemas.websocket import (
 )
 from domains.room.sync import calculate_reference_position
 
+# Suivi en mémoire des positions de lecture pour le calcul d'écart inter-participants
+_client_positions: dict[str, dict[str, tuple[float, int]]] = {}
+
 
 def _extract_auth(environ: dict[str, Any], auth: Any) -> dict[str, str | None]:
     """Extrait les identifiants depuis le payload auth ou les paramètres URL."""
@@ -124,11 +127,24 @@ async def _update_and_broadcast_player(
         )
 
     if err == "LOCKED":
+        logger.warning(
+            f"[SYNC:LOCKED] {room_id} | Action {action} refusée pour {session['username']} (salon verrouillé)"
+        )
         await _send_error(sid, "LOCKED", "Le salon est verrouillé par l'hôte")
         return
     if err == "NOOP" or not updated_room:
         return
 
+    if (
+        action in ("SEEK", "CHANGE_MEDIA")
+        or (action == "PLAY" and updates.get("is_restart"))
+    ) and room_id in _client_positions:
+        _client_positions[room_id].clear()
+
+    logger.info(
+        f"[SYNC:{action}] {room_id} | {session['username']} -> "
+        f"pos={updated_room.player.current_time:.1f}s | playing={updated_room.player.is_playing}"
+    )
     payload = {
         "action": action,
         "triggered_by": session["username"],
@@ -270,6 +286,10 @@ async def disconnect(sid: str) -> None:
                 room=f"user:{new_host_id}",
             )
     logger.info(f"[SIO:LEAVE] {username} ({user_id}) <- {room_id}")
+    if room_id and username and room_id in _client_positions:
+        _client_positions[room_id].pop(username, None)
+        if not _client_positions[room_id]:
+            _client_positions.pop(room_id, None)
 
 
 # ----------------------------------------------------------------------
@@ -410,6 +430,59 @@ async def on_heartbeat(sid: str, data: Any) -> None:
     prev_ping = session.get("ping_ms", 0)
     session["ping_ms"] = latency
     await sio.save_session(sid, session)
+
+    if payload.current_time is not None:
+        room_id = session["room_id"]
+        username = session["username"]
+        with DatabaseManager() as db:
+            room = await db.room_service.get_room(room_id)
+        if room and room.player.is_playing:
+            room_positions = _client_positions.setdefault(room_id, {})
+            room_positions[username] = (payload.current_time, now_ms)
+
+            ref_pos = calculate_reference_position(room.player, now_ms=now_ms)
+            server_drift = ref_pos - payload.current_time
+
+            other_diffs = []
+            for other_user, (pos, t_ms) in room_positions.items():
+                if other_user != username:
+                    proj_pos = pos + max(0.0, (now_ms - t_ms) / 1000.0)
+                    gap = abs(payload.current_time - proj_pos)
+                    other_diffs.append((other_user, proj_pos, gap))
+
+            if other_diffs:
+                other_user, proj_pos, gap = other_diffs[0]
+                gap_str = f"{gap:.2f}s"
+                if gap > 2.0:
+                    logger.warning(
+                        f"[SYNC:ALERT] {room_id} | {username} ({payload.current_time:.1f}s) vs "
+                        f"{other_user} ({proj_pos:.1f}s) | ÉCART: {gap_str} ⚠️"
+                    )
+                elif gap > 1.0:
+                    logger.info(
+                        f"[SYNC:DRIFT] {room_id} | {username} ({payload.current_time:.1f}s) vs "
+                        f"{other_user} ({proj_pos:.1f}s) | écart: {gap_str}"
+                    )
+                else:
+                    logger.info(
+                        f"[SYNC:OK] {room_id} | {username} ({payload.current_time:.1f}s) vs "
+                        f"{other_user} ({proj_pos:.1f}s) | écart: {gap_str} (synchro)"
+                    )
+            else:
+                if abs(server_drift) > 2.0:
+                    logger.warning(
+                        f"[SYNC:ALERT] {room_id} | {username} décalé de {server_drift:+.2f}s (réf={ref_pos:.1f}s)"
+                    )
+                elif abs(server_drift) > 1.0:
+                    logger.info(
+                        f"[SYNC:DRIFT] {room_id} | {username} local={payload.current_time:.1f}s | "
+                        f"réf={ref_pos:.1f}s | dérive={server_drift:+.2f}s"
+                    )
+                else:
+                    logger.info(
+                        f"[SYNC:OK] {room_id} | {username} local={payload.current_time:.1f}s | "
+                        f"réf={ref_pos:.1f}s | dérive={server_drift:+.2f}s"
+                    )
 
     await sio.emit(
         ServerEventType.HEARTBEAT_ACK,

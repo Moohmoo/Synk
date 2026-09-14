@@ -73,6 +73,7 @@ class ChatMessagePayload(BaseModel):
 class HeartbeatPayload(BaseModel):
     client_sent_at: int = Field(..., ge=0)
     ping_ms: int = Field(default=0, ge=0)
+    current_time: float | None = Field(default=None, ge=0.0)
 
 
 class UpdateSettingsPayload(BaseModel):

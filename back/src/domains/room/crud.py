@@ -335,8 +335,15 @@ class RoomService:
         if not room:
             return None, "NOT_FOUND"
 
-        # Vérification du verrouillage
-        if room.settings.is_locked and not participant.is_host:
+        # Vérification du verrouillage : l'hôte a tous les droits.
+        # Les invités peuvent uniquement déclencher la mise en pause automatique de fin de média.
+        is_media_ended = (
+            room.player.duration > 0
+            and current_time is not None
+            and current_time >= room.player.duration - 0.5
+            and is_playing is False
+        )
+        if room.settings.is_locked and not participant.is_host and not is_media_ended:
             return None, "LOCKED"
 
         # Garde d'idempotence sur l'état de lecture :

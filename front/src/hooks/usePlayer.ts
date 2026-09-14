@@ -19,6 +19,8 @@ export interface UsePlayerOptions {
   sendPlay: (currentTime?: number, duration?: number, isRestart?: boolean) => void;
   sendPause: (currentTime?: number, duration?: number) => void;
   sendSeek: (targetTime: number, duration?: number) => void;
+  sendHeartbeat?: (currentTime?: number) => void;
+  serverTimeOffset?: number;
   initialVolume?: number;
 }
 
@@ -102,6 +104,8 @@ export function usePlayer({
   sendPlay,
   sendPause,
   sendSeek,
+  sendHeartbeat,
+  serverTimeOffset = 0,
   initialVolume = 100,
 }: UsePlayerOptions): PlayerController {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -141,11 +145,14 @@ export function usePlayer({
   const [hasError, setHasError] = useState<boolean>(false);
   const [needsAutoplayUnlock, setNeedsAutoplayUnlock] = useState<boolean>(false);
 
+  const hasInitialSyncDoneRef = useRef<boolean>(false);
+
   // Réinitialisation synchrone pendant le render lors d'un changement d'URL
   // (Pattern React recommandé évitant les cascades de re-renders dues à un useEffect)
   const [prevMediaUrl, setPrevMediaUrl] = useState<string>(mediaUrl);
   if (mediaUrl !== prevMediaUrl) {
     setPrevMediaUrl(mediaUrl);
+    hasInitialSyncDoneRef.current = false;
     setCurrentTime(0);
     setMediaElementDuration(0);
     setScrubbingTime(null);
@@ -162,8 +169,8 @@ export function usePlayer({
   // Position affichée dans la timeline (priorité au déplacement du slider)
   const displayTime = scrubbingTime !== null ? scrubbingTime : currentTime;
 
-  // Position théorique du salon
-  const roomTime = calculateReferenceTime({ ...player, duration });
+  // Position théorique du salon (compensée par l'offset d'horloge NTP)
+  const roomTime = calculateReferenceTime({ ...player, duration }, serverTimeOffset);
 
   // Machine d'état unifiée : statut dérivé sans état booléen redondant
   const status: PlaybackStatus = useMemo(() => {
@@ -203,7 +210,9 @@ export function usePlayer({
   // Helper factorisé pour mettre en pause le salon de façon sécurisée
   const pauseIfPlaying = useCallback(
     (atTime: number) => {
-      if (player.is_playing && !isRestrictedForGuest && !isRateLimited?.("PAUSE")) {
+      const isEnd = duration > 0 && atTime >= duration - END_THRESHOLD_SECONDS;
+      const canPause = !isRestrictedForGuest || isEnd;
+      if (player.is_playing && canPause && !isRateLimited?.("PAUSE")) {
         sendPause(atTime, duration);
       }
     },
@@ -237,7 +246,7 @@ export function usePlayer({
     const handleVisibilityChange = () => {
       if (document.visibilityState !== "visible" || !player.is_playing) return;
 
-      const target = calculateReferenceTime({ ...player, duration });
+      const target = calculateReferenceTime({ ...player, duration }, serverTimeOffset);
       if (videoRef.current) {
         const local = videoRef.current.currentTime || 0;
         if (Math.abs(local - target) > DOM_SYNC_DRIFT_THRESHOLD_SECONDS) {
@@ -252,7 +261,22 @@ export function usePlayer({
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [player, duration]);
+  }, [player, duration, serverTimeOffset]);
+
+  // Monitoring temps réel de dérive vers le serveur (toutes les 2 secondes pendant la lecture)
+  const latestCurrentTimeRef = useRef<number>(currentTime);
+  latestCurrentTimeRef.current = currentTime;
+
+  useEffect(() => {
+    if (!player.is_playing || !sendHeartbeat) return;
+
+    const interval = setInterval(() => {
+      const current = videoRef.current?.currentTime ?? latestCurrentTimeRef.current;
+      sendHeartbeat(current);
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [player.is_playing, sendHeartbeat]);
 
   // Commandes explicites de l'utilisateur
   const play = useCallback(() => {
@@ -270,6 +294,8 @@ export function usePlayer({
     pendingSeekRef.current = 0;
     if (videoRef.current) {
       videoRef.current.currentTime = 0;
+      // Amorçage immédiat pour satisfaire la politique d'autoplay des navigateurs stricts (iOS / Safari)
+      videoRef.current.play().catch(() => {});
     }
     setScrubbingTime(null);
     setCurrentTime(0);
@@ -300,13 +326,19 @@ export function usePlayer({
       }
       setCurrentTime(clamped);
 
-      if (atEnd && player.is_playing) {
+      // Si la vidéo était terminée et qu'on cherche ailleurs, reprise immédiate de lecture
+      if (status === "ended" && !atEnd) {
+        if (videoRef.current) {
+          videoRef.current.play().catch(() => {});
+        }
+        sendPlay(clamped, duration, clamped === 0);
+      } else if (atEnd && player.is_playing) {
         pauseIfPlaying(clamped);
       } else {
         sendSeek(clamped, duration);
       }
     },
-    [isSeekDisabled, duration, player.is_playing, pauseIfPlaying, sendSeek]
+    [isSeekDisabled, duration, status, player.is_playing, pauseIfPlaying, sendPlay, sendSeek]
   );
 
   const catchUp = useCallback(() => {
@@ -340,6 +372,8 @@ export function usePlayer({
     if (!videoRef.current) return;
     const cur = videoRef.current.currentTime;
 
+    const wasSeekingToZero = pendingSeekRef.current === 0;
+
     // Ignore les frames résiduelles tant que le saut asynchrone n'a pas convergé
     if (pendingSeekRef.current !== null) {
       if (Math.abs(cur - pendingSeekRef.current) > 1.0) return;
@@ -353,16 +387,28 @@ export function usePlayer({
       }
       return;
     }
-    // Évite le saut à 0 lorsque le lecteur boucle ou bufferise en toute fin
-    if (cur === 0 && duration > 2 && currentTime >= duration - 1) return;
+    // Évite le saut parasite à 0 si YouTube boucle en fin de vidéo sans replay explicite
+    if (!wasSeekingToZero && cur === 0 && duration > 2 && currentTime >= duration - 1) return;
     setCurrentTime(cur);
   }, [duration, currentTime, pauseIfPlaying]);
 
   const onDurationChange = useCallback(() => {
     if (videoRef.current?.duration) {
-      setMediaElementDuration(videoRef.current.duration);
+      const dur = videoRef.current.duration;
+      setMediaElementDuration(dur);
+
+      // Calibrage temporel initial garanti dès que les métadonnées vidéo sont chargées
+      if (!hasInitialSyncDoneRef.current) {
+        hasInitialSyncDoneRef.current = true;
+        const target = calculateReferenceTime({ ...player, duration: dur }, serverTimeOffset);
+        if (target > 0) {
+          pendingSeekRef.current = target;
+          videoRef.current.currentTime = target;
+          setCurrentTime(target);
+        }
+      }
     }
-  }, []);
+  }, [player, serverTimeOffset]);
 
   const onEnded = useCallback(() => {
     pendingSeekRef.current = null;
