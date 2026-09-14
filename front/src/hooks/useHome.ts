@@ -54,7 +54,7 @@ export function useHome() {
   const [isLoading, setIsLoading] = useState(false);
 
   const focusInput = useCallback(() => {
-    // POURQUOI : différé d'un tick d'exécution pour que le DOM réactualise le focus après re-render
+    // Différé d'un tick pour laisser le DOM monter et actualiser le focus
     setTimeout(() => inputRef.current?.focus(), 0);
   }, []);
 

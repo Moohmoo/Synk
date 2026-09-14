@@ -347,8 +347,7 @@ export function useRoom({
 
       const isSelf = isSelfUser(payload.triggered_by, currentUsernameRef.current, username);
       if (payload.triggered_by && !isSelf) {
-        // POURQUOI : Une pause en fin de média (current_time >= duration - 0.3s)
-        // est un arrêt naturel du lecteur, pas une mise en pause volontaire par un utilisateur.
+        // Ignore la notification si la pause correspond à la fin naturelle de la vidéo
         const duration = payload.player.duration ?? 0;
         const isNaturalEnd =
           payload.action === "PAUSE" &&
