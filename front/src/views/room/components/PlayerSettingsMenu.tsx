@@ -30,6 +30,10 @@ export function PlayerSettingsMenu({ controller, ping }: PlayerSettingsMenuProps
     togglePictureInPicture,
   } = controller;
 
+  // Le Picture-in-Picture W3C n'est pas autorisé par les navigateurs sur les iframes cross-origin (YouTube/Twitch)
+  const isIframeProvider = controller.provider === "youtube" || controller.provider === "twitch";
+  const canUsePiP = isPiPSupported && !isIframeProvider;
+
   // Calcul du décalage temps réel en secondes
   const drift = Math.max(0, Math.abs(currentTime - roomTime));
 
@@ -115,7 +119,7 @@ export function PlayerSettingsMenu({ controller, ping }: PlayerSettingsMenuProps
           <button
             type="button"
             onClick={togglePictureInPicture}
-            disabled={!isPiPSupported}
+            disabled={!canUsePiP}
             className="flex items-center justify-between p-1.5 rounded hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-left cursor-pointer group"
           >
             <div className="flex items-center gap-2 text-zinc-300 group-hover:text-white">
@@ -128,7 +132,7 @@ export function PlayerSettingsMenu({ controller, ping }: PlayerSettingsMenuProps
                 isPiPActive ? "text-cyan-400" : "text-zinc-500"
               )}
             >
-              {!isPiPSupported
+              {!canUsePiP
                 ? t("controls.disabled")
                 : isPiPActive
                 ? t("controls.pipExit")

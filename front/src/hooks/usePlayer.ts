@@ -30,6 +30,7 @@ export interface PlayerController {
 
   // Source média résolue
   mediaUrl: string;
+  provider?: string;
 
   // Machine d'état unifiée (remplace la forêt de booléens)
   status: PlaybackStatus;
@@ -384,6 +385,35 @@ export function usePlayer({
     setSubtitlesEnabled((prev) => {
       const next = !prev;
       localStorage.setItem("synk_subtitles", String(next));
+
+      // 1. YouTube IFrame Player API
+      try {
+        const internal = (videoRef.current as any)?.getInternalPlayer?.();
+        if (internal) {
+          if (next) {
+            if (typeof internal.loadModule === "function") internal.loadModule("captions");
+          } else {
+            if (typeof internal.unloadModule === "function") internal.unloadModule("captions");
+          }
+        }
+      } catch (err) {
+        console.warn("[SUBTITLES] YouTube captions error", err);
+      }
+
+      // 2. Fichiers vidéo directs HTML5 (MP4 / WebM / HLS / Dash)
+      try {
+        const videoEl =
+          (videoRef.current as unknown as { getInternalPlayer?: () => HTMLVideoElement })
+            .getInternalPlayer?.() || videoRef.current;
+        if (videoEl?.textTracks && videoEl.textTracks.length > 0) {
+          for (let i = 0; i < videoEl.textTracks.length; i++) {
+            videoEl.textTracks[i].mode = next ? "showing" : "disabled";
+          }
+        }
+      } catch (err) {
+        console.warn("[SUBTITLES] HTML5 textTracks error", err);
+      }
+
       return next;
     });
   }, []);
@@ -486,8 +516,18 @@ export function usePlayer({
           setCurrentTime(target);
         }
       }
+
+      // Initialise les sous-titres YouTube si activés par l'utilisateur
+      if (subtitlesEnabled) {
+        try {
+          const internal = (videoRef.current as any)?.getInternalPlayer?.();
+          if (internal && typeof internal.loadModule === "function") {
+            internal.loadModule("captions");
+          }
+        } catch {}
+      }
     }
-  }, [player, serverTimeOffset]);
+  }, [player, serverTimeOffset, subtitlesEnabled]);
 
   const onEnded = useCallback(() => {
     pendingSeekRef.current = null;
@@ -511,6 +551,7 @@ export function usePlayer({
   return {
     videoRef,
     mediaUrl,
+    provider: player.provider || "youtube",
     status,
     currentTime,
     duration,
