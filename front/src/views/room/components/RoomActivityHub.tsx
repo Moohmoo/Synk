@@ -89,7 +89,7 @@ function MemberRow({
 
       <div className="flex items-center gap-2 shrink-0 ml-2">
         {participant.is_host ? (
-          <Badge className="bg-zinc-900 border border-zinc-800 text-zinc-300 text-[9px] py-0 px-1.5 gap-1 rounded-sm font-mono">
+          <Badge variant="host" className="text-[10px] py-0.5 px-1.5 gap-1 rounded-sm font-mono">
             <Crown className="w-2.5 h-2.5 text-zinc-400" />
             <span>{t("hub.roleHost")}</span>
           </Badge>
@@ -197,7 +197,7 @@ export function RoomActivityHub({
         <TabsList className="h-9 p-0 bg-zinc-950/60 border-b border-white/10 shrink-0 flex items-center">
           <TabsTrigger
             value="members"
-            className="flex-1 flex items-center justify-center gap-2 text-xs font-mono uppercase text-zinc-400 data-[state=active]:text-white"
+            className="flex-1 flex items-center justify-center gap-2 text-xs font-mono uppercase tracking-wider text-zinc-400 data-[state=active]:text-white"
           >
             <Users className="w-3.5 h-3.5" />
             <span>{t("hub.tabMembers", { count: participants.length })}</span>
@@ -209,11 +209,11 @@ export function RoomActivityHub({
                 <TabsTrigger
                   value="chat"
                   disabled
-                  className="w-full flex items-center justify-center gap-1.5 text-xs font-mono uppercase cursor-not-allowed opacity-50 select-none pointer-events-none"
+                  className="w-full flex items-center justify-center gap-1.5 text-xs font-mono uppercase tracking-wider cursor-not-allowed opacity-50 select-none pointer-events-none"
                 >
                   <MessageSquare className="w-3.5 h-3.5 text-zinc-500" />
                   <span>{t("hub.tabChat")}</span>
-                  <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-white/10 text-zinc-400">
+                  <span className="text-[10px] font-mono font-medium px-1.5 py-0.5 rounded bg-white/10 text-zinc-400">
                     SOON
                   </span>
                 </TabsTrigger>
@@ -263,7 +263,7 @@ export function RoomActivityHub({
               disabled={isChatDisabled}
               placeholder={t("hub.chatPlaceholder")}
               maxLength={500}
-              className="flex-1 h-8 px-2.5 bg-black/50 border border-white/10 rounded-sm text-xs font-mono text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-[#0ac8b9]/50 transition-colors"
+              className="flex-1 h-8 px-2.5 bg-black/50 border border-white/10 rounded-sm text-xs font-mono text-zinc-200 placeholder:text-zinc-500 focus:outline-none focus:border-[#0ac8b9]/50 transition-colors"
             />
             <Button
               type="submit"

@@ -40,7 +40,7 @@ export function RoomMobileInfoSheet(props: RoomActivityHubProps) {
         </SheetTrigger>
         <SheetContent side="right" className="w-80 p-4 bg-zinc-950 border-l border-white/10 flex flex-col h-full overflow-hidden">
           <SheetHeader className="mb-2 text-left">
-            <SheetTitle className="text-xs font-mono uppercase text-zinc-400">
+            <SheetTitle className="text-sm font-mono font-bold tracking-wider uppercase text-zinc-100">
               {t("sidebar.info")}
             </SheetTitle>
           </SheetHeader>

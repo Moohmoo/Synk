@@ -10,15 +10,15 @@
     "recent": "Récents",
     "settings": "Paramètres",
     "github": "GitHub",
-    "room": "SALON",
+    "room": "Salon",
     "live": "LIVE",
     "disconnected": "DÉCONNECTÉ"
   },
   "home": {
     "createTitle": "Lancer une session",
     "createSubtitle": "Créez un salon instantané et synchronisez vos vidéos en temps réel.",
-    "joinTitle": "Rejoindre l'équipe",
-    "joinSubtitle": "Entrez le code du salon pour vous synchroniser.",
+    "joinTitle": "Rejoindre une session",
+    "joinSubtitle": "Entrez le code d'invitation pour vous synchroniser.",
     "createTab": "Créer un salon",
     "joinTab": "Rejoindre",
     "createPlaceholder": "Entrez votre pseudo...",

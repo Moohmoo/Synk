@@ -22,10 +22,10 @@ export function HomeHero({ mode }: HomeHeroProps) {
             : "opacity-0 scale-95 pointer-events-none"
         }`}
       >
-        <h1 className="text-4xl md:text-5xl font-black tracking-tight text-white mb-2">
+        <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-zinc-100 mb-2.5">
           {t("home.createTitle")}
         </h1>
-        <p className="text-sm font-medium text-zinc-400 mb-8 max-w-sm text-center">
+        <p className="text-sm font-normal text-zinc-400 mb-8 max-w-sm text-center leading-relaxed">
           {t("home.createSubtitle")}
         </p>
       </div>
@@ -38,10 +38,10 @@ export function HomeHero({ mode }: HomeHeroProps) {
             : "opacity-0 scale-95 pointer-events-none"
         }`}
       >
-        <h1 className="text-4xl md:text-5xl font-black tracking-tight text-white mb-2">
+        <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-zinc-100 mb-2.5">
           {t("home.joinTitle")}
         </h1>
-        <p className="text-sm font-medium text-zinc-400 mb-8 max-w-sm text-center">
+        <p className="text-sm font-normal text-zinc-400 mb-8 max-w-sm text-center leading-relaxed">
           {t("home.joinSubtitle")}
         </p>
       </div>

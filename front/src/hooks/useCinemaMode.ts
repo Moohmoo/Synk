@@ -61,7 +61,7 @@ export function useCinemaMode({
     if (controller.status === "playing") {
       controlsTimeoutRef.current = setTimeout(() => {
         setAreControlsVisible(false);
-      }, 3000);
+      }, 2000);
     }
   }, [controller.status]);
 
@@ -72,7 +72,7 @@ export function useCinemaMode({
       if (controlsTimeoutRef.current) {
         clearTimeout(controlsTimeoutRef.current);
       }
-    } else if (isFullscreen) {
+    } else {
       resetControlsTimeout();
     }
 

@@ -79,12 +79,12 @@ export function RoomMetaSection({
 
           {/* Badge Contrôle Hôte / Libre */}
           {roomSettings.is_locked ? (
-            <Badge className="bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs py-1 px-2.5 gap-1.5">
+            <Badge variant="host" className="text-[11px] py-1 px-2.5 gap-1.5 font-sans uppercase tracking-wider">
               <Lock className="w-3.5 h-3.5 text-zinc-400" />
               <span>{t("meta.hostControl")}</span>
             </Badge>
           ) : (
-            <Badge className="bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs py-1 px-2.5 gap-1.5">
+            <Badge variant="host" className="text-[11px] py-1 px-2.5 gap-1.5 font-sans uppercase tracking-wider">
               <Unlock className="w-3.5 h-3.5 text-zinc-400" />
               <span>{t("meta.freeControl")}</span>
             </Badge>
@@ -97,7 +97,7 @@ export function RoomMetaSection({
         <TabsList className="bg-transparent border-b border-white/5 justify-start h-9 p-0 gap-6 w-full">
           <TabsTrigger
             value="settings"
-            className="flex-none flex items-center gap-2 px-1 pb-2 text-xs font-mono uppercase bg-transparent text-zinc-500 hover:text-zinc-300 data-[state=active]:text-white data-[state=active]:bg-transparent border-b-2 border-transparent data-[state=active]:border-cyan-400 after:hidden rounded-none -mb-px transition-colors"
+            className="flex-none flex items-center gap-2 px-1 pb-2 text-xs font-mono uppercase tracking-wider bg-transparent text-zinc-500 hover:text-zinc-300 data-[state=active]:text-white data-[state=active]:bg-transparent border-b-2 border-transparent data-[state=active]:border-cyan-400 after:hidden rounded-none -mb-px transition-colors"
           >
             <SlidersHorizontal className="w-3.5 h-3.5 text-inherit" />
             <span>{t("meta.tabSettings")}</span>
@@ -109,11 +109,11 @@ export function RoomMetaSection({
                 <TabsTrigger
                   value="queue"
                   disabled
-                  className="flex-none flex items-center gap-1.5 px-1 pb-2 text-xs font-mono uppercase bg-transparent text-zinc-500 hover:text-zinc-300 border-b-2 border-transparent cursor-not-allowed opacity-50 select-none pointer-events-none after:hidden rounded-none -mb-px"
+                  className="flex-none flex items-center gap-1.5 px-1 pb-2 text-xs font-mono uppercase tracking-wider bg-transparent text-zinc-500 hover:text-zinc-300 border-b-2 border-transparent cursor-not-allowed opacity-50 select-none pointer-events-none after:hidden rounded-none -mb-px"
                 >
                   <ListVideo className="w-3.5 h-3.5 text-inherit" />
                   <span>{t("meta.tabQueue")}</span>
-                  <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-white/10 text-zinc-400">
+                  <span className="text-[10px] font-mono font-medium px-1.5 py-0.5 rounded bg-white/10 text-zinc-400">
                     SOON
                   </span>
                 </TabsTrigger>
@@ -168,7 +168,7 @@ export function RoomMetaSection({
                   <span>{roomSettings.is_locked ? t("meta.hostControl") : t("meta.freeControl")}</span>
                 </Button>
               ) : (
-                <Badge className="bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs shrink-0 py-1 px-2.5 gap-1.5">
+                <Badge variant="host" className="text-[11px] shrink-0 py-1 px-2.5 gap-1.5 font-sans uppercase tracking-wider">
                   {roomSettings.is_locked ? `${t("meta.hostControl")} (Hôte)` : t("meta.freeControl")}
                 </Badge>
               )}

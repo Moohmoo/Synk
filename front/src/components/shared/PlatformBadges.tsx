@@ -10,7 +10,7 @@ import {
 interface PlatformItem {
   name: string;
   icon: React.ComponentType<{ className?: string }>;
-  hoverIcon: string;
+  brandColor: string;
   isSupported: boolean;
 }
 
@@ -26,25 +26,25 @@ const PLATFORMS: PlatformItem[] = [
   {
     name: "YouTube",
     icon: Youtube,
-    hoverIcon: "group-hover:text-[#ff0000]",
+    brandColor: "text-[#ff0000]",
     isSupported: true,
   },
   {
     name: "Twitch",
     icon: Twitch,
-    hoverIcon: "group-hover:text-[#a970ff]",
+    brandColor: "text-[#a970ff]",
     isSupported: false,
   },
   {
     name: "Vimeo",
     icon: VimeoIcon,
-    hoverIcon: "group-hover:text-[#1ab7ea]",
+    brandColor: "text-[#1ab7ea]",
     isSupported: false,
   },
   {
     name: "Direct (HLS)",
     icon: Radio,
-    hoverIcon: "group-hover:text-[#0ac8b9]",
+    brandColor: "text-[#0ac8b9]",
     isSupported: false,
   },
 ];
@@ -56,7 +56,7 @@ export interface PlatformBadgesProps {
 
 /**
  * Ligne canonique des plateformes de streaming supportées.
- * - YouTube : actif, révèle sa couleur de marque au survol.
+ * - YouTube : actif, affiche sa couleur rouge officielle de manière permanente.
  * - Twitch, Vimeo & Direct : désactivés (bêta MVP), opacité atténuée, curseur not-allowed et tooltip explicatif.
  */
 export function PlatformBadges({ className = "", maxVisible = 4 }: PlatformBadgesProps) {
@@ -68,19 +68,19 @@ export function PlatformBadges({ className = "", maxVisible = 4 }: PlatformBadge
     <div
       className={`flex flex-wrap items-center justify-center gap-x-2 text-[10px] font-bold text-zinc-600 uppercase tracking-widest mt-6 select-none ${className}`}
     >
-      {visiblePlatforms.map(({ name, icon: Icon, hoverIcon, isSupported }, index) => {
+      {visiblePlatforms.map(({ name, icon: Icon, brandColor, isSupported }, index) => {
         const badgeElement = (
           <span
             tabIndex={isSupported ? undefined : 0}
-            className={`group inline-flex items-center gap-1.5 transition-colors duration-200 outline-none ${
+            className={`inline-flex items-center gap-1.5 transition-colors duration-200 outline-none ${
               isSupported
-                ? "text-zinc-400 hover:text-zinc-200 cursor-default"
+                ? "text-zinc-300 cursor-default"
                 : "text-zinc-600 hover:text-zinc-500 cursor-not-allowed"
             }`}
           >
             <Icon
-              className={`w-3.5 h-3.5 text-zinc-600 shrink-0 transition-colors duration-200 ${
-                isSupported ? hoverIcon : ""
+              className={`w-3.5 h-3.5 shrink-0 ${
+                isSupported ? brandColor : "text-zinc-600"
               }`}
             />
             <span>{name}</span>

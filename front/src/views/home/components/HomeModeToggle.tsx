@@ -13,10 +13,10 @@ export function HomeModeToggle({ mode, onChange }: HomeModeToggleProps) {
   const { t } = useTranslation("global");
 
   return (
-    <div className="relative flex p-1 mb-8 bg-zinc-900/60 border border-white/5 rounded-lg shadow-inner w-max mx-auto backdrop-blur-sm select-none">
-      {/* Glissière mécanique (curseur d'arrière-plan animé) */}
+    <div className="relative flex p-1 mb-8 bg-zinc-800/70 border border-white/10 rounded-lg w-max mx-auto backdrop-blur-sm select-none">
+      {/* Glissière mécanique (curseur d'arrière-plan animé Niveau 3+) */}
       <div
-        className="absolute top-1 bottom-1 left-1 w-[130px] bg-zinc-700/50 border border-white/10 rounded-md transition-transform duration-300 ease-[cubic-bezier(0.2,0.9,0.3,1)] pointer-events-none"
+        className="absolute top-1 bottom-1 left-1 w-[130px] bg-zinc-700 border border-white/10 rounded-md transition-transform duration-300 ease-[cubic-bezier(0.2,0.9,0.3,1)] pointer-events-none"
         style={{
           transform: mode === "create" ? "translateX(0px)" : "translateX(130px)",
         }}
@@ -26,7 +26,7 @@ export function HomeModeToggle({ mode, onChange }: HomeModeToggleProps) {
         type="button"
         onClick={() => onChange("create")}
         className={`relative z-10 w-[130px] py-1.5 text-xs font-semibold tracking-wide transition-colors duration-200 cursor-pointer text-center ${
-          mode === "create" ? "text-white" : "text-zinc-500 hover:text-zinc-300"
+          mode === "create" ? "text-white" : "text-zinc-400 hover:text-zinc-200"
         }`}
       >
         {t("home.createTab")}
@@ -36,7 +36,7 @@ export function HomeModeToggle({ mode, onChange }: HomeModeToggleProps) {
         type="button"
         onClick={() => onChange("join")}
         className={`relative z-10 w-[130px] py-1.5 text-xs font-semibold tracking-wide transition-colors duration-200 cursor-pointer text-center ${
-          mode === "join" ? "text-white" : "text-zinc-500 hover:text-zinc-300"
+          mode === "join" ? "text-white" : "text-zinc-400 hover:text-zinc-200"
         }`}
       >
         {t("home.joinTab")}

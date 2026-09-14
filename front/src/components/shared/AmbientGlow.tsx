@@ -1,38 +1,50 @@
+import { cn } from "@/lib/utils";
+
 export interface AmbientGlowProps {
-  color?: "cyan" | "red" | "none";
-  position?: "center" | "bottom";
   className?: string;
+  disabled?: boolean;
 }
 
-const GLOW_GRADIENTS: Record<"cyan" | "red", string> = {
-  cyan: "radial-gradient(ellipse 55% 50% at 50% 50%, rgba(10, 200, 185, 0.25) 0%, rgba(15, 60, 90, 0.12) 40%, transparent 70%)",
-  red: "radial-gradient(ellipse 55% 50% at 50% 50%, rgba(255, 70, 85, 0.25) 0%, rgba(180, 20, 40, 0.08) 40%, transparent 70%)",
-};
-
-export function AmbientGlow({
-  color = "cyan",
-  position = "center",
-  className = "",
-}: AmbientGlowProps) {
-  const isNone = color === "none";
-  const background = isNone ? "none" : GLOW_GRADIENTS[color];
-
-  // Transition fluide verticale : même ancrage top et même transform pour éviter tout saut ou bord coupé
-  const positionClasses =
-    position === "bottom"
-      ? "top-[78%] left-1/2 -translate-x-1/2 -translate-y-1/2"
-      : "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2";
+/**
+ * AmbientGlow : Lueur d'ambiance Cyber-Tech froide (Minimalisme Mécanique).
+ * Dégradé vertical Bleu Nuit profond -> Cyan sombre et diffus en harmonie avec le bouton SYNK.
+ */
+export function AmbientGlow({ className, disabled = false }: AmbientGlowProps) {
+  if (disabled) return null;
 
   return (
     <div
-      style={{ background }}
-      className={`absolute w-[1400px] h-[750px] pointer-events-none transition-all duration-700 ease-out select-none ${positionClasses} ${
-        isNone ? "opacity-0 scale-95" : "opacity-100 scale-100"
-      } ${className}`}
       aria-hidden="true"
-    />
+      className={cn(
+        "absolute right-0 top-0 h-full w-[520px] pointer-events-none select-none z-0 overflow-hidden",
+        className
+      )}
+    >
+      {/* 1. Halo supérieur : Bleu Nuit profond */}
+      <div 
+        className="absolute top-0 right-0 w-[480px] h-[55%] blur-[68px]"
+        style={{
+          background: "radial-gradient(ellipse 100% 80% at 100% 20%, rgba(23, 37, 84, 0.85) 0%, rgba(30, 58, 138, 0.45) 35%, transparent 75%)"
+        }}
+      />
+
+      {/* 2. Halo médian : Cyan sombre et diffus (rappel de la marque SYNK) */}
+      <div 
+        className="absolute top-[18%] right-0 w-[520px] h-[68%] blur-[72px]"
+        style={{
+          background: "radial-gradient(ellipse 100% 75% at 100% 38%, rgba(8, 145, 178, 0.6) 0%, rgba(10, 200, 185, 0.25) 40%, transparent 80%)"
+        }}
+      />
+
+      {/* 3. Texture grain anti-banding argentique */}
+      <div
+        className="absolute inset-0 opacity-[0.035] mix-blend-overlay pointer-events-none"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+        }}
+      />
+    </div>
   );
 }
 
 export default AmbientGlow;
-
