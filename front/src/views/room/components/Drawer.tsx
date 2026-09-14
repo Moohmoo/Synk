@@ -8,15 +8,15 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { RoomSidePanel, type RoomSidePanelProps } from "./RoomSidePanel";
+import { SidePanel, type SidePanelProps } from "./SidePanel";
 
-export type RoomDrawerProps = RoomSidePanelProps;
+export type DrawerProps = SidePanelProps;
 
 /**
  * Tiroir coulissant pour appareils mobiles et tablettes (< xl),
  * donnant accès au panneau latéral (chat et membres) lorsque la barre latérale droite est masquée.
  */
-export function RoomDrawer(props: RoomDrawerProps) {
+export function Drawer(props: DrawerProps) {
   const [open, setOpen] = useState(false);
   const { t } = useTranslation("room");
 
@@ -51,7 +51,7 @@ export function RoomDrawer(props: RoomDrawerProps) {
             </SheetTitle>
           </SheetHeader>
           <div className="flex-1 min-h-0">
-            <RoomSidePanel {...props} />
+            <SidePanel {...props} />
           </div>
         </SheetContent>
       </Sheet>
@@ -59,4 +59,4 @@ export function RoomDrawer(props: RoomDrawerProps) {
   );
 }
 
-export default RoomDrawer;
+export default Drawer;

@@ -3,7 +3,7 @@
  * Préserve strictement le ratio 16:9 cinématographique et l'empreinte des contrôles
  * pour garantir zéro décalage de mise en page (CLS) lors du chargement.
  */
-export function RoomSkeleton() {
+export function Skeleton() {
   return (
     <div className="w-full flex flex-col select-none animate-pulse" aria-busy="true">
       {/* Cadre vidéo 16:9 bord à bord rigoureusement identique à MediaPlayer */}
@@ -21,3 +21,5 @@ export function RoomSkeleton() {
     </div>
   );
 }
+
+export default Skeleton;

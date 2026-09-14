@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ChatMessage } from "@/types/room";
 import { getParticipantColor } from "@/lib/utils";
 
-export interface RoomChatProps {
+export interface ChatProps {
   messages: ChatMessage[];
   onSendMessage: (content: string) => void;
   isChatDisabled?: boolean;
@@ -14,11 +14,11 @@ export interface RoomChatProps {
 /**
  * Panneau de discussion textuelle en direct avec défilement automatique et formulaire de saisie.
  */
-export function RoomChat({
+export function Chat({
   messages,
   onSendMessage,
   isChatDisabled = false,
-}: RoomChatProps) {
+}: ChatProps) {
   const { t } = useTranslation("room");
   const [chatInput, setChatInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -91,4 +91,4 @@ export function RoomChat({
   );
 }
 
-export default RoomChat;
+export default Chat;

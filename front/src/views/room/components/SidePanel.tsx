@@ -6,10 +6,10 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Participant, ChatMessage } from "@/types/room";
 import { toast } from "@/components/ui/sonner";
-import { RoomMembers } from "./RoomMembers";
-import { RoomChat } from "./RoomChat";
+import { Members } from "./Members";
+import { Chat } from "./Chat";
 
-export interface RoomSidePanelProps {
+export interface SidePanelProps {
   roomId: string;
   isConnected: boolean;
   ping?: number;
@@ -27,7 +27,7 @@ export interface RoomSidePanelProps {
  * - En-tête : Récapitulatif salon #ID + bouton inviter.
  * - Onglets : Membres et Chat temps réel.
  */
-export function RoomSidePanel({
+export function SidePanel({
   roomId,
   isConnected,
   ping,
@@ -38,7 +38,7 @@ export function RoomSidePanel({
   onSendMessage,
   playerStatus,
   isChatDisabled = false,
-}: RoomSidePanelProps) {
+}: SidePanelProps) {
   const { t } = useTranslation(["room", "global"]);
   const [copied, setCopied] = useState(false);
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -128,7 +128,7 @@ export function RoomSidePanel({
         </TabsList>
 
         <TabsContent value="members" className="flex-1 flex flex-col justify-start items-start min-h-0 pt-2 w-full">
-          <RoomMembers
+          <Members
             participants={participants}
             currentUsername={currentUsername}
             currentUserId={currentUserId}
@@ -137,7 +137,7 @@ export function RoomSidePanel({
         </TabsContent>
 
         <TabsContent value="chat" className="flex-1 flex flex-col min-h-0 pt-2">
-          <RoomChat
+          <Chat
             messages={messages}
             onSendMessage={onSendMessage}
             isChatDisabled={isChatDisabled}
@@ -148,4 +148,4 @@ export function RoomSidePanel({
   );
 }
 
-export default RoomSidePanel;
+export default SidePanel;

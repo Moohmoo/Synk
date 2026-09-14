@@ -13,12 +13,12 @@ import { toast } from "@/components/ui/sonner";
 import { NotFoundView } from "@/views/NotFoundView";
 import { MediaPlayer } from "./components/MediaPlayer";
 import { PlayerControls } from "./components/PlayerControls";
-import { RoomSidePanel } from "./components/RoomSidePanel";
-import { RoomMetaSection } from "./components/RoomMetaSection";
-import { RoomDropzone } from "./components/RoomDropzone";
+import { SidePanel } from "./components/SidePanel";
+import { MetaSection } from "./components/MetaSection";
+import { Dropzone } from "./components/Dropzone";
 import { ChangeMediaDialog } from "./components/ChangeMediaDialog";
-import { RoomDrawer } from "./components/RoomDrawer";
-import { RoomSkeleton } from "./components/RoomSkeleton";
+import { Drawer } from "./components/Drawer";
+import { Skeleton } from "./components/Skeleton";
 
 export function RoomView() {
   const { roomId = "" } = useParams<{ roomId: string }>();
@@ -162,13 +162,13 @@ export function RoomView() {
     <>
       <RightSidebarSlot>
         <div className="h-full animate-fade-in">
-          <RoomSidePanel {...sidePanelProps} />
+          <SidePanel {...sidePanelProps} />
         </div>
       </RightSidebarSlot>
 
       <div className="flex-1 min-w-0 flex flex-col w-full animate-fade-in">
         {isConnectingGuest ? (
-          <RoomSkeleton />
+          <Skeleton />
         ) : (
           <div
             ref={cinemaContainerRef}
@@ -214,7 +214,7 @@ export function RoomView() {
                 />
               }
               emptySlot={
-                <RoomDropzone
+                <Dropzone
                   value={mediaUrlInput}
                   onChange={setMediaUrlInput}
                   onSubmit={handleLoadMedia}
@@ -225,7 +225,7 @@ export function RoomView() {
 
             {/* SOUS LE LECTEUR : SECTION MÉTA & ONGLETS (FILE D'ATTENTE & RÉGLAGES) */}
             {!isFullscreen && (
-              <RoomMetaSection
+              <MetaSection
                 mediaUrl={player.media_url}
                 provider={player.provider}
                 isConnected={isConnected}
@@ -237,7 +237,7 @@ export function RoomView() {
                   updateSettings(!roomSettings.is_locked);
                 }}
                 isLockDisabled={!isHost || Boolean(isRateLimited("UPDATE_SETTINGS"))}
-                mobileSlot={<RoomDrawer {...sidePanelProps} />}
+                mobileSlot={<Drawer {...sidePanelProps} />}
               />
             )}
           </div>

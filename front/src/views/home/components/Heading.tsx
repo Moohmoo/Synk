@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 
-interface HomeHeroProps {
+interface HeadingProps {
   mode: "create" | "join";
 }
 
@@ -9,7 +9,7 @@ interface HomeHeroProps {
  * Superpose les titres et sous-titres des modes Créer et Rejoindre
  * en grille CSS pour une transition fluide sans aucun saut de mise en page (layout shift).
  */
-export function HomeHero({ mode }: HomeHeroProps) {
+export function Heading({ mode }: HeadingProps) {
   const { t } = useTranslation("global");
 
   return (

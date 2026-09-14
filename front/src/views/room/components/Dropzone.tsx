@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Tv } from "lucide-react";
 import { Omnibox, PlatformBadges } from "@/components/shared";
 
-interface RoomDropzoneProps {
+interface DropzoneProps {
   value: string;
   onChange: (value: string) => void;
   onSubmit: (e: React.FormEvent) => void;
@@ -14,7 +14,7 @@ interface RoomDropzoneProps {
  * Capsule d'injection centrale (état vide du lecteur 16:9).
  * Réutilise l'Omnibox canonique pour une harmonisation stricte avec la vue Home.
  */
-export function RoomDropzone({ value, onChange, onSubmit, disabled }: RoomDropzoneProps) {
+export function Dropzone({ value, onChange, onSubmit, disabled }: DropzoneProps) {
   const { t } = useTranslation(["room", "global"]);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -81,4 +81,4 @@ export function RoomDropzone({ value, onChange, onSubmit, disabled }: RoomDropzo
   );
 }
 
-export default RoomDropzone;
+export default Dropzone;

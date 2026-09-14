@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 
-interface HomeModeToggleProps {
+interface ModeToggleProps {
   mode: "create" | "join";
   onChange: (mode: "create" | "join") => void;
 }
@@ -9,7 +9,7 @@ interface HomeModeToggleProps {
  * Sélecteur de mode d'accueil (Créer / Rejoindre) :
  * Affiche deux boutons bascules avec un curseur d'arrière-plan animé.
  */
-export function HomeModeToggle({ mode, onChange }: HomeModeToggleProps) {
+export function ModeToggle({ mode, onChange }: ModeToggleProps) {
   const { t } = useTranslation("global");
 
   return (

@@ -93,7 +93,7 @@ function MemberRow({ participant, isMe, playerStatus }: MemberRowProps) {
   );
 }
 
-export interface RoomMembersProps {
+export interface MembersProps {
   participants: Participant[];
   currentUsername: string;
   currentUserId?: string | null;
@@ -103,12 +103,12 @@ export interface RoomMembersProps {
 /**
  * Liste des participants du salon avec statut de synchronisation en direct.
  */
-export function RoomMembers({
+export function Members({
   participants,
   currentUsername,
   currentUserId,
   playerStatus,
-}: RoomMembersProps) {
+}: MembersProps) {
   return (
     <div className="w-full flex flex-col justify-start space-y-1.5 pr-1 overflow-y-auto min-h-0">
       {participants.map((p) => (
@@ -123,4 +123,4 @@ export function RoomMembers({
   );
 }
 
-export default RoomMembers;
+export default Members;

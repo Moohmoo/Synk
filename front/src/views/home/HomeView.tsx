@@ -1,11 +1,11 @@
 import { Omnibox, PlatformBadges } from "@/components/shared";
-import { HomeHero } from "./components/HomeHero";
-import { HomeModeToggle } from "./components/HomeModeToggle";
+import { Heading } from "./components/Heading";
+import { ModeToggle } from "./components/ModeToggle";
 import { useHomeFlow } from "@/hooks/useHomeFlow";
 
 /**
  * Vue d'accueil principale :
- * Composant de mise en page sobre déléguant l'affichage à HomeHero/HomeModeToggle
+ * Composant de mise en page sobre déléguant l'affichage à Heading/ModeToggle
  * et l'orchestration du flux à useHomeFlow.
  */
 export function HomeView() {
@@ -32,10 +32,10 @@ export function HomeView() {
       {/* Conteneur principal (rehaussé au centre optique du halo) */}
       <div className="relative z-10 flex flex-col items-center w-full -translate-y-8 sm:-translate-y-12">
         {/* Titre & Sous-titre en superposition de grille (zéro layout shift) */}
-        <HomeHero mode={mode} />
+        <Heading mode={mode} />
 
         {/* Le sélecteur de mode (Créer / Rejoindre) */}
-        <HomeModeToggle mode={mode} onChange={switchMode} />
+        <ModeToggle mode={mode} onChange={switchMode} />
 
         {/* L'Omnibox d'accueil */}
         <Omnibox

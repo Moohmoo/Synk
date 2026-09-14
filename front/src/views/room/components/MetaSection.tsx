@@ -6,7 +6,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { RoomSettings } from "@/types/room";
 
-interface RoomMetaSectionProps {
+interface MetaSectionProps {
   mediaUrl?: string | null;
   provider?: string | null;
   isConnected: boolean;
@@ -43,7 +43,7 @@ function getMediaDisplayTitle(mediaUrl?: string | null): string | null {
 /**
  * Section méta et conteneur d'onglets légers sous le lecteur vidéo 16:9.
  */
-export function RoomMetaSection({
+export function MetaSection({
   mediaUrl,
   provider,
   isConnected,
@@ -53,7 +53,7 @@ export function RoomMetaSection({
   onToggleLock,
   isLockDisabled = false,
   mobileSlot,
-}: RoomMetaSectionProps) {
+}: MetaSectionProps) {
   const { t } = useTranslation("room");
   const displayTitle = getMediaDisplayTitle(mediaUrl);
 
