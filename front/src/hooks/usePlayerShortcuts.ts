@@ -31,7 +31,8 @@ function isInteractiveInput(target: EventTarget | null): boolean {
  * - M : Sourdine (Mute / Unmute)
  * - Flèches Haut / Bas : Volume +/- 5%
  * - Flèches Gauche / Droite : Saut +/- 5s
- * - C / S : Rattrapage du flux salon (Catch-up)
+ * - C : Sous-titres (Captions)
+ * - S : Rattrapage du flux salon (Sync / Catch-up)
  * - Cmd+K / Ctrl+K : Boîte de dialogue de changement de média
  * - Échap : Sortie du plein écran
  */
@@ -120,9 +121,15 @@ export function usePlayerShortcuts({
           }
           break;
 
-        // Rattraper le salon (Catch-up / Sync)
+        // Sous-titres (Captions)
         case "c":
         case "C":
+          e.preventDefault();
+          controller.toggleSubtitles();
+          resetControlsTimeout();
+          break;
+
+        // Rattraper le salon (Sync / Catch-up)
         case "s":
         case "S":
           if (controller.isBehind && !controller.isSeekDisabled) {
