@@ -11,6 +11,18 @@ import { useVolume } from "./useVolume";
 
 export type { PlaybackStatus };
 
+const SEEK_LOCK_DURATION_MS = 300;
+const SUBTITLES_STORAGE_KEY = "synk_subtitles";
+
+interface InternalMediaPlayer extends HTMLVideoElement {
+  getInternalPlayer?: () => {
+    loadModule?: (moduleName: string) => void;
+    unloadModule?: (moduleName: string) => void;
+    requestPictureInPicture?: () => Promise<PictureInPictureWindow>;
+    textTracks?: TextTrackList;
+  };
+}
+
 export interface UsePlayerOptions {
   player: PlayerState;
   isHost: boolean;
@@ -66,7 +78,6 @@ export interface PlayerController {
     onDurationChange: () => void;
     onEnded: () => void;
     onError: () => void;
-    onSeeked?: () => void;
   };
 }
 
@@ -82,6 +93,27 @@ export function resolveMediaUrl(player: PlayerState): string {
   if (provider === "twitch") return `https://www.twitch.tv/${player.media_id}`;
   if (provider === "vimeo") return `https://vimeo.com/${player.media_id}`;
   return player.media_id;
+}
+
+function applySubtitlesPreference(videoElement: HTMLVideoElement | null, enabled: boolean): void {
+  if (!videoElement) return;
+
+  const playerEl = videoElement as InternalMediaPlayer;
+  const internal = playerEl.getInternalPlayer?.();
+
+  // 1. YouTube IFrame API (chargement/déchargement du module captions)
+  if (internal) {
+    if (enabled && typeof internal.loadModule === "function") internal.loadModule("captions");
+    if (!enabled && typeof internal.unloadModule === "function") internal.unloadModule("captions");
+  }
+
+  // 2. Balise HTML5 native (pilotage du mode des pistes textTracks)
+  const tracksTarget = internal?.textTracks ? internal : videoElement;
+  if (tracksTarget.textTracks) {
+    for (let i = 0; i < tracksTarget.textTracks.length; i++) {
+      tracksTarget.textTracks[i].mode = enabled ? "showing" : "disabled";
+    }
+  }
 }
 
 /**
@@ -113,13 +145,12 @@ export function usePlayer({
   const [hasError, setHasError] = useState<boolean>(false);
   const [needsAutoplayUnlock, setNeedsAutoplayUnlock] = useState<boolean>(false);
 
-  // Verrou temporel après un saut (seek/replay).
-  // Absorbe les frames résiduelles du décodeur pendant 300ms sans heuristiques fragiles.
+  // Verrou temporel après un saut : absorbe les frames résiduelles du décodeur
   const seekLockUntilRef = useRef<number>(0);
   const lastHandledUpdateRef = useRef<number>(player.last_updated_at);
   const hasInitialSyncDoneRef = useRef<boolean>(false);
 
-  // Réinitialisation synchrone lors d'un changement d'URL (évite les cascades d'effets React)
+  // Réinitialisation synchrone lors d'un changement d'URL
   const [prevMediaUrl, setPrevMediaUrl] = useState<string>(mediaUrl);
   if (mediaUrl !== prevMediaUrl) {
     setPrevMediaUrl(mediaUrl);
@@ -148,7 +179,6 @@ export function usePlayer({
     return "paused";
   }, [mediaUrl, hasError, currentTime, duration, player.is_playing, player.current_time]);
 
-  // Position affichée dans la timeline (verrouillée à 100% si terminé, priorité au scrubbing)
   const displayTime =
     scrubbingTime !== null ? scrubbingTime : status === "ended" && duration > 0 ? duration : currentTime;
 
@@ -171,7 +201,6 @@ export function usePlayer({
     !player.media_id ||
     Boolean(isRateLimited?.("SEEK"));
 
-  // Point unique et canonique de gestion de fin de média
   const handleMediaEnded = useCallback(() => {
     setCurrentTime(duration);
     if (player.is_playing && (!isRestrictedForGuest || duration > 0)) {
@@ -179,7 +208,7 @@ export function usePlayer({
     }
   }, [duration, player.is_playing, isRestrictedForGuest, sendPause]);
 
-  // Synchronisation temporelle impérative avec les ordres du salon (DOM uniquement)
+  // Synchronisation temporelle impérative avec les ordres du salon (DOM)
   useEffect(() => {
     if (lastHandledUpdateRef.current === player.last_updated_at) return;
     lastHandledUpdateRef.current = player.last_updated_at;
@@ -191,7 +220,7 @@ export function usePlayer({
     if (videoRef.current) {
       const local = videoRef.current.currentTime || 0;
       if (Math.abs(local - target) > DOM_SYNC_DRIFT_THRESHOLD_SECONDS) {
-        seekLockUntilRef.current = Date.now() + 300;
+        seekLockUntilRef.current = Date.now() + SEEK_LOCK_DURATION_MS;
         videoRef.current.currentTime = target;
       }
     }
@@ -206,7 +235,7 @@ export function usePlayer({
       if (videoRef.current) {
         const local = videoRef.current.currentTime || 0;
         if (Math.abs(local - target) > DOM_SYNC_DRIFT_THRESHOLD_SECONDS) {
-          seekLockUntilRef.current = Date.now() + 300;
+          seekLockUntilRef.current = Date.now() + SEEK_LOCK_DURATION_MS;
           videoRef.current.currentTime = target;
           setCurrentTime(target);
         }
@@ -245,10 +274,10 @@ export function usePlayer({
 
   const replay = useCallback(() => {
     if (isPlayDisabled) return;
-    seekLockUntilRef.current = Date.now() + 300;
+    seekLockUntilRef.current = Date.now() + SEEK_LOCK_DURATION_MS;
     if (videoRef.current) {
       videoRef.current.currentTime = 0;
-      // Amorçage immédiat pour satisfaire la politique d'autoplay des navigateurs stricts (iOS / Safari)
+      // Amorçage immédiat pour satisfaire l'autoplay des navigateurs stricts (iOS / Safari)
       videoRef.current.play().catch(() => {});
     }
     setScrubbingTime(null);
@@ -274,13 +303,12 @@ export function usePlayer({
         duration > 0 ? Math.min(Math.max(0, targetTime), duration) : Math.max(0, targetTime);
       const atEnd = isNearEnd(clamped, duration);
 
-      seekLockUntilRef.current = Date.now() + 300;
+      seekLockUntilRef.current = Date.now() + SEEK_LOCK_DURATION_MS;
       if (videoRef.current) {
         videoRef.current.currentTime = clamped;
       }
       setCurrentTime(clamped);
 
-      // Si la vidéo était terminée et qu'on cherche ailleurs, reprise immédiate de lecture
       if (status === "ended" && !atEnd) {
         if (videoRef.current) {
           videoRef.current.play().catch(() => {});
@@ -299,7 +327,7 @@ export function usePlayer({
     setScrubbingTime(null);
     const safeTarget =
       duration > 0 ? Math.min(roomTime, Math.max(0, duration - END_THRESHOLD_SECONDS)) : roomTime;
-    seekLockUntilRef.current = Date.now() + 300;
+    seekLockUntilRef.current = Date.now() + SEEK_LOCK_DURATION_MS;
     if (videoRef.current) {
       videoRef.current.currentTime = safeTarget;
     }
@@ -321,62 +349,19 @@ export function usePlayer({
     }
   }, []);
 
-  // Sous-titres (mémorisation locale et pilotage API)
+  // Sous-titres (mémorisation locale et pilotage API hors du setter React)
   const [subtitlesEnabled, setSubtitlesEnabled] = useState<boolean>(() => {
-    return localStorage.getItem("synk_subtitles") === "true";
+    return localStorage.getItem(SUBTITLES_STORAGE_KEY) === "true";
   });
 
   const toggleSubtitles = useCallback(() => {
     setSubtitlesEnabled((prev) => {
       const next = !prev;
-      localStorage.setItem("synk_subtitles", String(next));
-
-      try {
-        const internal = (videoRef.current as any)?.getInternalPlayer?.();
-        if (internal) {
-          if (next && typeof internal.loadModule === "function") internal.loadModule("captions");
-          if (!next && typeof internal.unloadModule === "function") internal.unloadModule("captions");
-        }
-      } catch (err) {
-        console.warn("[SUBTITLES] YouTube captions error", err);
-      }
-
-      try {
-        const videoEl =
-          (videoRef.current as unknown as { getInternalPlayer?: () => HTMLVideoElement })
-            .getInternalPlayer?.() || videoRef.current;
-        if (videoEl?.textTracks) {
-          for (let i = 0; i < videoEl.textTracks.length; i++) {
-            videoEl.textTracks[i].mode = next ? "showing" : "disabled";
-          }
-        }
-      } catch (err) {
-        console.warn("[SUBTITLES] HTML5 textTracks error", err);
-      }
-
+      localStorage.setItem(SUBTITLES_STORAGE_KEY, String(next));
+      applySubtitlesPreference(videoRef.current, next);
       return next;
     });
   }, []);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key.toLowerCase() !== "c") return;
-      const target = e.target as HTMLElement | null;
-      if (
-        target &&
-        (target.tagName === "INPUT" ||
-          target.tagName === "TEXTAREA" ||
-          target.isContentEditable)
-      ) {
-        return;
-      }
-      e.preventDefault();
-      toggleSubtitles();
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [toggleSubtitles]);
 
   // Mini-lecteur (Picture-in-Picture)
   const isPiPSupported =
@@ -403,9 +388,8 @@ export function usePlayer({
       if (document.pictureInPictureElement) {
         await document.exitPictureInPicture();
       } else if (videoRef.current) {
-        const internal =
-          (videoRef.current as unknown as { getInternalPlayer?: () => HTMLVideoElement }).getInternalPlayer?.() ||
-          videoRef.current;
+        const playerEl = videoRef.current as InternalMediaPlayer;
+        const internal = playerEl.getInternalPlayer?.() || playerEl;
         if (internal && typeof internal.requestPictureInPicture === "function") {
           await internal.requestPictureInPicture();
         }
@@ -436,19 +420,14 @@ export function usePlayer({
         hasInitialSyncDoneRef.current = true;
         const target = calculateReferenceTime({ ...player, duration: dur }, serverTimeOffset);
         if (target > 0) {
-          seekLockUntilRef.current = Date.now() + 300;
+          seekLockUntilRef.current = Date.now() + SEEK_LOCK_DURATION_MS;
           videoRef.current.currentTime = target;
           setCurrentTime(target);
         }
       }
 
       if (subtitlesEnabled) {
-        try {
-          const internal = (videoRef.current as any)?.getInternalPlayer?.();
-          if (internal && typeof internal.loadModule === "function") {
-            internal.loadModule("captions");
-          }
-        } catch {}
+        applySubtitlesPreference(videoRef.current, true);
       }
     }
   }, [player, serverTimeOffset, subtitlesEnabled]);
@@ -456,8 +435,6 @@ export function usePlayer({
   const onEnded = useCallback(() => {
     handleMediaEnded();
   }, [handleMediaEnded]);
-
-  const onSeeked = useCallback(() => {}, []);
 
   const onError = useCallback(() => {
     if (player.is_playing) {
@@ -502,10 +479,8 @@ export function usePlayer({
       onDurationChange,
       onEnded,
       onError,
-      onSeeked,
     },
   };
 }
 
-export const usePlayerController = usePlayer;
 export default usePlayer;

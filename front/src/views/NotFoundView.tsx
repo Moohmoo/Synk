@@ -1,9 +1,7 @@
-import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Tv2 } from "lucide-react";
-import { useUIStore } from "@/stores/uiStore";
 
 interface NotFoundViewProps {
   code?: string;
@@ -13,12 +11,6 @@ interface NotFoundViewProps {
 
 export function NotFoundView({ code = "404", title, description }: NotFoundViewProps = {}) {
   const { t } = useTranslation("global");
-  const setGlowColor = useUIStore((s) => s.setGlowColor);
-
-  useEffect(() => {
-    setGlowColor("red");
-    return () => setGlowColor("cyan");
-  }, [setGlowColor]);
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center p-4 text-zinc-100 font-sans select-none">

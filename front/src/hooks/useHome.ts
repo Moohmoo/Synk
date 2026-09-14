@@ -1,101 +1,128 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { roomApi } from "@/services/roomApi";
 import { validateUsername } from "@/lib/validation";
 import { formatErrorMessage } from "@/lib/errorMapper";
 import { sessionManager } from "@/lib/session";
 import { extractRoomCode } from "@/lib/utils";
 import { toast } from "@/components/ui/sonner";
-import { useUIStore } from "@/stores/uiStore";
 
 export type HomeMode = "create" | "join";
 export type JoinStep = "code" | "username";
 
 /**
- * Hook orchestrant l'intégralité du flux d'accueil :
- * - Machine à états (Création vs Rejoindre, Étape Code vs Étape Pseudo)
- * - Traitement des invitations directes par URL (?join=CODE)
- * - Validation des formulaires et persistance de session
- * - Effet atmosphérique (halo rouge en création, cyan en connexion)
+ * Résout le texte du bouton d'action principal de l'accueil sans ternaire imbriqué.
  */
+function getHomeButtonText(
+  mode: HomeMode,
+  step: JoinStep,
+  isLoading: boolean,
+  t: TFunction
+): string | undefined {
+  if (mode === "create") return undefined;
+  if (step === "code") {
+    return isLoading ? t("home.checking") : t("home.next");
+  }
+  return isLoading ? t("home.connecting") : t("home.join");
+}
+
+/**
+ * Résout l'invite de saisie (placeholder) selon le mode et l'étape courante.
+ */
+function getHomePlaceholder(mode: HomeMode, step: JoinStep, t: TFunction): string {
+  if (mode === "create") return t("home.createPlaceholder");
+  if (step === "code") return t("home.joinCodePlaceholder");
+  return t("home.joinUsernamePlaceholder");
+}
+
 export function useHome() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const inputRef = useRef<HTMLInputElement>(null);
   const { t } = useTranslation(["global", "validation", "errors"]);
-  const setGlowColor = useUIStore((s) => s.setGlowColor);
 
-  const initialJoinParam = searchParams.get("join");
-  const initialCleanCode = initialJoinParam ? extractRoomCode(initialJoinParam) : null;
+  const initialJoinParam = searchParams.get("join") || "";
+  const initialJoinCode = extractRoomCode(initialJoinParam);
 
-  const [mode, setMode] = useState<HomeMode>(() => (initialCleanCode ? "join" : "create"));
+  const [mode, setMode] = useState<HomeMode>(() => (initialJoinCode ? "join" : "create"));
   const [joinStep, setJoinStep] = useState<JoinStep>("code");
   const [username, setUsername] = useState(() => sessionManager.getLastUsername());
-  const [roomCode, setRoomCode] = useState(() => initialCleanCode || "");
+  const [roomCode, setRoomCode] = useState(() => initialJoinCode || "");
   const [validatedRoomCode, setValidatedRoomCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  // Maintient la lueur d'ambiance cyan de la marque sur l'accueil
-  useEffect(() => {
-    setGlowColor("cyan");
-  }, [setGlowColor]);
+  const focusInput = useCallback(() => {
+    // POURQUOI : différé d'un tick d'exécution pour que le DOM réactualise le focus après re-render
+    setTimeout(() => inputRef.current?.focus(), 0);
+  }, []);
 
-  const clearJoinParam = () => {
-    if (searchParams.has("join")) {
-      setSearchParams({}, { replace: true });
-    }
-  };
+  const clearJoinParam = useCallback(() => {
+    if (!searchParams.has("join")) return;
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("join");
+    setSearchParams(nextParams, { replace: true });
+  }, [searchParams, setSearchParams]);
 
-  // Traitement automatique d'une invitation via ?join=ROOM_ID
-  useEffect(() => {
-    const joinParam = searchParams.get("join");
-    if (!joinParam) return;
+  const verifyAndSelectRoom = useCallback(
+    async (rawCode: string): Promise<boolean> => {
+      const cleanCode = extractRoomCode(rawCode);
+      if (!cleanCode) {
+        toast.error(formatErrorMessage("MISSING_ROOM_CODE", t), { id: "home-room-code-error" });
+        return false;
+      }
 
-    const cleanCode = extractRoomCode(joinParam);
-    if (!cleanCode) return;
-
-    setMode("join");
-    setRoomCode(cleanCode);
-    setIsLoading(true);
-
-    roomApi
-      .checkRoom(cleanCode)
-      .then((check) => {
-        if (check.exists) {
-          setValidatedRoomCode(cleanCode);
-          setJoinStep("username");
-        } else {
-          toast.error(formatErrorMessage("ROOM_NOT_FOUND", t), { id: "home-join-not-found" });
-          setJoinStep("code");
+      setIsLoading(true);
+      try {
+        const check = await roomApi.checkRoom(cleanCode);
+        if (!check.exists) {
+          toast.error(formatErrorMessage("ROOM_NOT_FOUND", t), { id: "home-room-not-found" });
           clearJoinParam();
+          return false;
         }
-      })
-      .catch((err) => {
-        toast.error(formatErrorMessage(err, t), { id: "home-join-error" });
-        setJoinStep("code");
-      })
-      .finally(() => {
+
+        setValidatedRoomCode(cleanCode);
+        setJoinStep("username");
+        clearJoinParam();
+        focusInput();
+        return true;
+      } catch (err: unknown) {
+        toast.error(formatErrorMessage(err, t), { id: "home-api-error" });
+        return false;
+      } finally {
         setIsLoading(false);
-      });
-  }, [searchParams, t]);
+      }
+    },
+    [t, clearJoinParam, focusInput]
+  );
+
+  // Consomme l'invitation d'URL une seule fois au montage si présente
+  useEffect(() => {
+    if (!initialJoinCode) return;
+    void verifyAndSelectRoom(initialJoinCode);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSwitchMode = (newMode: HomeMode) => {
     setMode(newMode);
     if (newMode === "create") {
       setJoinStep("code");
+      setValidatedRoomCode("");
       clearJoinParam();
     }
-    setTimeout(() => inputRef.current?.focus(), 0);
+    focusInput();
   };
 
   const handleCancelValidatedCode = () => {
+    setValidatedRoomCode("");
     setJoinStep("code");
     clearJoinParam();
-    setTimeout(() => inputRef.current?.focus(), 0);
+    focusInput();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Annulation rapide du salon sélectionné comme un "tag" avec Retour ou Échap
     if (mode === "join" && joinStep === "username") {
       if ((e.key === "Backspace" && !username) || e.key === "Escape") {
         e.preventDefault();
@@ -105,11 +132,9 @@ export function useHome() {
   };
 
   const validateAndGetUsername = (): string | null => {
-    const valError = validateUsername(username, (key) =>
-      t(key, { ns: "validation" })
-    );
-    if (valError) {
-      toast.error(valError, { id: "home-val-error" });
+    const error = validateUsername(username, (key) => t(key, { ns: "validation" }));
+    if (error) {
+      toast.error(error, { id: "home-val-error" });
       return null;
     }
     return username.trim();
@@ -134,32 +159,11 @@ export function useHome() {
         navigate(`/room/${data.room_id}`);
       } catch (err: unknown) {
         toast.error(formatErrorMessage(err, t), { id: "home-api-error" });
+      } finally {
         setIsLoading(false);
       }
     } else if (joinStep === "code") {
-      const cleanRoomCode = extractRoomCode(roomCode);
-      if (!cleanRoomCode) {
-        toast.error(formatErrorMessage("MISSING_ROOM_CODE", t), { id: "home-room-code-error" });
-        return;
-      }
-
-      setIsLoading(true);
-      try {
-        const check = await roomApi.checkRoom(cleanRoomCode);
-        if (!check.exists) {
-          toast.error(formatErrorMessage("ROOM_NOT_FOUND", t), { id: "home-room-not-found" });
-          setIsLoading(false);
-          return;
-        }
-
-        setValidatedRoomCode(cleanRoomCode);
-        setJoinStep("username");
-        setIsLoading(false);
-        setTimeout(() => inputRef.current?.focus(), 0);
-      } catch (err: unknown) {
-        toast.error(formatErrorMessage(err, t), { id: "home-api-error" });
-        setIsLoading(false);
-      }
+      await verifyAndSelectRoom(roomCode);
     } else {
       const cleanUsername = validateAndGetUsername();
       if (!cleanUsername) return;
@@ -169,33 +173,17 @@ export function useHome() {
     }
   };
 
-  const isUsernameInput = mode === "create" || joinStep === "username";
-
-  const placeholder =
-    mode === "create"
-      ? t("home.createPlaceholder")
-      : joinStep === "code"
-      ? t("home.joinCodePlaceholder")
-      : t("home.joinUsernamePlaceholder");
-
-  const buttonText =
-    mode === "create"
-      ? undefined
-      : joinStep === "code"
-      ? isLoading
-        ? t("home.checking")
-        : t("home.next")
-      : isLoading
-      ? t("home.connecting")
-      : t("home.join");
+  const isUsernameStep = mode === "create" || joinStep === "username";
+  const placeholder = getHomePlaceholder(mode, joinStep, t);
+  const buttonText = getHomeButtonText(mode, joinStep, isLoading, t);
 
   return {
     mode,
     switchMode: handleSwitchMode,
     inputRef,
-    inputValue: isUsernameInput ? username : roomCode,
+    inputValue: isUsernameStep ? username : roomCode,
     setInputValue: (val: string) => {
-      if (isUsernameInput) {
+      if (isUsernameStep) {
         setUsername(val);
       } else {
         setRoomCode(val);
@@ -207,7 +195,7 @@ export function useHome() {
     placeholder,
     buttonText,
     badge:
-      mode === "join" && joinStep === "username"
+      mode === "join" && joinStep === "username" && validatedRoomCode
         ? {
             text: `#${validatedRoomCode}`,
             onRemove: handleCancelValidatedCode,

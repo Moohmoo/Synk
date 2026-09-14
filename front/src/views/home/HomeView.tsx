@@ -5,54 +5,30 @@ import { useHome } from "@/hooks/useHome";
 
 /**
  * Vue d'accueil principale :
- * Composant de mise en page sobre déléguant l'affichage à Heading/ModeToggle
- * et l'orchestration du flux à useHome.
+ * Orchestre la présentation sans implémenter de logique interne.
  */
 export function HomeView() {
-  const {
-    mode,
-    switchMode,
-    inputRef,
-    inputValue,
-    setInputValue,
-    handleKeyDown,
-    handleSubmit,
-    isLoading,
-    placeholder,
-    buttonText,
-    badge,
-  } = useHome();
+  const home = useHome();
 
   return (
     <div className="relative flex-1 flex flex-col items-center justify-center w-full max-w-full px-4 sm:px-6 md:px-12 py-10 animate-fade-in">
-      {/* 
-        POURQUOI px-4 sm:px-6 md:px-12 : Libère 16px d'espace horizontal sur smartphone 
-        pour loger confortablement le badge et l'omnibox sans débordement.
-      */}
-      {/* Conteneur principal (rehaussé au centre optique du halo) */}
+      {/* POURQUOI : translate-y centre optiquement l'ensemble sur le halo d'ambiance */}
       <div className="relative z-10 flex flex-col items-center w-full -translate-y-8 sm:-translate-y-12">
-        {/* Titre & Sous-titre en superposition de grille (zéro layout shift) */}
-        <Heading mode={mode} />
-
-        {/* Le sélecteur de mode (Créer / Rejoindre) */}
-        <ModeToggle mode={mode} onChange={switchMode} />
-
-        {/* L'Omnibox d'accueil */}
+        <Heading mode={home.mode} />
+        <ModeToggle mode={home.mode} onChange={home.switchMode} />
         <Omnibox
-          ref={inputRef}
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          onKeyDown={handleKeyDown}
-          mode={mode}
-          placeholder={placeholder}
-          buttonText={buttonText}
-          badge={badge}
-          onSubmit={handleSubmit}
-          isLoading={isLoading}
+          ref={home.inputRef}
+          value={home.inputValue}
+          onChange={(e) => home.setInputValue(e.target.value)}
+          onKeyDown={home.handleKeyDown}
+          mode={home.mode}
+          placeholder={home.placeholder}
+          buttonText={home.buttonText}
+          badge={home.badge}
+          onSubmit={home.handleSubmit}
+          isLoading={home.isLoading}
           autoFocus
         />
-
-        {/* Badges discrets des plateformes supportées */}
         <PlatformBadges className="mt-5" />
       </div>
     </div>

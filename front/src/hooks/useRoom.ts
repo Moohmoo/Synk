@@ -23,6 +23,17 @@ import { formatErrorMessage } from "@/lib/errorMapper";
 import { sessionManager } from "@/lib/session";
 import { useRateLimiter } from "./useRateLimiter";
 
+const DEFAULT_WS_URL = "ws://localhost:8000";
+const HEARTBEAT_INTERVAL_MS = 5000;
+const CLOCK_SKEW_THRESHOLD_MS = 50;
+
+const SYNC_ACTION_TOAST_KEYS: Record<string, string> = {
+  PLAY: "toast.play",
+  PAUSE: "toast.pause",
+  SEEK: "toast.seek",
+  CHANGE_MEDIA: "toast.loadMedia",
+};
+
 export interface UseRoomOptions {
   roomId: string;
   username: string;
@@ -31,9 +42,29 @@ export interface UseRoomOptions {
   wsBaseUrl?: string;
 }
 
-/**
- * Valide et arrondit les valeurs temporelles de lecture avant transmission au serveur.
- */
+export interface RoomController {
+  isConnected: boolean;
+  participants: Participant[];
+  player: PlayerState;
+  roomSettings: RoomSettings;
+  messages: ChatMessage[];
+  myPing: number;
+  serverTimeOffset: number;
+  error: string | null;
+  currentUsername: string;
+  currentUserId: string | null;
+  isHost: boolean;
+  isRateLimited: (action: string) => boolean;
+  getRemainingCooldown: (action: string) => number;
+  sendPlay: (currentTime?: number, duration?: number, isRestart?: boolean) => void;
+  sendPause: (currentTime?: number, duration?: number) => void;
+  sendSeek: (targetTime: number, duration?: number) => void;
+  changeMedia: (url: string) => void;
+  sendChat: (content: string) => void;
+  updateSettings: (isLocked: boolean) => void;
+  sendHeartbeat: (currentTime?: number) => void;
+}
+
 function sanitizePlaybackTimes(
   currentTime?: number,
   duration?: number
@@ -44,15 +75,20 @@ function sanitizePlaybackTimes(
   return { roundedPos, validDur };
 }
 
-/**
- * Vérifie si le nom d'utilisateur correspond à la session locale.
- */
 function isSelfUser(
   targetUsername: string,
   currentUsername: string,
   initialUsername: string
 ): boolean {
   return targetUsername === currentUsername || targetUsername === initialUsername;
+}
+
+function findSelfParticipant(
+  participants: Participant[],
+  userId: string | null | undefined,
+  username: string
+): Participant | undefined {
+  return participants.find((p) => (userId && p.id === userId) || p.username === username);
 }
 
 /**
@@ -63,28 +99,25 @@ export function useRoom({
   username,
   token,
   userId,
-  wsBaseUrl = import.meta.env.VITE_WS_URL || "ws://localhost:8000",
-}: UseRoomOptions) {
+  wsBaseUrl = import.meta.env.VITE_WS_URL || DEFAULT_WS_URL,
+}: UseRoomOptions): RoomController {
   const { t } = useTranslation(["room", "global", "errors"]);
   const { isRateLimited, getRemainingCooldown, lockAction } = useRateLimiter();
 
-  // États du salon et de la session
   const [isConnected, setIsConnected] = useState(false);
   const [currentUsername, setCurrentUsername] = useState(username);
   const [currentUserId, setCurrentUserId] = useState<string | null>(userId || null);
   const [participants, setParticipants] = useState<Participant[]>(() => {
-    if (username) {
-      return [
-        {
-          id: userId || "self",
-          username,
-          is_host: Boolean(token),
-          ping_ms: 0,
-          joined_at: Date.now(),
-        },
-      ];
-    }
-    return [];
+    if (!username) return [];
+    return [
+      {
+        id: userId || "self",
+        username,
+        is_host: Boolean(token),
+        ping_ms: 0,
+        joined_at: Date.now(),
+      },
+    ];
   });
   const [player, setPlayer] = useState<PlayerState>({
     media_url: null,
@@ -104,21 +137,27 @@ export function useRoom({
   const [serverTimeOffset, setServerTimeOffset] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
 
-  // Références stables pour les callbacks asynchrones du WebSocket
   const socketRef = useRef<Socket | null>(null);
   const currentUsernameRef = useRef(username);
   const currentUserIdRef = useRef<string | null>(userId || null);
   const myPingRef = useRef(0);
   const tRef = useRef(t);
-  const lockActionRef = useRef(lockAction);
   const authoritativePlayerRef = useRef<PlayerState>(player);
 
-  // Synchronisation synchrone des refs à chaque render
   tRef.current = t;
   currentUsernameRef.current = currentUsername;
   currentUserIdRef.current = currentUserId;
   myPingRef.current = myPing;
-  lockActionRef.current = lockAction;
+
+  const emitHeartbeat = useCallback((socket: Socket | null, currentTime?: number) => {
+    if (socket?.connected) {
+      socket.emit("HEARTBEAT", {
+        client_sent_at: Date.now(),
+        ping_ms: myPingRef.current,
+        current_time: currentTime,
+      });
+    }
+  }, []);
 
   // Actions utilisateur vers le serveur Socket.IO (avec Optimistic UI)
   const sendPlay = useCallback(
@@ -223,21 +262,18 @@ export function useRoom({
     [isRateLimited, roomSettings.is_locked]
   );
 
-  const sendHeartbeat = useCallback((currentTime?: number) => {
-    if (socketRef.current?.connected) {
-      socketRef.current.emit("HEARTBEAT", {
-        client_sent_at: Date.now(),
-        ping_ms: myPingRef.current,
-        current_time: currentTime,
-      });
-    }
-  }, []);
+  const sendHeartbeat = useCallback(
+    (currentTime?: number) => {
+      emitHeartbeat(socketRef.current, currentTime);
+    },
+    [emitHeartbeat]
+  );
 
   // Initialisation et gestion du cycle de vie Socket.IO
   useEffect(() => {
     if (!roomId || !username) return;
 
-    // Normaliser l'URL WebSocket en HTTP/HTTPS pour le client Socket.IO
+    // Normaliser l'URL WebSocket en HTTP/HTTPS pour le handshake Socket.IO
     const serverUrl = wsBaseUrl.replace(/^ws(s?):/, "http$1:");
 
     const socket = io(serverUrl, {
@@ -257,14 +293,10 @@ export function useRoom({
 
     socketRef.current = socket;
 
-    // --- 1. Cycle de connexion ---
     socket.on("connect", () => {
       setIsConnected(true);
       setError(null);
-      socket.emit("HEARTBEAT", {
-        client_sent_at: Date.now(),
-        ping_ms: myPingRef.current,
-      });
+      emitHeartbeat(socket);
     });
 
     socket.on("disconnect", () => {
@@ -272,13 +304,12 @@ export function useRoom({
     });
 
     socket.on("connect_error", (err) => {
-      console.error("[useSyncRoom] Erreur de connexion Socket.IO :", err.message);
+      console.error("[useRoom] Erreur de connexion Socket.IO :", err.message);
       setIsConnected(false);
       setError(err.message);
       toast.error(err.message, { id: "socket-connect-error" });
     });
 
-    // --- 2. Synchronisation de la salle et du lecteur ---
     socket.on("ROOM_SYNC", (payload: RoomSyncPayload) => {
       const roomData = payload.room;
       setParticipants(roomData.participants);
@@ -300,12 +331,10 @@ export function useRoom({
         });
       }
 
-      // Si le serveur indique qu'on n'est pas hôte, purger l'ancien token hôte local
+      // Si le serveur indique qu'on n'est plus hôte, purger le token local
       const myId = payload.your_id || currentUserIdRef.current || userId;
       const myName = payload.your_username || currentUsernameRef.current || username;
-      const me = (roomData.participants || []).find(
-        (p) => (myId && p.id === myId) || p.username === myName
-      );
+      const me = findSelfParticipant(roomData.participants || [], myId, myName);
       if (me && !me.is_host) {
         sessionManager.clearHostToken(roomId);
       }
@@ -317,13 +346,7 @@ export function useRoom({
 
       const isSelf = isSelfUser(payload.triggered_by, currentUsernameRef.current, username);
       if (payload.triggered_by && !isSelf) {
-        const toastKeyMap: Record<string, string> = {
-          PLAY: "toast.play",
-          PAUSE: "toast.pause",
-          SEEK: "toast.seek",
-          CHANGE_MEDIA: "toast.loadMedia",
-        };
-        const translationKey = toastKeyMap[payload.action];
+        const translationKey = SYNC_ACTION_TOAST_KEYS[payload.action];
         if (translationKey) {
           toast.info(tRef.current(translationKey, { user: payload.triggered_by }), {
             id: "player-sync-action",
@@ -334,14 +357,10 @@ export function useRoom({
 
     socket.on("SETTINGS_UPDATED", (payload: SettingsUpdatedPayload) => {
       setRoomSettings(payload.settings);
-      if (payload.settings.is_locked) {
-        toast.warning(tRef.current("toast.roomLocked"), { id: "room-lock-status" });
-      } else {
-        toast.info(tRef.current("toast.roomUnlocked"), { id: "room-lock-status" });
-      }
+      const lockKey = payload.settings.is_locked ? "toast.roomLocked" : "toast.roomUnlocked";
+      toast.info(tRef.current(lockKey), { id: "room-lock-status" });
     });
 
-    // --- 3. Gestion des participants et rôles ---
     socket.on("PARTICIPANT_JOINED", (payload: ParticipantJoinedPayload) => {
       const newParticipant = payload.user;
       setParticipants((prev) => {
@@ -376,7 +395,6 @@ export function useRoom({
       }
     });
 
-    // --- 4. Tchat et métriques réseau ---
     socket.on("CHAT_BROADCAST", (payload: ChatMessage) => {
       setMessages((prev) => [...prev, payload]);
     });
@@ -393,7 +411,7 @@ export function useRoom({
         if (payload.server_received_at) {
           const estimatedServerNow = payload.server_received_at + oneWayDelay;
           const newOffset = Math.round(estimatedServerNow - now);
-          setServerTimeOffset((prev) => (Math.abs(prev - newOffset) > 50 ? newOffset : prev));
+          setServerTimeOffset((prev) => (Math.abs(prev - newOffset) > CLOCK_SKEW_THRESHOLD_MS ? newOffset : prev));
         }
       } else {
         setMyPing(payload.ping_ms || 0);
@@ -406,7 +424,6 @@ export function useRoom({
       );
     });
 
-    // --- 5. Erreurs et Rate Limiting ---
     socket.on("ERROR", (payload: ErrorPayload) => {
       const localizedMsg = formatErrorMessage(payload, tRef.current);
       setError(localizedMsg);
@@ -416,14 +433,14 @@ export function useRoom({
         const action = payload.action;
         const retryAfter = payload.retry_after || 2;
         if (action) {
-          lockActionRef.current(action, retryAfter);
+          lockAction(action, retryAfter);
         } else {
-          lockActionRef.current("SEEK", retryAfter);
-          lockActionRef.current("PLAY", retryAfter);
-          lockActionRef.current("PAUSE", retryAfter);
+          lockAction("SEEK", retryAfter);
+          lockAction("PLAY", retryAfter);
+          lockAction("PAUSE", retryAfter);
         }
 
-        // Rollback sur l'état faisant autorité côté serveur
+        // Rollback sur l'état faisant autorité côté serveur lors d'un refus
         if (!action || action === "SEEK" || action === "PLAY" || action === "PAUSE") {
           setPlayer({
             ...authoritativePlayerRef.current,
@@ -433,31 +450,20 @@ export function useRoom({
       }
     });
 
-    // Mesure de latence périodique
     const heartbeatTimer = setInterval(() => {
-      if (socket.connected) {
-        socket.emit("HEARTBEAT", {
-          client_sent_at: Date.now(),
-          ping_ms: myPingRef.current,
-        });
-      }
-    }, 5000);
+      emitHeartbeat(socket);
+    }, HEARTBEAT_INTERVAL_MS);
 
     return () => {
       clearInterval(heartbeatTimer);
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [roomId, username, token, wsBaseUrl]);
+  }, [roomId, username, token, userId, wsBaseUrl, emitHeartbeat, lockAction]);
 
-  // Déterminer si l'utilisateur courant est hôte
   const effectiveUserId = currentUserId || userId;
   const isHost = useMemo(() => {
-    return Boolean(
-      participants.find(
-        (p) => (effectiveUserId && p.id === effectiveUserId) || p.username === currentUsername
-      )?.is_host
-    );
+    return Boolean(findSelfParticipant(participants, effectiveUserId, currentUsername)?.is_host);
   }, [participants, effectiveUserId, currentUsername]);
 
   return {

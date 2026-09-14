@@ -187,7 +187,6 @@ export function RoomView() {
               controller={playerController}
               isFullscreen={isFullscreen}
               onToggleFullscreen={toggleFullscreen}
-              areControlsVisible={areControlsVisible}
               controlsSlot={
                 <PlayerControls
                   controller={playerController}
