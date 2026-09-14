@@ -221,7 +221,6 @@ export function RoomView() {
                 mediaUrl={player.media_url}
                 provider={player.provider}
                 isConnected={isConnected}
-                ping={myPing}
                 roomSettings={roomSettings}
                 isHost={isHost}
                 onToggleLock={() => {
