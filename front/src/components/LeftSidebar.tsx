@@ -2,6 +2,7 @@ import { Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Home, PanelLeftClose, PanelLeft } from "lucide-react";
 import { Logo } from "@/components/Logo";
+import { SidebarSettings } from "@/components/SidebarSettings";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useUIStore } from "@/stores/uiStore";
 import { cn } from "@/lib/utils";
@@ -48,7 +49,7 @@ export function LeftNavContent({ onItemClick, className }: LeftNavContentProps =
  * - Repliable via useUIStore avec icône de panneau.
  * - Logo masqué en mode compact (replié), uniquement le bouton toggle au centre.
  * - Hauteur de header (h-14) alignée sur le Main Canvas grâce à mt-4.
- * - Icône d'accueil universelle (Home) et contraste net de l'item actif en mode replié.
+ * - Navigation en haut et footer de préférences globales ancré en bas.
  */
 export function LeftSidebar({ className }: LeftSidebarProps = {}) {
   const location = useLocation();
@@ -61,7 +62,7 @@ export function LeftSidebar({ className }: LeftSidebarProps = {}) {
   return (
     <aside
       className={cn(
-        "flex-shrink-0 flex flex-col relative z-10 bg-zinc-950 select-none mt-4 transition-all duration-300 ease-in-out",
+        "flex-shrink-0 flex flex-col h-[calc(100vh-1rem)] relative z-10 bg-zinc-950 select-none mt-4 transition-all duration-300 ease-in-out",
         isSidebarCollapsed ? "w-[64px]" : "w-[240px]",
         className
       )}
@@ -91,31 +92,38 @@ export function LeftSidebar({ className }: LeftSidebarProps = {}) {
         </button>
       </div>
 
-      {/* Menu de navigation avec paddings internes harmonisés */}
-      {isSidebarCollapsed ? (
-        <nav className="flex flex-col px-2.5">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Link
-                to="/"
-                className={cn(
-                  "flex items-center justify-center w-10 h-10 mx-auto rounded-md transition-colors duration-150",
-                  isHome
-                    ? "bg-white/[0.08] text-zinc-100"
-                    : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]"
-                )}
-              >
-                <Home className={cn("w-4 h-4 transition-colors", isHome ? "text-zinc-100" : "text-zinc-400")} />
-              </Link>
-            </TooltipTrigger>
-            <TooltipContent side="right" sideOffset={10}>
-              {t("nav.home")}
-            </TooltipContent>
-          </Tooltip>
-        </nav>
-      ) : (
-        <LeftNavContent />
-      )}
+      {/* Menu de navigation principale */}
+      <div className="flex-1">
+        {isSidebarCollapsed ? (
+          <nav className="flex flex-col px-2.5">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link
+                  to="/"
+                  className={cn(
+                    "flex items-center justify-center w-10 h-10 mx-auto rounded-md transition-colors duration-150",
+                    isHome
+                      ? "bg-white/[0.08] text-zinc-100"
+                      : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]"
+                  )}
+                >
+                  <Home className={cn("w-4 h-4 transition-colors", isHome ? "text-zinc-100" : "text-zinc-400")} />
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="right" sideOffset={10}>
+                {t("nav.home")}
+              </TooltipContent>
+            </Tooltip>
+          </nav>
+        ) : (
+          <LeftNavContent />
+        )}
+      </div>
+
+      {/* Footer Préférences & Paramètres ancré en bas */}
+      <div className="mt-auto border-t border-white/5 p-3 shrink-0">
+        <SidebarSettings isCollapsed={isSidebarCollapsed} />
+      </div>
     </aside>
   );
 }
