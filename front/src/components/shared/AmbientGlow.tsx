@@ -5,9 +5,42 @@ export interface AmbientGlowProps {
   disabled?: boolean;
 }
 
+interface GlowSideProps {
+  side: "left" | "right";
+}
+
 /**
- * AmbientGlow : Lueur d'ambiance Cyber-Tech froide (Minimalisme Mécanique).
- * Dégradé vertical Bleu Nuit profond -> Cyan sombre et diffus en harmonie avec le bouton SYNK.
+ * Halo latéral individuel projetant son flux lumineux vers le centre.
+ */
+function GlowSide({ side }: GlowSideProps) {
+  const isLeft = side === "left";
+  const originX = isLeft ? "0%" : "100%";
+  const sidePosition = isLeft ? "left-0" : "right-0";
+
+  return (
+    <div className={cn("absolute top-0 h-full w-[520px] overflow-hidden pointer-events-none", sidePosition)}>
+      {/* 1. Halo supérieur : Bleu Nuit profond */}
+      <div
+        className={cn("absolute top-0 w-[480px] h-[55%] blur-[68px]", sidePosition)}
+        style={{
+          background: `radial-gradient(ellipse 100% 80% at ${originX} 20%, rgba(23, 37, 84, 0.85) 0%, rgba(30, 58, 138, 0.45) 35%, transparent 75%)`,
+        }}
+      />
+
+      {/* 2. Halo médian : Cyan sombre et diffus (rappel de la marque SYNK) */}
+      <div
+        className={cn("absolute top-[18%] w-[520px] h-[68%] blur-[72px]", sidePosition)}
+        style={{
+          background: `radial-gradient(ellipse 100% 75% at ${originX} 38%, rgba(8, 145, 178, 0.6) 0%, rgba(10, 200, 185, 0.25) 40%, transparent 80%)`,
+        }}
+      />
+    </div>
+  );
+}
+
+/**
+ * AmbientGlow : Lueurs d'ambiance Cyber-Tech face-à-face (Minimalisme Mécanique).
+ * Projette deux faisceaux symétriques (gauche et droite) qui se rejoignent vers le centre.
  */
 export function AmbientGlow({ className, disabled = false }: AmbientGlowProps) {
   if (disabled) return null;
@@ -15,28 +48,12 @@ export function AmbientGlow({ className, disabled = false }: AmbientGlowProps) {
   return (
     <div
       aria-hidden="true"
-      className={cn(
-        "absolute right-0 top-0 h-full w-[520px] pointer-events-none select-none z-0 overflow-hidden",
-        className
-      )}
+      className={cn("absolute inset-0 pointer-events-none select-none z-0 overflow-hidden", className)}
     >
-      {/* 1. Halo supérieur : Bleu Nuit profond */}
-      <div 
-        className="absolute top-0 right-0 w-[480px] h-[55%] blur-[68px]"
-        style={{
-          background: "radial-gradient(ellipse 100% 80% at 100% 20%, rgba(23, 37, 84, 0.85) 0%, rgba(30, 58, 138, 0.45) 35%, transparent 75%)"
-        }}
-      />
+      <GlowSide side="left" />
+      <GlowSide side="right" />
 
-      {/* 2. Halo médian : Cyan sombre et diffus (rappel de la marque SYNK) */}
-      <div 
-        className="absolute top-[18%] right-0 w-[520px] h-[68%] blur-[72px]"
-        style={{
-          background: "radial-gradient(ellipse 100% 75% at 100% 38%, rgba(8, 145, 178, 0.6) 0%, rgba(10, 200, 185, 0.25) 40%, transparent 80%)"
-        }}
-      />
-
-      {/* 3. Texture grain anti-banding argentique */}
+      {/* Texture grain anti-banding argentique unifiée */}
       <div
         className="absolute inset-0 opacity-[0.035] mix-blend-overlay pointer-events-none"
         style={{
