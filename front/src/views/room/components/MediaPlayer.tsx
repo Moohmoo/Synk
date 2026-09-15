@@ -47,7 +47,7 @@ export function MediaPlayer({
       className={`w-full ${
         isFullscreen
           ? "w-full h-full max-w-none max-h-none rounded-none border-0 shadow-none"
-          : "aspect-video"
+          : "aspect-video rounded-xl border border-white/10 shadow-2xl"
       } bg-black relative z-10 flex items-center justify-center select-none overflow-hidden group`}
     >
       {status === "idle" ? (

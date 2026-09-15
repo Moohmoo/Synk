@@ -10,7 +10,6 @@ interface MetaSectionProps {
   mediaUrl?: string | null;
   provider?: string | null;
   isConnected: boolean;
-  ping?: number;
   roomSettings: RoomSettings;
   isHost: boolean;
   onToggleLock?: () => void;
@@ -47,7 +46,6 @@ export function MetaSection({
   mediaUrl,
   provider,
   isConnected,
-  ping,
   roomSettings,
   isHost,
   onToggleLock,
@@ -149,9 +147,9 @@ export function MetaSection({
 
         {/* Contenu Onglet : Réglages de synchronisation */}
         <TabsContent value="settings" className="pt-3">
-          <div className="bg-black/30 border border-white/5 rounded-md p-4 flex flex-col gap-4">
+          <div className="bg-black/30 border border-white/5 rounded-md p-4">
             {/* Contrôle de verrouillage de la session */}
-            <div className="flex items-center justify-between pb-3 border-b border-white/5">
+            <div className="flex items-center justify-between">
               <div className="flex flex-col pr-4">
                 <span className="text-xs font-semibold text-zinc-200">{t("meta.settingsLockTitle")}</span>
                 <span className="text-[11px] text-zinc-500 mt-0.5">{t("meta.settingsLockDesc")}</span>
@@ -172,18 +170,6 @@ export function MetaSection({
                   {roomSettings.is_locked ? `${t("meta.hostControl")}${t("meta.hostSuffix")}` : t("meta.freeControl")}
                 </Badge>
               )}
-            </div>
-
-            {/* Télémétrie et moteur de synchro */}
-            <div className="flex items-center justify-between text-xs font-mono text-zinc-400">
-              <div className="flex flex-col">
-                <span className="text-xs font-semibold font-sans text-zinc-200">{t("meta.settingsLatencyTitle")}</span>
-                <span className="text-[11px] font-sans text-zinc-500 mt-0.5">{t("meta.settingsLatencyDesc")}</span>
-              </div>
-              <div className="flex items-center gap-2 font-mono shrink-0">
-                <span className="text-[11px] text-zinc-400">RTT:</span>
-                <span className="text-xs text-zinc-400 font-medium">{ping !== undefined && ping > 0 ? `${ping}ms` : "--"}</span>
-              </div>
             </div>
           </div>
         </TabsContent>

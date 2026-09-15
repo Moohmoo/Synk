@@ -12,7 +12,7 @@ export function HomeView() {
 
   return (
     <div className="relative flex-1 flex flex-col items-center justify-center w-full max-w-full px-4 sm:px-6 md:px-12 py-10 animate-fade-in">
-      {/* POURQUOI : translate-y centre optiquement l'ensemble sur le halo d'ambiance */}
+      {/* Conteneur principal rehaussé au centre optique sous le halo */}
       <div className="relative z-10 flex flex-col items-center w-full -translate-y-8 sm:-translate-y-12">
         <Heading mode={home.mode} />
         <ModeToggle mode={home.mode} onChange={home.switchMode} />

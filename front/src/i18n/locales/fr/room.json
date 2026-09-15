@@ -73,9 +73,7 @@
     "queueEmptyTitle": "File d'attente vide",
     "queueEmptyDesc": "Les prochains médias apparaîtront ici.",
     "settingsLockTitle": "Accès aux commandes",
-    "settingsLockDesc": "Limiter le contrôle du lecteur à l'hôte uniquement.",
-    "settingsLatencyTitle": "Latence",
-    "settingsLatencyDesc": "Ajustement automatique du flux en temps réel."
+    "settingsLockDesc": "Limiter le contrôle du lecteur à l'hôte uniquement."
   },
   "hub": {
     "tabChat": "Chat",

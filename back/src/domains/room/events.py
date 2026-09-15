@@ -438,7 +438,7 @@ def _log_sync_drift(
         peer_name, peer_pos = peers[0]
         gap = abs(client_time - peer_pos)
         tag = "[SYNC:ALERT]" if gap > 2.0 else ("[SYNC:DRIFT]" if gap > 1.0 else "[SYNC:OK]")
-        log_fn = logger.warning if gap > 2.0 else logger.info
+        log_fn = logger.warning if gap > 2.0 else logger.debug
         log_fn(f"{tag} {room_id} | {username} ({client_time:.1f}s) vs {peer_name} ({peer_pos:.1f}s) | écart: {gap:.2f}s")
         return
 
@@ -446,7 +446,7 @@ def _log_sync_drift(
     ref_pos = calculate_reference_position(player, now_ms=now_ms)
     drift = ref_pos - client_time
     tag = "[SYNC:ALERT]" if abs(drift) > 2.0 else ("[SYNC:DRIFT]" if abs(drift) > 1.0 else "[SYNC:OK]")
-    log_fn = logger.warning if abs(drift) > 2.0 else logger.info
+    log_fn = logger.warning if abs(drift) > 2.0 else logger.debug
     log_fn(f"{tag} {room_id} | {username} local={client_time:.1f}s | réf={ref_pos:.1f}s | dérive={drift:+.2f}s")
 
 

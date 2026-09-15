@@ -17,9 +17,7 @@ const HEADINGS: Record<HomeMode, HeadingContent> = {
 };
 
 /**
- * En-tête dynamique de la page d'accueil :
- * POURQUOI : la superposition en grille CSS col-start-1 row-start-1 permet
- * de basculer de mode sans aucun saut de mise en page (layout shift).
+ * En-tête dynamique de la page d'accueil avec transition fluide sans saut de mise en page.
  */
 export function Heading({ mode }: HeadingProps) {
   const { t } = useTranslation("global");

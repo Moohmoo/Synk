@@ -73,9 +73,7 @@
     "queueEmptyTitle": "Queue is empty",
     "queueEmptyDesc": "Upcoming media will appear here.",
     "settingsLockTitle": "Controls access",
-    "settingsLockDesc": "Restrict playback controls to the host.",
-    "settingsLatencyTitle": "Latency",
-    "settingsLatencyDesc": "Automatic real-time stream adjustment."
+    "settingsLockDesc": "Restrict playback controls to the host."
   },
   "hub": {
     "tabChat": "Chat",
