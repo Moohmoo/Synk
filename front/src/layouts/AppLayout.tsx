@@ -29,7 +29,7 @@ export function AppLayout() {
 
       {/* Tiroir Mobile/Tablette de navigation (< lg) */}
       <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-        <SheetContent side="left" className="w-64 p-4 pt-6 bg-zinc-950 border-r border-white/5 flex flex-col">
+        <SheetContent side="left" className="w-64 p-4 pt-6 bg-zinc-950/90 backdrop-blur-xl border-r border-white/5 flex flex-col">
           <SheetHeader className="mb-6 px-2">
             <SheetTitle>
               <Logo onClick={() => setMobileMenuOpen(false)} />

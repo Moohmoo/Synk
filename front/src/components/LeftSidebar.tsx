@@ -62,7 +62,7 @@ export function LeftSidebar({ className }: LeftSidebarProps = {}) {
   return (
     <aside
       className={cn(
-        "flex-shrink-0 flex flex-col h-[calc(100vh-1rem)] relative z-10 bg-zinc-950 select-none mt-4 transition-all duration-300 ease-in-out",
+        "flex-shrink-0 flex flex-col h-[calc(100vh-1rem)] relative z-10 bg-zinc-950/40 backdrop-blur-xl select-none mt-4 transition-all duration-300 ease-in-out",
         isSidebarCollapsed ? "w-[64px]" : "w-[240px]",
         className
       )}
@@ -80,7 +80,7 @@ export function LeftSidebar({ className }: LeftSidebarProps = {}) {
         <button
           type="button"
           onClick={toggleSidebar}
-          className="p-1.5 rounded-md text-zinc-400 hover:text-white hover:bg-zinc-900 transition-colors cursor-pointer"
+          className="p-1.5 rounded-md text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
           title={isSidebarCollapsed ? t("nav.toggleExpand") : t("nav.toggleCollapse")}
           aria-label={isSidebarCollapsed ? t("nav.toggleExpand") : t("nav.toggleCollapse")}
         >
