@@ -24,14 +24,16 @@ export function SidebarSettings({ isCollapsed = false, className }: SidebarSetti
         <LanguageSwitcher compact />
         <Tooltip>
           <TooltipTrigger asChild>
-            <button
-              type="button"
-              disabled
-              className="flex items-center justify-center w-10 h-10 rounded-md text-zinc-600 opacity-40 cursor-not-allowed transition-colors"
-              aria-label={settingsTooltip}
-            >
-              <Settings className="w-4 h-4" />
-            </button>
+            <span className="inline-flex cursor-not-allowed">
+              <button
+                type="button"
+                disabled
+                className="flex items-center justify-center w-10 h-10 rounded-md text-zinc-600 opacity-40 pointer-events-none transition-colors"
+                aria-label={settingsTooltip}
+              >
+                <Settings className="w-4 h-4" />
+              </button>
+            </span>
           </TooltipTrigger>
           <TooltipContent side="right" sideOffset={10}>
             {settingsTooltip}
@@ -46,14 +48,16 @@ export function SidebarSettings({ isCollapsed = false, className }: SidebarSetti
       <LanguageSwitcher showGlobe />
       <Tooltip>
         <TooltipTrigger asChild>
-          <button
-            type="button"
-            disabled
-            className="p-1.5 rounded-md text-zinc-600 opacity-40 cursor-not-allowed transition-colors"
-            aria-label={settingsTooltip}
-          >
-            <Settings className="w-3.5 h-3.5" />
-          </button>
+          <span className="inline-flex cursor-not-allowed">
+            <button
+              type="button"
+              disabled
+              className="p-1.5 rounded-md text-zinc-600 opacity-40 pointer-events-none transition-colors"
+              aria-label={settingsTooltip}
+            >
+              <Settings className="w-3.5 h-3.5" />
+            </button>
+          </span>
         </TooltipTrigger>
         <TooltipContent side="top">
           {settingsTooltip}
