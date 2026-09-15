@@ -14,25 +14,26 @@ interface GlowSideProps {
  */
 function GlowSide({ side }: GlowSideProps) {
   const isLeft = side === "left";
-  const originX = isLeft ? "0%" : "100%";
-  const sidePosition = isLeft ? "left-0" : "right-0";
+  const sidePosition = isLeft ? "-left-10 top-[-6%]" : "right-0 top-0";
+  const blueGradient = isLeft
+    ? "radial-gradient(ellipse 100% 80% at -10% 10%, rgba(23, 37, 84, 0.5) 0%, rgba(30, 58, 138, 0.22) 40%, transparent 75%)"
+    : "radial-gradient(ellipse 100% 80% at 100% 20%, rgba(23, 37, 84, 0.85) 0%, rgba(30, 58, 138, 0.45) 35%, transparent 75%)";
+  const cyanGradient = isLeft
+    ? "radial-gradient(ellipse 100% 75% at -10% 28%, rgba(8, 145, 178, 0.3) 0%, rgba(10, 200, 185, 0.12) 40%, transparent 80%)"
+    : "radial-gradient(ellipse 100% 75% at 100% 38%, rgba(8, 145, 178, 0.6) 0%, rgba(10, 200, 185, 0.25) 40%, transparent 80%)";
 
   return (
-    <div className={cn("absolute top-0 h-full w-[520px] overflow-hidden pointer-events-none", sidePosition)}>
-      {/* 1. Halo supérieur : Bleu Nuit profond */}
+    <div className={cn("absolute h-full w-[540px] overflow-hidden pointer-events-none", sidePosition)}>
+      {/* 1. Halo supérieur : Bleu Nuit */}
       <div
-        className={cn("absolute top-0 w-[480px] h-[55%] blur-[68px]", sidePosition)}
-        style={{
-          background: `radial-gradient(ellipse 100% 80% at ${originX} 20%, rgba(23, 37, 84, 0.85) 0%, rgba(30, 58, 138, 0.45) 35%, transparent 75%)`,
-        }}
+        className={cn("absolute top-0 w-[480px] h-[55%] blur-[72px]", isLeft ? "left-0" : "right-0")}
+        style={{ background: blueGradient }}
       />
 
-      {/* 2. Halo médian : Cyan sombre et diffus (rappel de la marque SYNK) */}
+      {/* 2. Halo médian : Cyan sombre et diffus */}
       <div
-        className={cn("absolute top-[18%] w-[520px] h-[68%] blur-[72px]", sidePosition)}
-        style={{
-          background: `radial-gradient(ellipse 100% 75% at ${originX} 38%, rgba(8, 145, 178, 0.6) 0%, rgba(10, 200, 185, 0.25) 40%, transparent 80%)`,
-        }}
+        className={cn("absolute top-[18%] w-[520px] h-[68%] blur-[76px]", isLeft ? "left-0" : "right-0")}
+        style={{ background: cyanGradient }}
       />
     </div>
   );

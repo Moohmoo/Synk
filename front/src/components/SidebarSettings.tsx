@@ -16,6 +16,7 @@ export interface SidebarSettingsProps {
  */
 export function SidebarSettings({ isCollapsed = false, className }: SidebarSettingsProps) {
   const { t } = useTranslation("global");
+  const settingsTooltip = `${t("nav.settings")} (${t("platforms.comingSoon")})`;
 
   if (isCollapsed) {
     return (
@@ -25,14 +26,15 @@ export function SidebarSettings({ isCollapsed = false, className }: SidebarSetti
           <TooltipTrigger asChild>
             <button
               type="button"
-              className="flex items-center justify-center w-10 h-10 rounded-md text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.04] transition-colors cursor-pointer"
-              aria-label={t("nav.settings")}
+              disabled
+              className="flex items-center justify-center w-10 h-10 rounded-md text-zinc-600 opacity-40 cursor-not-allowed transition-colors"
+              aria-label={settingsTooltip}
             >
               <Settings className="w-4 h-4" />
             </button>
           </TooltipTrigger>
           <TooltipContent side="right" sideOffset={10}>
-            {t("nav.settings")}
+            {settingsTooltip}
           </TooltipContent>
         </Tooltip>
       </div>
@@ -46,14 +48,15 @@ export function SidebarSettings({ isCollapsed = false, className }: SidebarSetti
         <TooltipTrigger asChild>
           <button
             type="button"
-            className="p-1.5 rounded-md text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.04] transition-colors cursor-pointer"
-            aria-label={t("nav.settings")}
+            disabled
+            className="p-1.5 rounded-md text-zinc-600 opacity-40 cursor-not-allowed transition-colors"
+            aria-label={settingsTooltip}
           >
             <Settings className="w-3.5 h-3.5" />
           </button>
         </TooltipTrigger>
         <TooltipContent side="top">
-          {t("nav.settings")}
+          {settingsTooltip}
         </TooltipContent>
       </Tooltip>
     </div>

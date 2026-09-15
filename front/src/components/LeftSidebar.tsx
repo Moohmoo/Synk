@@ -62,7 +62,7 @@ export function LeftSidebar({ className }: LeftSidebarProps = {}) {
   return (
     <aside
       className={cn(
-        "flex-shrink-0 flex flex-col h-[calc(100vh-1rem)] relative z-10 bg-zinc-950/40 backdrop-blur-xl select-none mt-4 transition-all duration-300 ease-in-out",
+        "flex-shrink-0 flex flex-col h-[calc(100vh-1rem)] relative z-10 bg-zinc-950/40 backdrop-blur-xl select-none mt-4 transition-[width] duration-300 ease-in-out",
         isSidebarCollapsed ? "w-[64px]" : "w-[240px]",
         className
       )}

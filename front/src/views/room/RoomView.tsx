@@ -179,7 +179,7 @@ export function RoomView() {
                       ? "cursor-none"
                       : "cursor-default"
                   }`
-                : "w-full flex flex-col"
+                : "w-full flex flex-col p-3 sm:p-4 lg:p-5 gap-4"
             }
           >
             {/* LECTEUR VIDÉO 16:9 AVEC CONTRÔLES EN OVERLAY FLOTTANT AU SURVOL */}
