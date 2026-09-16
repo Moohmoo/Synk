@@ -44,26 +44,27 @@ L'ensemble des couleurs de SYNK est structuré autour d'une échelle sombre avec
 ## 4. Architecture de Mise en Page : « Floating Island » (Îlot Flottant)
 
 ### 4.1. Page d'Accueil (`/`) : L'Îlot Central
-Sur l'écran d'accueil, l'attention est focalisée sur un module unique surélevé au centre de l'écran :
+
+Sur grand écran (`>= lg`), l'application dispose d'une barre latérale gauche et d'un canvas principal sombre aux coins arrondis :
 
 ```text
-+-----------------------------------------------------------------------+
-|  SYNK [v1.0.0]                                           [GitHub]     |
-|                                                                       |
-|                     ┌───────────────────────────┐                     |
-|                     │     Lancer une session    │                     |
-|                     │  Synchronisez vos vidéos  │                     |
-|                     │    en temps réel.         │                     |
-|                     └─────────────┬─────────────┘                     |
-|                                   │                                   |
-|                      [ Créer un salon | Rejoindre ]                   |
-|                                   │                                   |
-|                     ┌───────────────────────────┐                     |
-|                     │ [ Entrez votre pseudo... ]│ [ CRÉER ]           |
-|                     └───────────────────────────┘                     |
-|                                                                       |
-|               YOUTUBE  /  TWITCH  /  VIMEO  /  DIRECT HLS             |
-+-----------------------------------------------------------------------+
++-----------------------------------------------------------------------------------------+
+| BARRE GAUCHE (Desktop)   |                    CANVAS PRINCIPAL (Sombre)                 |
+|                          |                                                              |
+| [Logo] SYNK              |                                                              |
+|                          |                     Lancer une session                       |
+| NAVIGATION               |            Créez un salon instantané et synchronisez         |
+| - Accueil (actif)        |                     vos vidéos en temps réel.                |
+| - Récents                |                                                              |
+|                          |                  [ Créer un salon | Rejoindre ]              |
+|                          |                                                              |
+|                          |          ┌───────────────────────────────────┬───────────┐   |
+|                          |          │  Entrez votre pseudo...           │  CRÉER    │   |
+|                          |          └───────────────────────────────────┴───────────┘   |
+|                          |                                                              |
+| PARAMÈTRES               |              [YouTube]  [Twitch: Soon]  [Direct: Soon]       |
+| [FR / EN]                |                                                              |
++-----------------------------------------------------------------------------------------+
 ```
 
 * **Omnibox unifiée :** Un seul champ de saisie intelligent gérant à la fois la création de salon, la validation du code d'invitation et la saisie du pseudo.
@@ -73,46 +74,48 @@ Sur l'écran d'accueil, l'attention est focalisée sur un module unique surélev
 
 ### 4.2. Salon de Visionnage (`/room/:roomId`) : Le Canvas Imbriqué
 
-Sur grand écran (desktop), l'interface adopte une disposition à deux colonnes asymétriques :
+Sur grand écran (desktop `>= xl`), l'interface s'organise en trois zones :
 
 ```text
-+------------------------------------------------------------------------------------------+
-| [Menu] SYNK             | #k8F2mX [Copier] | Host: Alice | Ping: 18ms     |  [Options]   |
-+-------------------------+-------------------------------------------------+--------------+
-| [Barre Gauche Repliable]|                  CANVAS VIDÉO                   | VOLET DROIT  |
-|                         |                                                 |              |
-|  - Accueil              |  ┌───────────────────────────────────────────┐  |  MEMBRES (3) |
-|  - Salons récents       |  │                                           │  |  - Alice     |
-|                         |  │             Lecteur 16:9                  │  |  - Bob       |
-|                         |  │                                           │  |  - Charlie   |
-|                         |  └───────────────────────────────────────────┘  |──────────────|
-|                         |  [Play] [04:12 / 10:00] [─────|─────] [Vol] [Max] |  CHAT LIVE   |
-|                         |                                                 |  Bob: Go !   |
-|                         |  ─────────────────────────────────────────────  |              |
-|                         |  Titre : Big Buck Bunny (YouTube)               |  [Message..] |
-+-------------------------+-------------------------------------------------+--------------+
++-----------------------------------------------------------------------------------------+
+| BARRE GAUCHE   |                       CANVAS VIDÉO                     | PANNEAU DROIT |
+|                |                                                        |               |
+| [Logo] SYNK    |  ┌──────────────────────────────────────────────────┐  | [Membres] Chat|
+|                |  │                                                  │  |───────────────|
+| NAVIGATION     |  │                 Lecteur Vidéo 16:9               │  | Membres (2)   |
+| - Accueil      |  │                (ou Dropzone si vide)             │  | - Alice (Hôte)|
+| - Récents      |  │                                                  │  | - Bob         |
+|                |  │ [Play] [04:12 / 10:00] [─────|─────] [Vol] [Max] │  |               |
+|                |  └──────────────────────────────────────────────────┘  |               |
+|                |                                                        |               |
+|                |  Point Vert LIVE  Titre de la vidéo    [CONTRÔLE HÔTE] │───────────────|
+|                |  ────────────────────────────────────────────────────  | Wifi 18ms     |
+| PARAMÈTRES     |  [RÉGLAGES]  File d'attente (Soon)                     | #k8F2mX       |
+| [FR / EN]      |  Option de verrouillage de la salle                    | [ Inviter ]   |
++-----------------------------------------------------------------------------------------+
 ```
 
 * **Lecteur 16:9 Cinématographique :** Le conteneur vidéo préserve strictement son ratio pour éviter tout décalage visuel (CLS = 0).
 * **Contrôles Overlay Flottants :** La barre de transport (play/pause, timeline, volume) s'affiche en transparence sur la vidéo et s'efface automatiquement après 3 secondes d'inactivité en lecture.
-* **Volet Droit Contextuel :** Onglets "Membres" et "Chat" ancrés à droite sur Desktop (`>= xl`).
+* **Sous le lecteur (`MetaSection`) :** Statut de connexion en direct, titre de la vidéo, badge de contrôle de la salle et onglets de réglages.
+* **Volet Droit Contextuel (`SidePanel`) :** Onglet "Membres" actif avec les participants connectés, onglet "Chat" (bientôt disponible), et carte en bas avec indicateur de latence (ping) et bouton d'invitation.
 
 ---
 
 ## 5. Stratégie Responsive (Mobile-First)
 
-L'expérience mobile s'adapte automatiquement sans perte de fonctionnalité :
+L'expérience s'adapte automatiquement selon la largeur de l'écran :
 
 ```mermaid
 flowchart TD
     ScreenSize{Taille d'écran}
     
     ScreenSize -->|">= 1280px (Desktop xl)"| FullLayout[Barre Gauche + Lecteur Central + Volet Droit Fixe]
-    ScreenSize -->|"1024px - 1279px (Tablette lg)"| TabletLayout[Barre Gauche + Lecteur Central + Volet Droit en Tiroir Sheet]
-    ScreenSize -->|"< 1024px (Mobile)"| MobileLayout[Plein Cadre 100% + Menu Burger + Tiroir Chat en Overlay]
+    ScreenSize -->|"1024px - 1279px (Desktop lg)"| TabletLayout[Barre Gauche + Lecteur Central + Volet Droit en Tiroir Drawer]
+    ScreenSize -->|"< 1024px (Mobile & Tablette)"| MobileLayout[Plein Cadre + Bouton Menu Burger + Tiroir Drawer sous la vidéo]
 ```
 
-* **Écrans mobiles (< 1024px) :**
-  * La barre latérale gauche disparaît au profit d'un bouton burger flottant discret en haut à gauche.
-  * Le panneau latéral droit (membres et chat) bascule dans un tiroir coulissant (`Drawer` / `Sheet`) accessible d'un tap sous le lecteur.
-  * Les contrôles de volume fins sont masqués pour aérer l'interface (les utilisateurs utilisent les boutons physiques du smartphone).
+* **Écrans mobiles et tablettes (< 1024px) :**
+  * La barre latérale gauche disparaît au profit d'un bouton burger discret en haut à gauche qui ouvre un tiroir coulissant (`Sheet`).
+  * Le panneau latéral droit (membres et carte salon) est accessible via un bouton dédié sous la vidéo ouvrant un tiroir inférieur (`Drawer`).
+  * Les réglages fins de volume sont masqués sur mobile pour laisser place aux boutons physiques de l'appareil.
