@@ -1,7 +1,8 @@
-# Spécifications UI/UX & Design System — SYNK
+# Spécifications UI/UX & Design System : SYNK
 
-> **Document Version :** 1.0.0-beta  
-> **Philosophie Visuelle :** Minimalisme Mécanique (*Cyber-Industrial Dark*)
+> **Version :** 1.0.0-beta  
+> **Philosophie Visuelle :** Minimalisme Mécanique  
+> **Auteur :** Mohmo
 
 ---
 
@@ -35,8 +36,8 @@ L'ensemble des couleurs de SYNK est structuré autour d'une échelle sombre avec
 
 ## 3. Typographie
 
-* **Interface & Titres :** `Inter` (sans-serif) — Clarté, lisibilité maximale sur tous types d'écrans.
-* **Données Techniques & Métriques :** `Geist Mono` — Horodatages vidéo (`04:12 / 12:30`), codes de salon (`#k8F2mX`), latence (`24ms`).
+* **Interface & Titres :** `Inter` (sans-serif) : Clarté, lisibilité maximale sur tous types d'écrans.
+* **Données Techniques & Métriques :** `Geist Mono` : Horodatages vidéo (`04:12 / 12:30`), codes de salon (`#k8F2mX`), latence (`24ms`).
 
 ---
 
@@ -47,7 +48,7 @@ Sur l'écran d'accueil, l'attention est focalisée sur un module unique surélev
 
 ```text
 +-----------------------------------------------------------------------+
-|  SYNK [v1.0.0]                                           [GitHub ↗]   |
+|  SYNK [v1.0.0]                                           [GitHub]     |
 |                                                                       |
 |                     ┌───────────────────────────┐                     |
 |                     │     Lancer une session    │                     |
@@ -66,7 +67,7 @@ Sur l'écran d'accueil, l'attention est focalisée sur un module unique surélev
 ```
 
 * **Omnibox unifiée :** Un seul champ de saisie intelligent gérant à la fois la création de salon, la validation du code d'invitation et la saisie du pseudo.
-* **Transition sans saut :** Bascule instantanée entre les modes « Créer » et « Rejoindre » via un commutateur mécanique fluide (`ModeToggle`).
+* **Transition sans saut :** Bascule instantanée entre les modes "Créer" et "Rejoindre" via un commutateur mécanique fluide (`ModeToggle`).
 
 ---
 
@@ -76,16 +77,16 @@ Sur grand écran (desktop), l'interface adopte une disposition à deux colonnes 
 
 ```text
 +------------------------------------------------------------------------------------------+
-| [≡] SYNK                | #k8F2mX [Copier] | Host: Alice | Ping: 18ms     |  Paramètres ⚙|
+| [Menu] SYNK             | #k8F2mX [Copier] | Host: Alice | Ping: 18ms     |  [Options]   |
 +-------------------------+-------------------------------------------------+--------------+
 | [Barre Gauche Repliable]|                  CANVAS VIDÉO                   | VOLET DROIT  |
 |                         |                                                 |              |
-|  • Accueil              |  ┌───────────────────────────────────────────┐  |  MEMBRES (3) |
-|  • Salons récents       |  │                                           │  |  • Alice 👑  |
-|                         |  │             Lecteur 16:9                  │  |  • Bob       |
-|                         |  │                                           │  |  • Charlie   |
+|  - Accueil              |  ┌───────────────────────────────────────────┐  |  MEMBRES (3) |
+|  - Salons récents       |  │                                           │  |  - Alice     |
+|                         |  │             Lecteur 16:9                  │  |  - Bob       |
+|                         |  │                                           │  |  - Charlie   |
 |                         |  └───────────────────────────────────────────┘  |──────────────|
-|                         |  [▶] [04:12 / 10:00] [───────•─────] [🔊] [⛶]   |  CHAT LIVE   |
+|                         |  [Play] [04:12 / 10:00] [─────|─────] [Vol] [Max] |  CHAT LIVE   |
 |                         |                                                 |  Bob: Go !   |
 |                         |  ─────────────────────────────────────────────  |              |
 |                         |  Titre : Big Buck Bunny (YouTube)               |  [Message..] |

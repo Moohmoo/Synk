@@ -1,7 +1,8 @@
-# Architecture Frontend — SYNK
+# Architecture Frontend : SYNK
 
-> **Document Version :** 1.0.0-beta  
-> **Framework :** React 18.3 + TypeScript 5.7 + Vite 6.2
+> **Version :** 1.0.0-beta  
+> **Framework :** React 18.3 + TypeScript 5.7 + Vite 6.2  
+> **Auteur :** Mohmo
 
 ---
 

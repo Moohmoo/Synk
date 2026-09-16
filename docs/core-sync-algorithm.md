@@ -1,7 +1,8 @@
-# Algorithme de Synchronisation Temps Réel — SYNK
+# Algorithme de Synchronisation Temps Réel : SYNK
 
-> **Document Version :** 1.0.0-beta  
-> **Composant Critique :** Moteur de lecture distribué & Recalage temporel
+> **Version :** 1.0.0-beta  
+> **Composant :** Moteur de lecture distribué et recalage temporel
+> **Auteur :** Mohmo
 
 ---
 

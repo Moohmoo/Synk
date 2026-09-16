@@ -1,7 +1,8 @@
-# Spécifications Techniques & Justifications d'Architecture — SYNK
+# Spécifications Techniques & Justifications d'Architecture : SYNK
 
-> **Document Version :** 1.0.0-beta  
-> **Cible :** Architecture logicielle, Performance temps réel, Résilience distribuée
+> **Version :** 1.0.0-beta  
+> **Cible :** Architecture logicielle, Performance temps réel, Résilience distribuée  
+> **Auteur :** Mohmo
 
 ---
 
