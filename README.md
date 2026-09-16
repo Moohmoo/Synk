@@ -1,115 +1,143 @@
-# SYNK — Synchronisation Multimédia en Temps Réel
+<h1 align="center">Synk</h1>
 
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue.svg?logo=typescript)](https://www.typescriptlang.org/)
-[![React](https://img.shields.io/badge/React-18.3-61dafb.svg?logo=react)](https://react.dev/)
-[![Vite](https://img.shields.io/badge/Vite-6.2-646cff.svg?logo=vite)](https://vitejs.dev/)
-[![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.4-38b2ac.svg?logo=tailwind-css)](https://tailwindcss.com/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688.svg?logo=fastapi)](https://fastapi.tiangolo.com/)
-[![Python](https://img.shields.io/badge/Python-3.12-3776ab.svg?logo=python)](https://www.python.org/)
-[![Redis](https://img.shields.io/badge/Redis-7.0-dc382d.svg?logo=redis)](https://redis.io/)
-[![Docker](https://img.shields.io/badge/Docker-Compose-2496ed.svg?logo=docker)](https://www.docker.com/)
+<p align="center">
+  The open-source real-time video synchronization platform.
+  <br />
+  <br />
+  <a href="#introduction"><strong>Introduction</strong></a> ·
+  <a href="#features"><strong>Features</strong></a> ·
+  <a href="#tech-stack"><strong>Tech Stack</strong></a> ·
+  <a href="#quickstart"><strong>Quickstart</strong></a> ·
+  <a href="#documentation"><strong>Documentation</strong></a> ·
+  <a href="#contributing"><strong>Contributing</strong></a>
+</p>
 
-> **Elevator Pitch :** Synk est une Web App SaaS de synchronisation multimédia ultra-rapide permettant à plusieurs utilisateurs distants de visionner des flux vidéo en parfaite cohérence temporelle (< 200 ms d'écart), sans inscription, sans extension de navigateur et sans publicité.
+<p align="center">
+  <a href="./LICENSE">
+    <img src="https://img.shields.io/badge/license-MIT-blue.svg?style=flat" alt="License" />
+  </a>
+  <a href="https://react.dev/">
+    <img src="https://img.shields.io/badge/React-18.3-61dafb.svg?style=flat&logo=react" alt="React" />
+  </a>
+  <a href="https://fastapi.tiangolo.com/">
+    <img src="https://img.shields.io/badge/FastAPI-0.115-009688.svg?style=flat&logo=fastapi" alt="FastAPI" />
+  </a>
+  <a href="https://redis.io/">
+    <img src="https://img.shields.io/badge/Redis-7.0-dc382d.svg?style=flat&logo=redis" alt="Redis" />
+  </a>
+  <a href="https://www.docker.com/">
+    <img src="https://img.shields.io/badge/Docker-Compose-2496ed.svg?style=flat&logo=docker" alt="Docker" />
+  </a>
+</p>
 
----
+<br/>
 
-## ⚡ Fonctionnalités Clés
+## Introduction
 
-* **Synchronisation chirurgicale (< 200 ms) :** Algorithme d'extrapolation temporelle avec compensation de l'horloge réseau (formule SNTP / RFC 4330).
-* **Multi-fournisseurs (Strategy Pattern) :** Support natif de YouTube, Twitch, Vimeo et flux directs (MP4 / HLS).
-* **Contrôle d'accès granulaire :** Mode Hôte exclusif (contrôles verrouillés) ou Mode Collaboratif libre.
-* **Résilience & Présence temps réel :** WebSockets bidirectionnels, monitoring du ping individuel, détection de déconnexion et transfert d'hôte automatique.
-* **Zéro friction :** Salons éphémères créés en 1 clic, persistance locale de session (`sessionStorage`/`localStorage`), partage direct par URL.
-* **Architecture Mobile-first :** Interface adaptative conçue pour smartphones, tablettes et écrans larges avec tiroirs rétractables (*Sheets*).
+**Synk** is an ultra-low latency, open-source web application designed for synchronized video co-watching.
 
----
+Built with an SNTP-inspired clock drift compensation algorithm (RFC 4330), Synk guarantees sub-200ms temporal alignment across participants worldwide — without browser extensions, user accounts, or advertisements.
 
-## 🏗️ Architecture Globale
+## Features
 
-```text
-[ Client Web (React 18 / Vite / Tailwind) ]
-                     │
-                     │  HTTP REST (Création / État)
-                     │  WebSocket Socket.IO (Sync bidirectionnelle)
-                     ▼
-       [ Backend API (FastAPI / Asynchrone) ]
-                     │
-         ┌───────────┴───────────┐
-         ▼                       ▼
-  [ Redis Key-Value ]     [ Redis Pub/Sub ]
- (État salon, TTL 2h)    (Diffusion multi-workers)
-```
+- **Sub-200ms Drift Compensation** – Real-time kinematic extrapolation and network latency compensation.
+- **Multi-Source Support** – Seamless playback across YouTube, Twitch, Vimeo, and direct MP4/HLS streams via Strategy pattern.
+- **Dynamic Authority Modes** – Switch instantly between strict Host Authority (locked controls) and Collaborative Free mode.
+- **Zero-Friction Ephemeral Rooms** – 1-click room creation with NanoID, shareable links, and persistent local sessions.
+- **Floating Island UX** – Distraction-free, responsive dark interface built with Tailwind CSS and Radix UI primitives.
+- **Resilient WebSockets** – Bidirectional Socket.IO heartbeats, auto-reconnection, and automatic host migration.
 
----
+## Tech Stack
 
-## 🚀 Guide de Démarrage Rapide (Quickstart)
+- [FastAPI](https://fastapi.tiangolo.com/) – backend ASGI framework
+- [Python 3.12](https://www.python.org/) – runtime
+- [Redis 7](https://redis.io/) – in-memory state & Pub/Sub
+- [React 18](https://react.dev/) – UI library
+- [TypeScript](https://www.typescriptlang.org/) – language
+- [Vite 6](https://vite.dev/) – frontend build tool
+- [Tailwind CSS](https://tailwindcss.com/) – CSS styling
+- [Zustand](https://zustand.docs.pmnd.rs/) – client state management
+- [Socket.IO](https://socket.io/) – real-time bidirectional communication
+- [Docker](https://www.docker.com/) – containerization & orchestration
 
-### Prérequis
-* Docker & Docker Compose **OU** Node.js 20+ et Python 3.12+ avec `uv`.
+## Quickstart
 
-### Option A : Lancement immédiat via Docker Compose (Recommandé)
+### Recommended Versions
+
+| Package | Recommended Version |
+| :--- | :--- |
+| **Node.js** | `>= 20.x` |
+| **Python** | `>= 3.12` |
+| **Docker** | `>= 24.x` |
+| **uv** | `>= 0.4.x` |
+
+### Option A: Docker Compose (Recommended)
+
+Run the entire stack (Frontend, Backend, Redis) with a single command:
 
 ```bash
-# 1. Cloner le dépôt
+# 1. Clone the repository
 git clone https://github.com/Moohmoo/Synk.git
 cd Synk
 
-# 2. Démarrer l'ensemble des conteneurs (Redis, Backend FastAPI, Frontend Vite)
+# 2. Start all containers in background
 docker compose up -d
 
-# 3. Consulter les logs en direct
+# 3. View live logs
 docker compose logs -f
 ```
 
-**Services disponibles :**
-* 🌐 **Frontend Web :** [http://localhost:3000](http://localhost:3000)
-* ⚙️ **Backend API :** [http://localhost:8000](http://localhost:8000)
-* 📖 **Swagger / OpenAPI :** [http://localhost:8000/docs](http://localhost:8000/docs)
-* 🧠 **Redis Server :** `localhost:6379`
+**Services:**
+- 🌐 **Web App:** [http://localhost:3000](http://localhost:3000)
+- ⚙️ **Backend API:** [http://localhost:8000](http://localhost:8000)
+- 📖 **Interactive API Docs (Swagger):** [http://localhost:8000/docs](http://localhost:8000/docs)
+- 🧠 **Redis Instance:** `localhost:6379`
 
 ---
 
-### Option B : Développement Local (Sans Docker)
+### Option B: Local Development
 
-#### 1. Backend (Python / FastAPI)
+#### 1. Backend (FastAPI & uv)
 ```bash
 cd back
-uv sync                                               # Installation des dépendances avec uv
+uv sync
 PYTHONPATH=src uv run uvicorn main:app --reload --port 8000
 ```
 
-#### 2. Frontend (React / Vite)
+#### 2. Frontend (React & Vite)
 ```bash
 cd front
-npm install                                           # Installation des dépendances
-npm run dev                                           # Serveur de développement sur http://localhost:3000
+npm install
+npm run dev
 ```
 
-#### 3. Exécution des Tests
+#### 3. Verification & Tests
 ```bash
-# Tests unitaires & intégration Backend (Pytest)
-docker exec synk-back /app/.venv/bin/pytest
-# Ou en local :
+# Backend pytest suite (31 unit & integration tests)
 cd back && PYTHONPATH=src uv run pytest
 
-# Compilation et vérification TypeScript Frontend
+# Frontend TypeScript check & production build
 cd front && npm run build
 ```
 
----
+## Documentation
 
-## 📚 Documentation Technique
+Full architectural guides and technical specifications are available in the [`/docs`](./docs) folder:
 
-L'intégralité des spécifications techniques et guides d'architecture est centralisée dans le dossier [`/docs`](./docs/) :
+- [Product Requirements Document (PRD)](./docs/PRD.md) – Problem statement, target personas, and scope.
+- [UI/UX Flows & Design System](./docs/ui-ux-flows.md) – Floating Island layout, tokens, and responsive sheets.
+- [Technical Specifications](./docs/tech-specs.md) – Architectural decisions, benchmarks, and Redis schema.
+- [Frontend Architecture](./docs/front-architecture.md) – Modular tree, sync guards, and Zustand state.
+- [Core Sync Algorithm](./docs/core-sync-algorithm.md) – Drift math, SNTP offset, and playback state machine.
 
-1. [**PRD (Product Requirements Document)**](./docs/PRD.md) : Vision produit, public cible, périmètre MVP vs V2.
-2. [**Spécifications UI/UX & Design**](./docs/ui-ux-flows.md) : Charte *Minimalisme Mécanique*, palette Zinc/Cyan, ergonomie *Floating Island*.
-3. [**Spécifications Techniques**](./docs/tech-specs.md) : Justifications de la stack, Redis schema, contrats d'API.
-4. [**Architecture Frontend**](./docs/front-architecture.md) : Organisation modulaire, routing, gestion d'état Zustand.
-5. [**Algorithme de Synchronisation**](./docs/core-sync-algorithm.md) : Horloge de référence, compensation du ping, machine d'état.
+## Contributing
 
----
+1. Fork the project & create your feature branch (`git checkout -b feature/amazing-feature`).
+2. Verify tests pass (`uv run pytest` and `npm run build`).
+3. Commit your changes following conventional commits.
+4. Push to the branch (`git push origin feature/amazing-feature`).
+5. Open a Pull Request.
 
-## 📄 Licence
+## License
 
-Ce projet est sous licence MIT. Consultez le fichier [LICENSE](./LICENSE) pour plus de détails.
+This project is open-source and licensed under the [MIT License](./LICENSE).
