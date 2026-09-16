@@ -1,155 +1,117 @@
-# UI/UX Specifications & User Flows — Synk
+# Spécifications UI/UX & Design System — SYNK
 
-## 1. Direction Artistique & Charte Graphique (Inspiration LoL Esports)
-
-* **Ambiance générale :** Style « dark tech » épuré, aéré et immersif. Fond noir profond avec contrastes nets.
-* **Palette de couleurs :**
-  * **Fond principal :** Noir profond (`#050505` / Tailwind `bg-zinc-950`) pour fondre l'interface et faire ressortir la vidéo.
-  * **Surfaces / Cartes :** Gris sombre subtil (`#0F0F11` / Tailwind `bg-zinc-900/60`) avec bordures ultra-fines (`#1E1E24` / `border-zinc-800`).
-  * **Couleur d'accent (Brand) :** Cyan électrique (`#00E5FF` ou `#06B6D4` / Tailwind `text-cyan-400`, `bg-cyan-500`) pour les boutons d'action clés, les états actifs et les badges.
-  * **Textes :** Blanc pur (`#FFFFFF`) pour les titres et gris neutre (`#A1A1AA` / `text-zinc-400`) pour les informations secondaires.
-* **Typographie & Détails :**
-  * Petits libellés de section en majuscules discrètes (`SALON`, `PARTICIPANTS`, `CHAT`).
-  * Zéro ombre lourde, pas de fioritures : séparation nette par des lignes fines.
-* **Responsive :** Optimisé en priorité pour Desktop (lecteur 70 % / panneau 30 %), avec disposition empilée sur Mobile.
+> **Document Version :** 1.0.0-beta  
+> **Philosophie Visuelle :** Minimalisme Mécanique (*Cyber-Industrial Dark*)
 
 ---
 
-## 2. Wireframes des Écrans
+## 1. Direction Artistique : « Minimalisme Mécanique »
 
-### 2.1. Page d'Accueil (`/`)
+La direction artistique de **SYNK** repose sur l'élimination systématique du superflu pour créer une ambiance high-tech sobre et fonctionnelle.
 
-Page d'atterrissage ultra-épurée avec deux actions : créer un salon ou en rejoindre un via un code.
-
-```text
-+-----------------------------------------------------------------------+
-|  [Logo] Synk                                              [GitHub ↗]  |
-|                                                                       |
-|                                                                       |
-|                         Regardez ensemble.                            |
-|                       Parfaitement synchronisés.                      |
-|                                                                       |
-|             +-------------------------------------------+             |
-|             | Votre pseudo : [ Alice                  ] |             |
-|             |                                           |             |
-|             | [  Créer un salon instantané (1 clic)   ] |             |
-|             +-------------------------------------------+             |
-|                                                                       |
-|                                 — OU —                                |
-|                                                                       |
-|             +-------------------------------------------+             |
-|             | Code du salon : [ loup-bleu-42 ] [Rejoindre]|            |
-|             +-------------------------------------------+             |
-|                                                                       |
-|                                                                       |
-|  Open source • 100 % gratuit • Sans extension • Sans pub              |
-+-----------------------------------------------------------------------+
-```
-
-### 2.2. Modale Invité — Arrivée via Lien Direct (/room/[roomId])
-
-Quand un utilisateur clique sur un lien partagé sans avoir de session active :
-
-```text
-+-----------------------------------------------------------------------+
-|                                                                       |
-|                 +-----------------------------------+                 |
-|                 |  Rejoindre le salon               |                 |
-|                 |  "loup-bleu-42"                   |                 |
-|                 |                                   |                 |
-|                 |  Entrez votre pseudo :            |                 |
-|                 |  [ Bob                          ] |                 |
-|                 |                                   |                 |
-|                 |  [ Entrer dans la session       ] |                 |
-|                 +-----------------------------------+                 |
-|                                                                       |
-+-----------------------------------------------------------------------+
-```
-
-### 2.3. Salle de Visionnage — Desktop (/room/[roomId])
-
-Disposition à deux colonnes : le lecteur à gauche (70 % de la largeur) et le panneau latéral à droite (30 %).
-
-```text
-+---------------------------------------------------------------------------------------+
-| [Logo] Synk  |  Salon: loup-bleu-42  [Copier lien 🔗] | [● Synchro: 24ms]  [Quitter ✕]|
-+-------------------------------------------------------------+-------------------------+
-|                                                             | [👥 MEMBRES (3)] [💬 CHAT]|
-|  +-------------------------------------------------------+  |-------------------------|
-|  | [URL YouTube] [https://youtube.com/watch?v=](https://youtube.com/watch?v=)... [Charger] |  | • Alice (Hôte 👑)       |
-|  +-------------------------------------------------------+  | • Bob                   |
-|                                                             | • Chloé                 |
-|  +-------------------------------------------------------+  |-------------------------|
-|  |                                                       |  | Alice: Salut !  |
-|  |                                                       |  | Bob a rejoint    |
-|  |                                                       |  | * Alice a mis   |
-|  |                   LECTEUR VIDÉO                       |  |   la vidéo en pause *   |
-|  |                                                       |  | Chloé: On lance?|
-|  |                                                       |  |                         |
-|  |                                                       |  |                         |
-|  +-------------------------------------------------------+  |                         |
-|  | [▶ / ⏸] [ 04:12 / 12:30 ] [======•-------] [🔊 80%]   |  |                         |
-|  +-------------------------------------------------------+  |                         |
-|                                                             |-------------------------|
-|  Toast système : ℹ️ Alice a mis la vidéo en pause à 04:12   | [Message...     ] [Env.]|
-+-------------------------------------------------------------+-------------------------+
-```
-
-### 2.4. Salle de Visionnage — Mobile (`/room/[roomId]`)
-
-Sur mobile, l'interface s'empile verticalement avec un système d'onglets sous la vidéo pour basculer entre le chat et la liste des membres.
-
-```text
-+-----------------------------------+
-| Synk | loup-bleu-42   [🔗]  [●]  |
-+-----------------------------------+
-|                                   |
-|          LECTEUR VIDÉO            |
-|                                   |
-+-----------------------------------+
-| [▶] [ 04:12 / 12:30 ]    [🔊]     |
-+-----------------------------------+
-| [ 💬 Chat (2) ]  |  [ 👥 Membres (3) ] |
-+-----------------------------------+
-| Alice: Salut tout le monde|
-| * Alice a mis en pause *  |
-| Bob: Prêt !               |
-|                                   |
-|                                   |
-+-----------------------------------+
-| [Écrire un message...     ] [ > ] |
-+-----------------------------------+
-```
-
-## 3. Composants d'État et Feedback Utilisateur
-
-### 3.1. Indicateur de Synchronisation Réseau
-Situé dans la barre supérieure, il informe l'utilisateur de l'état de sa connexion avec le salon :
-
-| État | Visuel | Déclencheur |
-|---|---|---|
-| **Optimal** | `● Vert` (Synchro < 100 ms) | Connexion stable, décalage imperceptible. |
-| **Recalage** | `● Orange` (Drift corrigé) | Décalage entre 500 ms et 1,5 s, accélération douce en cours. |
-| **Désynchronisé** | `● Rouge` (Perte de signal) | Reconnexion WebSocket en cours ou latence critique (> 2 s). |
-
-### 3.2. Toasts de Notification Système
-Bannières temporaires semi-transparentes (durée : 3 secondes) qui apparaissent au-dessus du lecteur pour expliciter les actions distantes :
-* *« Alice a mis la vidéo en pause »*
-* *« Bob a avancé la lecture à 05:20 »*
-* *« Chloé a chargé une nouvelle vidéo »*
-* *« Vous êtes désormais l'hôte du salon »*
+### 1.1. Principes Fondateurs
+* **Effacement au profit du média :** L'interface doit s'estomper lorsque la vidéo joue. Zéro distraction visuelle inutile.
+* **Précision chirurgicale :** Angles nets, typographies monospace pour les métriques, bordures ultra-fines (1px) semi-transparentes.
+* **Pas de "Div Soup" :** Arbre DOM plat, hiérarchie visuelle gérée par les contrastes de luminosité plutôt que par une accumulation de conteneurs.
 
 ---
 
-## 4. Matrice des Interactions & Réponses UI
+## 2. Palette Chromatique & Tokens de Design
 
-| Action Utilisateur | Retour UI Immédiat | Notification Distante |
-|---|---|---|
-| **Clic sur « Copier lien »** | Changement du bouton en `Copié ! ✓` (cyan/vert) pendant 2 s | Aucun |
-| **Changement d'URL vidéo** | Affichage d'un indicateur de chargement dans le lecteur | Toast système chez tous les invités + actualisation du lecteur |
-| **Clic Pause / Play** | Changement instantané de l'icône du lecteur | Toast système + synchronisation immédiate de l'état |
-| **Curseur déplacé (Seek)** | Curseur de lecture mis à jour | Recalage temporel des autres participants |
-| **Envoi message chat** | Message affiché instantanément en local | Message poussé en bas du fil de discussion des autres membres |
+L'ensemble des couleurs de SYNK est structuré autour d'une échelle sombre avec un contraste d'accentuation haute visibilité :
 
+| Rôle | Token / Valeur CSS | Utilisation |
+| :--- | :--- | :--- |
+| **Noir Absolu (Mur)** | `#000000` / `bg-black` | Arrière-plan global et fond du lecteur vidéo pour immersion totale. |
+| **Fond d'Application (Canvas)** | `#09090b` / `zinc-950` | Conteneur applicatif principal et tiroirs latéraux. |
+| **Surfaces & Cartes** | `#18181b` / `zinc-900` | Éléments interactifs, barre latérale, modales. |
+| **Bordures Subtiles** | `rgba(255, 255, 255, 0.05)` | Délimitations discrètes sans rupture brutale. |
+| **Couleur Signature (Cyan)** | `#0ac8b9` (`rgba(10, 200, 185, 1)`) | Boutons d'action principaux, jauges de lecture, statut de synchro, logo. |
+| **Texte Principal** | `#f4f4f5` / `zinc-100` | Titres et contenus actifs. |
+| **Texte Secondaire** | `#a1a1aa` / `zinc-400` | Labels, horodatages, états inactifs. |
+| **Alerte / Verrou** | `#f43f5e` / `rose-500` | Déconnexion, erreurs réseau, contrôle exclusif. |
 
+---
 
+## 3. Typographie
+
+* **Interface & Titres :** `Inter` (sans-serif) — Clarté, lisibilité maximale sur tous types d'écrans.
+* **Données Techniques & Métriques :** `Geist Mono` — Horodatages vidéo (`04:12 / 12:30`), codes de salon (`#k8F2mX`), latence (`24ms`).
+
+---
+
+## 4. Architecture de Mise en Page : « Floating Island » (Îlot Flottant)
+
+### 4.1. Page d'Accueil (`/`) : L'Îlot Central
+Sur l'écran d'accueil, l'attention est focalisée sur un module unique surélevé au centre de l'écran :
+
+```text
++-----------------------------------------------------------------------+
+|  SYNK [v1.0.0]                                           [GitHub ↗]   |
+|                                                                       |
+|                     ┌───────────────────────────┐                     |
+|                     │     Lancer une session    │                     |
+|                     │  Synchronisez vos vidéos  │                     |
+|                     │    en temps réel.         │                     |
+|                     └─────────────┬─────────────┘                     |
+|                                   │                                   |
+|                      [ Créer un salon | Rejoindre ]                   |
+|                                   │                                   |
+|                     ┌───────────────────────────┐                     |
+|                     │ [ Entrez votre pseudo... ]│ [ CRÉER ]           |
+|                     └───────────────────────────┘                     |
+|                                                                       |
+|               YOUTUBE  /  TWITCH  /  VIMEO  /  DIRECT HLS             |
++-----------------------------------------------------------------------+
+```
+
+* **Omnibox unifiée :** Un seul champ de saisie intelligent gérant à la fois la création de salon, la validation du code d'invitation et la saisie du pseudo.
+* **Transition sans saut :** Bascule instantanée entre les modes « Créer » et « Rejoindre » via un commutateur mécanique fluide (`ModeToggle`).
+
+---
+
+### 4.2. Salon de Visionnage (`/room/:roomId`) : Le Canvas Imbriqué
+
+Sur grand écran (desktop), l'interface adopte une disposition à deux colonnes asymétriques :
+
+```text
++------------------------------------------------------------------------------------------+
+| [≡] SYNK                | #k8F2mX [Copier] | Host: Alice | Ping: 18ms     |  Paramètres ⚙|
++-------------------------+-------------------------------------------------+--------------+
+| [Barre Gauche Repliable]|                  CANVAS VIDÉO                   | VOLET DROIT  |
+|                         |                                                 |              |
+|  • Accueil              |  ┌───────────────────────────────────────────┐  |  MEMBRES (3) |
+|  • Salons récents       |  │                                           │  |  • Alice 👑  |
+|                         |  │             Lecteur 16:9                  │  |  • Bob       |
+|                         |  │                                           │  |  • Charlie   |
+|                         |  └───────────────────────────────────────────┘  |──────────────|
+|                         |  [▶] [04:12 / 10:00] [───────•─────] [🔊] [⛶]   |  CHAT LIVE   |
+|                         |                                                 |  Bob: Go !   |
+|                         |  ─────────────────────────────────────────────  |              |
+|                         |  Titre : Big Buck Bunny (YouTube)               |  [Message..] |
++-------------------------+-------------------------------------------------+--------------+
+```
+
+* **Lecteur 16:9 Cinématographique :** Le conteneur vidéo préserve strictement son ratio pour éviter tout décalage visuel (CLS = 0).
+* **Contrôles Overlay Flottants :** La barre de transport (play/pause, timeline, volume) s'affiche en transparence sur la vidéo et s'efface automatiquement après 3 secondes d'inactivité en lecture.
+* **Volet Droit Contextuel :** Onglets "Membres" et "Chat" ancrés à droite sur Desktop (`>= xl`).
+
+---
+
+## 5. Stratégie Responsive (Mobile-First)
+
+L'expérience mobile s'adapte automatiquement sans perte de fonctionnalité :
+
+```mermaid
+flowchart TD
+    ScreenSize{Taille d'écran}
+    
+    ScreenSize -->|">= 1280px (Desktop xl)"| FullLayout[Barre Gauche + Lecteur Central + Volet Droit Fixe]
+    ScreenSize -->|"1024px - 1279px (Tablette lg)"| TabletLayout[Barre Gauche + Lecteur Central + Volet Droit en Tiroir Sheet]
+    ScreenSize -->|"< 1024px (Mobile)"| MobileLayout[Plein Cadre 100% + Menu Burger + Tiroir Chat en Overlay]
+```
+
+* **Écrans mobiles (< 1024px) :**
+  * La barre latérale gauche disparaît au profit d'un bouton burger flottant discret en haut à gauche.
+  * Le panneau latéral droit (membres et chat) bascule dans un tiroir coulissant (`Drawer` / `Sheet`) accessible d'un tap sous le lecteur.
+  * Les contrôles de volume fins sont masqués pour aérer l'interface (les utilisateurs utilisent les boutons physiques du smartphone).
