@@ -40,7 +40,7 @@ function getMediaDisplayTitle(mediaUrl?: string | null): string | null {
 }
 
 /**
- * Section méta et conteneur d'onglets légers sous le lecteur vidéo 16:9.
+ * Informations sur le média et onglets de réglages sous le lecteur vidéo.
  */
 export function MetaSection({
   mediaUrl,
@@ -90,7 +90,7 @@ export function MetaSection({
         </div>
       </div>
 
-      {/* 2. Conteneur d'onglets légers : Réglages (Actif) & File d'attente (Bientôt disponible) */}
+      {/* Onglets : Réglages et File d'attente */}
       <Tabs defaultValue="settings" className="w-full">
         <TabsList className="bg-transparent border-b border-white/5 justify-start h-9 p-0 gap-6 w-full">
           <TabsTrigger

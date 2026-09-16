@@ -151,7 +151,7 @@ export function MediaPlayer({
             </div>
           )}
 
-          {/* Contrôles de lecture Scrim Overlay */}
+          {/* Contrôles de lecture (overlay) */}
           {controlsSlot}
         </>
       )}

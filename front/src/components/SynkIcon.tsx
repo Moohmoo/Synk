@@ -7,9 +7,7 @@ export interface SynkIconProps {
 }
 
 /**
- * SynkIcon : Emblème géométrique compact "Minimalisme Mécanique" (Charte Cyber-Tech).
- * - Cadre biseauté en Cyan électrique éclatant (#0ac8b9).
- * - Double chevron central "Fast-Forward / Sync" en blanc pur avec lueur réactive.
+ * Icône SVG du logo Synk avec effet de lueur optionnel.
  */
 export function SynkIcon({
   className,
@@ -26,7 +24,7 @@ export function SynkIcon({
       className={cn("shrink-0", className)}
       aria-hidden="true"
     >
-      {/* Cadre extérieur : 4 coins en Cyan électrique signature */}
+      {/* Coins extérieurs */}
       <g fill="#0ac8b9" className="transition-opacity duration-200">
         <path d="M2 13V6L6 2H13V6H6V13H2Z" />
         <path d="M19 2H26L30 6V13H26V6H19V2Z" />
@@ -34,7 +32,7 @@ export function SynkIcon({
         <path d="M13 30H6L2 26V19H6V26H13V30Z" />
       </g>
 
-      {/* Centre : Double chevron massif blanc pur */}
+      {/* Double chevron central */}
       <g
         className={cn(
           "fill-white transition-all duration-300",

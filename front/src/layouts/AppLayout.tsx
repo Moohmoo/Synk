@@ -19,15 +19,14 @@ export function AppLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    /* NIVEAU 0 (Le Mur / Root) : Noir absolu derrière l'application */
+    /* Arrière-plan global */
     <div className="h-screen w-screen flex bg-black relative overflow-hidden text-zinc-400 font-sans select-none">
-      {/* Premier enfant absolu : Lueur d'ambiance globale */}
       <AmbientGlow />
 
-      {/* NIVEAU 1 (La Sidebar) : Affichée à partir de lg (>= 1024px) */}
+      {/* Barre latérale desktop (>= lg) */}
       <LeftSidebar className="hidden lg:flex" />
 
-      {/* Tiroir Mobile/Tablette de navigation (< lg) */}
+      {/* Tiroir mobile/tablette (< lg) */}
       <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
         <SheetContent side="left" className="w-64 p-4 pt-6 bg-zinc-950/90 backdrop-blur-xl border-r border-white/5 flex flex-col">
           <SheetHeader className="mb-6 px-2">
@@ -44,12 +43,9 @@ export function AppLayout() {
         </SheetContent>
       </Sheet>
 
-      {/* NIVEAU 2 (Le Main Canvas incrusté) :
-          - Mobile / Tablette (< lg) : 100% largeur & hauteur sans marges pour exploiter l'écran
-          - Desktop (>= lg) : Nested Canvas incrusté avec mt-4 mr-4, rounded-t-2xl et bordures fines
-      */}
+      {/* Conteneur principal */}
       <div className="flex-1 w-full flex flex-col relative z-20 bg-zinc-900 overflow-hidden lg:mt-4 lg:mr-4 lg:rounded-t-2xl lg:border-t lg:border-x lg:border-white/5">
-        {/* Bouton burger mobile (< lg) : Flottant et ultra-discret, zéro perte de hauteur */}
+        {/* Bouton de menu mobile (< lg) */}
         <button
           type="button"
           onClick={() => setMobileMenuOpen(true)}

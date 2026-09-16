@@ -10,9 +10,7 @@ export interface SidebarSettingsProps {
 }
 
 /**
- * Pied de page de navigation pour les réglages globaux (langue, préférences).
- * - Ultra-discret avec boutons ghost (zéro bouton plein)
- * - Supporte le mode complet (horizontal) et le mode compact (vertical centré)
+ * Sélecteur de langue et accès aux réglages pour la barre latérale.
  */
 export function SidebarSettings({ isCollapsed = false, className }: SidebarSettingsProps) {
   const { t } = useTranslation("global");

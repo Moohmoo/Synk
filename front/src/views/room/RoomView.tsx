@@ -23,10 +23,10 @@ export function RoomView() {
   const { roomId = "" } = useParams<{ roomId: string }>();
   const { t } = useTranslation(["room", "global"]);
 
-  // Vérification synchrone de la session locale en mémoire
+  // Récupération synchrone de la session locale (localStorage)
   const session = useMemo(() => (roomId ? sessionManager.getRoomSession(roomId) : null), [roomId]);
 
-  // Si pas de salon ou pas de pseudo, redirection immédiate
+  // Accès direct via lien externe : redirection accueil pour obliger la saisie d'un pseudo
   if (!roomId || !session?.username) {
     return <Navigate to={roomId ? `/?join=${encodeURIComponent(roomId)}` : "/"} replace />;
   }
@@ -37,7 +37,7 @@ export function RoomView() {
   const [mediaUrlInput, setMediaUrlInput] = useState("");
   const [isChangeMediaOpen, setIsChangeMediaOpen] = useState(false);
 
-  // Effet : Vérification asynchrone non-bloquante de l'existence du salon (HTTP)
+  // Vérification HTTP non-bloquante : détection anticipée si le salon a expiré
   useEffect(() => {
     roomApi
       .checkRoom(roomId)

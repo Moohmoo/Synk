@@ -39,8 +39,7 @@ function GlowSide({ side }: GlowSideProps) {
 }
 
 /**
- * AmbientGlow : Lueurs d'ambiance Cyber-Tech face-à-face (Minimalisme Mécanique).
- * Projette deux faisceaux symétriques (gauche et droite) qui se rejoignent vers le centre.
+ * Lueur d'ambiance d'arrière-plan avec dégradés latéraux symétriques.
  */
 export function AmbientGlow({ className, disabled = false }: AmbientGlowProps) {
   if (disabled) return null;
@@ -53,7 +52,7 @@ export function AmbientGlow({ className, disabled = false }: AmbientGlowProps) {
       <GlowSide side="left" />
       <GlowSide side="right" />
 
-      {/* Texture grain anti-banding argentique unifiée */}
+      {/* Texture de bruit pour atténuer l'effet de bandes (banding) */}
       <div
         className="absolute inset-0 opacity-[0.035] mix-blend-overlay pointer-events-none"
         style={{

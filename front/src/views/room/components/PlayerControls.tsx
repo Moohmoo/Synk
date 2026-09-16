@@ -37,10 +37,7 @@ interface PlayerControlsProps {
 }
 
 /**
- * Contrôles de lecture Scrim Overlay immersif (Style moderne).
- * - Positionné en absolute bottom-0 inset-x-0 avec dégradé transparent.
- * - Timeline fine sur une ligne pleine juste au-dessus des icônes d'action.
- * - Boutons "Ghost" (icônes nues) sans fonds rectangulaires gris.
+ * Barre de contrôles de lecture superposée (overlay) au lecteur vidéo.
  */
 export function PlayerControls({
   controller,

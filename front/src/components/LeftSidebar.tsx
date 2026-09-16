@@ -45,11 +45,7 @@ export function LeftNavContent({ onItemClick, className }: LeftNavContentProps =
 }
 
 /**
- * Barre latérale gauche (Le Socle) de la navigation.
- * - Repliable via useUIStore avec icône de panneau.
- * - Logo masqué en mode compact (replié), uniquement le bouton toggle au centre.
- * - Hauteur de header (h-14) alignée sur le Main Canvas grâce à mt-4.
- * - Navigation en haut et footer de préférences globales ancré en bas.
+ * Barre latérale gauche de navigation (repliable).
  */
 export function LeftSidebar({ className }: LeftSidebarProps = {}) {
   const location = useLocation();
