@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { roomApi } from "@/services/roomApi";
-import { validateUsername } from "@/lib/validation";
+import { validateUsername, validateRoomCode } from "@/lib/validation";
 import { formatErrorMessage } from "@/lib/errorMapper";
 import { sessionManager } from "@/lib/session";
 import { extractRoomCode } from "@/lib/utils";
@@ -68,8 +68,9 @@ export function useHome() {
   const verifyAndSelectRoom = useCallback(
     async (rawCode: string): Promise<boolean> => {
       const cleanCode = extractRoomCode(rawCode);
-      if (!cleanCode) {
-        toast.error(formatErrorMessage("MISSING_ROOM_CODE", t), { id: "home-room-code-error" });
+      const valError = validateRoomCode(cleanCode, (key) => t(key, { ns: "validation" }));
+      if (valError) {
+        toast.error(valError, { id: "home-room-code-error" });
         return false;
       }
 

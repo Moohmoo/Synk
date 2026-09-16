@@ -17,8 +17,9 @@ export const roomApi = {
    */
   async checkRoom(roomId: string): Promise<RoomCheckResponse> {
     try {
+      const sanitizedId = encodeURIComponent(roomId.trim());
       const response = await axiosInstance.get<RoomCheckResponse>(
-        `/api/v1/rooms/${roomId}`
+        `/api/v1/rooms/${sanitizedId}`
       );
       return response.data;
     } catch (err: unknown) {

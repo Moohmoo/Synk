@@ -142,7 +142,8 @@ export function PlayerControls({
                 <Volume2 className="w-4 h-4" />
               )}
             </button>
-            <div className="w-14 sm:w-18">
+            {/* Curseur de volume fin (masqué sur mobile ultra-étroit pour aérer les contrôles) */}
+            <div className="hidden sm:block sm:w-18">
               <Slider
                 value={[effectiveMuted ? 0 : effectiveVolume]}
                 max={100}
