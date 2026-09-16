@@ -1,13 +1,10 @@
-<p align="center">
-  <a href="https://github.com/Moohmoo/Synk">
-    <img src="./front/public/favicon.svg" width="72" height="72" alt="Synk Logo" />
-  </a>
-</p>
-
-<h1 align="center">Synk</h1>
+<h1 align="center">
+  <img src="./front/public/favicon.svg" width="32" height="32" alt="Synk" align="middle" />
+  Synk
+</h1>
 
 <p align="center">
-  Watch videos together in perfect sync with friends.
+  Watch videos together in sync with friends.
   <br />
   <br />
   <a href="#introduction"><strong>Introduction</strong></a> ·
@@ -22,36 +19,24 @@
   <a href="./LICENSE">
     <img src="https://img.shields.io/badge/license-MIT-blue.svg?style=flat" alt="License" />
   </a>
-  <a href="https://react.dev/">
-    <img src="https://img.shields.io/badge/React-18.3-61dafb.svg?style=flat&logo=react" alt="React" />
-  </a>
-  <a href="https://fastapi.tiangolo.com/">
-    <img src="https://img.shields.io/badge/FastAPI-0.115-009688.svg?style=flat&logo=fastapi" alt="FastAPI" />
-  </a>
-  <a href="https://redis.io/">
-    <img src="https://img.shields.io/badge/Redis-7.0-dc382d.svg?style=flat&logo=redis" alt="Redis" />
-  </a>
-  <a href="https://www.docker.com/">
-    <img src="https://img.shields.io/badge/Docker-Compose-2496ed.svg?style=flat&logo=docker" alt="Docker" />
-  </a>
+  <img src="https://img.shields.io/badge/release-v1.0.0--beta-teal.svg?style=flat" alt="Version" />
 </p>
 
 <br/>
 
 ## Introduction
 
-**Synk** is a lightweight, open-source web app that lets you watch videos in sync with friends around the world.
+**Synk** is a lightweight, open-source web app that lets you watch videos in sync with friends.
 
 No account to create, no browser extensions to install, and zero ads. Just generate a room link, paste your video URL, and enjoy the show together in real time.
 
 ## Features
 
-- ⚡ **Real-Time Sync** – Play, pause, and seek stay aligned across everyone's screens with millisecond precision.
-- 🎬 **Watch Anything** – Paste links from YouTube, Twitch, Vimeo, or direct video files (.mp4, .m3u8).
-- 👑 **Host or Free Mode** – Keep full control of playback as the room host, or let everyone control the player together.
-- 🔗 **Zero Friction** – Create a room in 1 click, share the URL, and start watching immediately.
-- 📱 **Mobile & Desktop** – A clean, distraction-free dark interface that works seamlessly on phones, tablets, and laptops.
-- 🔄 **Auto-Reconnection** – Never get left behind if your Wi-Fi flickers; Synk automatically reconnects and catches up.
+- **Real-Time Sync** – Play, pause, and seek stay aligned across everyone's screens in real time.
+- **Watch Anything** – Paste links from YouTube, Twitch, Vimeo, or direct video files (.mp4, .m3u8).
+- **Host or Free Mode** – Keep full control of playback as the room host, or let everyone control the player together.
+- **Zero Friction** – Create a room in 1 click, share the URL, and start watching immediately.
+- **Mobile & Desktop** – A clean, distraction-free dark interface that works seamlessly on phones, tablets, and laptops.
 
 ## Tech Stack
 
