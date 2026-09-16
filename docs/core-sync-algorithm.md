@@ -6,101 +6,109 @@
 
 ---
 
-## 1. Le Principe en une phrase
+## Le Fil Conducteur : L'Histoire d'Alice et Bob
 
-Pour ne pas saturer la connexion internet, **le serveur n'envoie pas la position de la vidéo en continu**. 
-
-Il envoie un message uniquement lorsqu'un bouton est cliqué (*Play*, *Pause*, *Avance rapide*), avec l'heure exacte de l'action. Chaque navigateur calcule ensuite lui-même où doit se trouver la vidéo.
+Pour comprendre le fonctionnement de l'algorithme, suivons deux amis : **Alice** (l'hôte, à Paris) et **Bob** (l'invité, à Montréal) qui veulent regarder une vidéo YouTube ensemble.
 
 ---
 
-## 2. Le Calcul de la Position
+### Étape 1 : Pourquoi ne pas simplement "diffuser" la vidéo ?
 
-Quand un événement arrive, le serveur retient trois informations :
-* `current_time` : La seconde où se trouve la vidéo (ex: 42.5s).
-* `is_playing` : Si la vidéo est en lecture ou en pause (`true` ou `false`).
-* `last_updated_at` : L'heure exacte du serveur au moment du clic.
+Si le serveur devait capturer et retransmettre l'image vidéo à Bob en continu (comme un partage d'écran Discord), cela demanderait une bande passante énorme et une lourde carte graphique côté serveur.
 
-Chaque navigateur calcule alors la position en direct :
-* **Si la vidéo est en pause :** Tout le monde reste calé sur `current_time`.
-* **Si la vidéo est en lecture :**  
-  `Position = current_time + (Heure actuelle - Heure du clic Play)`
+**Le choix SYNK :**  
+Chaque navigateur charge directement la vidéo depuis YouTube. Le serveur FastAPI ne transmet aucune image : il agit uniquement comme un **arbitre temporel ultra-léger** qui donne le tempo via WebSockets.
 
 ---
 
-## 3. Le Piège des Horloges Décalées (et sa solution)
+### Étape 2 : La synchronisation des montres (Le problème du décalage d'horloge)
 
-Si l'ordinateur d'un participant retarde de 3 secondes par rapport à l'heure réelle, son calcul de position sera faux de 3 secondes.
+Avant même de lancer la vidéo, un premier piège se pose :
+> Si l'ordinateur de Bob retarde de 2 secondes par rapport à l'heure universelle, tous ses calculs de temps auront 2 secondes de retard.
 
-**Comment Synk corrige cela :**
-1. Le navigateur envoie un ping régulier au serveur.
-2. Le serveur répond avec son heure précise.
-3. Le navigateur mesure le temps de trajet aller-retour et calcule son décalage par rapport au serveur (`serverTimeOffset`).
-4. Ce décalage est appliqué à tous les calculs : même si l'ordinateur de l'utilisateur a une heure locale complètement fausse, la vidéo reste parfaitement calée sur celle des autres.
+**La solution :**
+1. Le navigateur de Bob envoie régulièrement un ping WebSocket au backend FastAPI.
+2. FastAPI répond immédiatement avec son heure serveur exacte.
+3. Le navigateur de Bob calcule le temps de trajet aller-retour et en déduit son écart d'horloge (`serverTimeOffset`).
+4. **Résultat :** Le navigateur de Bob sait exactement combien de millisecondes ajouter ou soustraire pour être à la même seconde que le serveur, peu importe les réglages de son PC.
 
 ---
 
-## 4. Les 3 Seuils de Recalage
+### Étape 3 : Alice clique sur "Play" (La persistance dans Redis)
 
-Modifier la position d'une vidéo en continu produit un son haché et désagréable. Pour préserver le confort d'écoute, Synk applique trois zones de tolérance :
+Alice clique sur le bouton **Play** à la seconde `0:00` de la vidéo.
+
+1. Le navigateur d'Alice émet l'événement `player_play` vers FastAPI via WebSocket.
+2. FastAPI valide que le salon n'est pas verrouillé et enregistre instantanément l'état dans Redis :
+   * `current_time : 0.0` (la seconde de départ)
+   * `is_playing : true` (l'état de lecture)
+   * `last_updated_at : 1772450100.0` (l'heure exacte du clic sur le serveur)
+3. FastAPI diffuse immédiatement cet événement (`room_playback_sync`) à tous les participants connectés via WebSocket.
+
+---
+
+### Étape 4 : Le calcul instantané chez Bob
+
+Dès réception du message, le navigateur de Bob ne demande pas au serveur "Où en est la vidéo ?". Il applique une formule simple :
+
+$$\text{Position cible} = \text{current\_time} + (\text{Heure actuelle du serveur} - \text{last\_updated\_at})$$
+
+Même si le message a mis 40 millisecondes à traverser l'Atlantique, Bob sait que la vidéo tourne déjà depuis 40 millisecondes. Son lecteur se cale directement à `0.04s` et lance la lecture. Les deux vidéos jouent en parfaite synchronisation (< 200 ms d'écart).
+
+---
+
+### Étape 5 : Les aléas du direct (La gestion de la dérive)
+
+Pendant le film, le Wi-Fi de Bob a une baisse de débit, ou Bob change d'onglet pour répondre à un message. Sa vidéo prend du retard par rapport au temps de référence calculé.
+
+Synk applique alors une politique à trois seuils pour éviter les coupures de son intempestives :
 
 ```text
                0.5s                           2.0s
 ────────────────┼──────────────────────────────┼────────────────────────► (Écart constaté)
    ZONE VERTE   │         ZONE JAUNE           │        ZONE ROUGE
   Lecture douce │      Recalage discret        │    Bouton "Rattraper"
-  (Aucun saut)  │ (Alignement automatique)     │    (Action manuelle)
+  (Aucun saut)  │ (video.currentTime = target) │    (Action manuelle)
 ```
 
 1. **Écart inférieur à 0.5s (Zone verte) :**
-   * Différence invisible à l'œil et à l'oreille.
-   * On ne touche à rien pour ne pas couper le son.
+   * Tolérance normale absorbant les micro-variations de buffer.
+   * On ne touche à rien pour préserver la fluidité du son.
 2. **Écart entre 0.5s et 2.0s (Zone jaune) :**
-   * Petit retard de connexion.
-   * Le lecteur saute discrètement à la bonne seconde pour recoller au groupe.
+   * Le retard devient perceptible.
+   * Le lecteur force discrètement le recalage (`video.currentTime = target`) sans interrompre la lecture.
 3. **Écart supérieur à 2.0s (Zone rouge) :**
-   * Gros ralentissement réseau ou onglet mis en veille prolongée par le système.
-   * Un bouton **"Rattraper"** apparaît au-dessus de la barre de lecture pour se remettre à niveau en un clic.
+   * L'ordinateur de Bob a subi un gros gel réseau ou a mis l'onglet en veille.
+   * Un badge cyan **"Rattraper"** apparaît au-dessus de la barre de lecture. Bob clique dessus pour se recaler instantanément.
 
 ---
 
-## 5. Retour sur l'Onglet (Mise en veille)
+## Schéma Technique Complet
 
-Lorsque l'utilisateur change d'onglet, le navigateur ralentit automatiquement la page pour économiser la batterie.
-
-Dès que l'utilisateur revient sur Synk, l'application détecte le retour au premier plan, recalcule immédiatement l'écart avec le serveur et recale la vidéo si elle a pris du retard.
-
----
-
-## 6. Déroulement Complet (Création, Connexion et Lecture)
+Ce diagramme illustre le flux complet des données entre les navigateurs clients, le backend FastAPI et la base en mémoire Redis :
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor Alice as Alice (Hôte)
     actor Bob as Bob (Invité)
-    participant Serveur as Serveur Synk (FastAPI + Redis)
+    participant FastAPI as Backend FastAPI
+    participant Redis as Base Redis
 
-    Note over Alice,Serveur: 1. Alice crée le salon
-    Alice->>Serveur: Crée le salon avec le pseudo "Alice"
-    Serveur-->>Alice: Salon créé (#k8F2mX) + Clé secrète d'hôte
+    Note over Bob,FastAPI: Phase 1 : Synchronisation de l'horloge
+    Bob->>FastAPI: Ping WebSocket (Horodatage local T0)
+    FastAPI-->>Bob: Pong (Horodatage serveur T_server)
+    Bob->>Bob: Calcule le décalage d'horloge (serverTimeOffset)
 
-    Note over Alice,Bob: 2. Bob rejoint le salon
-    Alice->>Bob: Envoie le lien du salon
-    Bob->>Serveur: Rejoint avec le pseudo "Bob"
-    Serveur-->>Bob: État actuel du salon
-    Serveur-->>Alice: Alerte : "Bob a rejoint la salle"
+    Note over Alice,Redis: Phase 2 : Alice lance la vidéo
+    Alice->>FastAPI: WebSocket emit: player_play (Position: 0:00)
+    FastAPI->>Redis: Sauvegarde {is_playing: true, current_time: 0.0, timestamp: T}
+    FastAPI-->>Alice: WebSocket broadcast: room_playback_sync
+    FastAPI-->>Bob: WebSocket broadcast: room_playback_sync
 
-    Note over Alice,Serveur: 3. Alice charge une vidéo
-    Alice->>Serveur: Colle un lien YouTube
-    Serveur-->>Alice: Vidéo prête (en pause à 0:00)
-    Serveur-->>Bob: Vidéo prête (en pause à 0:00)
-
-    Note over Alice,Bob: 4. Lecture synchronisée
-    Alice->>Serveur: Clic sur Play (à 0:00)
-    Serveur-->>Alice: Ordre de lecture (Heure serveur: T)
-    Serveur-->>Bob: Ordre de lecture (Heure serveur: T)
-    Alice->>Alice: Lance la lecture
-    Bob->>Bob: Calcule le temps écoulé et lance la lecture
-    Note over Alice,Bob: Vidéos parfaitement calées (< 200 ms d'écart)
+    Note over Bob,FastAPI: Phase 3 : Calcul local et recalage
+    Alice->>Alice: Démarre la lecture YouTube
+    Bob->>Bob: Calcule le temps écoulé depuis T (avec serverTimeOffset)
+    Bob->>Bob: Démarre la lecture YouTube à la seconde exacte
+    Note over Alice,Bob: Écart temporel inférieur à 200 ms
 ```
