@@ -1,61 +1,55 @@
-# Spécifications UI/UX & Design System : SYNK
+# Interface & Design : SYNK
 
 > **Version :** 1.0.0-beta  
-> **Philosophie Visuelle :** Minimalisme Mécanique  
+> **Style :** Épuré et sombre  
 > **Auteur :** Mohmo
 
 ---
 
-## 1. Direction Artistique : « Minimalisme Mécanique »
+## 1. Principes de Design
 
-La direction artistique de **SYNK** repose sur l'élimination systématique du superflu pour créer une ambiance high-tech sobre et fonctionnelle.
+L'interface de SYNK est pensée pour être discrète et fonctionnelle, afin de laisser toute la place à la vidéo :
 
-### 1.1. Principes Fondateurs
-* **Effacement au profit du média :** L'interface doit s'estomper lorsque la vidéo joue. Zéro distraction visuelle inutile.
-* **Précision chirurgicale :** Angles nets, typographies monospace pour les métriques, bordures ultra-fines (1px) semi-transparentes.
-* **Pas de "Div Soup" :** Arbre DOM plat, hiérarchie visuelle gérée par les contrastes de luminosité plutôt que par une accumulation de conteneurs.
+- **Priorité à la vidéo :** Les boutons et contrôles s'effacent automatiquement après 3 secondes de lecture pour ne pas gêner le visionnage.
+- **Lisibilité :** Un fond très sombre avec une touche de couleur vive (Cyan) pour repérer immédiatement les actions importantes.
+- **Légèreté :** Une mise en page directe, sans fioritures ni animations superflues, garantissant un affichage instantané.
 
 ---
 
-## 2. Palette Chromatique & Tokens de Design
+## 2. Couleurs
 
-L'ensemble des couleurs de SYNK est structuré autour d'une échelle sombre avec un contraste d'accentuation haute visibilité :
-
-| Rôle | Token / Valeur CSS | Utilisation |
+| Rôle | Couleur | Utilisation |
 | :--- | :--- | :--- |
-| **Noir Absolu (Mur)** | `#000000` / `bg-black` | Arrière-plan global et fond du lecteur vidéo pour immersion totale. |
-| **Fond d'Application (Canvas)** | `#09090b` / `zinc-950` | Conteneur applicatif principal et tiroirs latéraux. |
-| **Surfaces & Cartes** | `#18181b` / `zinc-900` | Éléments interactifs, barre latérale, modales. |
-| **Bordures Subtiles** | `rgba(255, 255, 255, 0.05)` | Délimitations discrètes sans rupture brutale. |
-| **Couleur Signature (Cyan)** | `#0ac8b9` (`rgba(10, 200, 185, 1)`) | Boutons d'action principaux, jauges de lecture, statut de synchro, logo. |
-| **Texte Principal** | `#f4f4f5` / `zinc-100` | Titres et contenus actifs. |
-| **Texte Secondaire** | `#a1a1aa` / `zinc-400` | Labels, horodatages, états inactifs. |
-| **Alerte / Verrou** | `#f43f5e` / `rose-500` | Déconnexion, erreurs réseau, contrôle exclusif. |
+| **Fond global** | Noir (`#000000`) | Arrière-plan général et fond du lecteur vidéo. |
+| **Surfaces & Cartes** | Gris foncé (`#09090b` / `#18181b`) | Conteneur principal, volet latéral et tiroirs. |
+| **Couleur active (Cyan)** | Cyan (`#0ac8b9`) | Boutons d'action, barre de lecture et logo. |
+| **Texte principal** | Blanc (`#f4f4f5`) | Titres et éléments actifs. |
+| **Texte secondaire** | Gris clair (`#a1a1aa`) | Horodatages, labels et descriptions. |
 
 ---
 
 ## 3. Typographie
 
-* **Interface & Titres :** `Inter` (sans-serif) : Clarté, lisibilité maximale sur tous types d'écrans.
-* **Données Techniques & Métriques :** `Geist Mono` : Horodatages vidéo (`04:12 / 12:30`), codes de salon (`#k8F2mX`), latence (`24ms`).
+- **Titres et interface :** `Inter` pour une lecture claire sur tous les écrans.
+- **Chiffres et codes :** `Geist Mono` pour aligner les temps de lecture (`04:12 / 10:00`), les codes de salon (`#k8F2mX`) et le ping réseau (`18ms`).
 
 ---
 
-## 4. Architecture de Mise en Page : « Floating Island » (Îlot Flottant)
+## 4. Organisation des Pages
 
-### 4.1. Page d'Accueil (`/`) : L'Îlot Central
+### 4.1. Page d'Accueil (`/`)
 
-Sur grand écran (`>= lg`), l'application dispose d'une barre latérale gauche et d'un canvas principal sombre aux coins arrondis :
+Sur grand écran, l'écran d'accueil présente la barre latérale à gauche et le module de connexion au centre :
 
 ```text
 +-----------------------------------------------------------------------------------------+
-| BARRE GAUCHE (Desktop)   |                    CANVAS PRINCIPAL (Sombre)                 |
+| BARRE GAUCHE (Desktop)   |                    CANVAS PRINCIPAL                          |
 |                          |                                                              |
 | [Logo] SYNK              |                                                              |
 |                          |                     Lancer une session                       |
 | NAVIGATION               |            Créez un salon instantané et synchronisez         |
-| - Accueil (actif)        |                     vos vidéos en temps réel.                |
-| - Récents                |                                                              |
+| - Accueil                |                     vos vidéos en temps réel.                |
+|                          |                                                              |
 |                          |                  [ Créer un salon | Rejoindre ]              |
 |                          |                                                              |
 |                          |          ┌───────────────────────────────────┬───────────┐   |
@@ -67,14 +61,14 @@ Sur grand écran (`>= lg`), l'application dispose d'une barre latérale gauche e
 +-----------------------------------------------------------------------------------------+
 ```
 
-* **Omnibox unifiée :** Un seul champ de saisie intelligent gérant à la fois la création de salon, la validation du code d'invitation et la saisie du pseudo.
-* **Transition sans saut :** Bascule instantanée entre les modes "Créer" et "Rejoindre" via un commutateur mécanique fluide (`ModeToggle`).
+- **Un seul champ de saisie :** Sert à la fois à entrer son pseudo en mode création ou à coller un code en mode rejoindre.
+- **Bascule instantanée :** Passage d'un clic entre "Créer" et "Rejoindre".
 
 ---
 
-### 4.2. Salon de Visionnage (`/room/:roomId`) : Le Canvas Imbriqué
+### 4.2. Salon de Visionnage (`/room/:roomId`)
 
-Sur grand écran (desktop `>= xl`), l'interface s'organise en trois zones :
+Sur grand écran, la page s'articule en trois parties :
 
 ```text
 +-----------------------------------------------------------------------------------------+
@@ -84,7 +78,7 @@ Sur grand écran (desktop `>= xl`), l'interface s'organise en trois zones :
 |                |  │                                                  │  |───────────────|
 | NAVIGATION     |  │                 Lecteur Vidéo 16:9               │  | Membres (2)   |
 | - Accueil      |  │                (ou Dropzone si vide)             │  | - Alice (Hôte)|
-| - Récents      |  │                                                  │  | - Bob         |
+|                |  │                                                  │  | - Bob         |
 |                |  │ [Play] [04:12 / 10:00] [─────|─────] [Vol] [Max] │  |               |
 |                |  └──────────────────────────────────────────────────┘  |               |
 |                |                                                        |               |
@@ -95,27 +89,17 @@ Sur grand écran (desktop `>= xl`), l'interface s'organise en trois zones :
 +-----------------------------------------------------------------------------------------+
 ```
 
-* **Lecteur 16:9 Cinématographique :** Le conteneur vidéo préserve strictement son ratio pour éviter tout décalage visuel (CLS = 0).
-* **Contrôles Overlay Flottants :** La barre de transport (play/pause, timeline, volume) s'affiche en transparence sur la vidéo et s'efface automatiquement après 3 secondes d'inactivité en lecture.
-* **Sous le lecteur (`MetaSection`) :** Statut de connexion en direct, titre de la vidéo, badge de contrôle de la salle et onglets de réglages.
-* **Volet Droit Contextuel (`SidePanel`) :** Onglet "Membres" actif avec les participants connectés, onglet "Chat" (bientôt disponible), et carte en bas avec indicateur de latence (ping) et bouton d'invitation.
+- **Au centre :** Le lecteur vidéo avec commandes en transparence (play, pause, timeline, volume, plein écran) et les informations du média juste en dessous.
+- **À droite :** La liste des participants connectés avec leur statut, et en bas le code du salon avec le ping et le bouton pour copier le lien d'invitation.
 
 ---
 
-## 5. Stratégie Responsive (Mobile-First)
+## 5. Adaptation Mobile
 
-L'expérience s'adapte automatiquement selon la largeur de l'écran :
+L'interface s'adapte automatiquement sans encombrer les petits écrans :
 
-```mermaid
-flowchart TD
-    ScreenSize{Taille d'écran}
-    
-    ScreenSize -->|">= 1280px (Desktop xl)"| FullLayout[Barre Gauche + Lecteur Central + Volet Droit Fixe]
-    ScreenSize -->|"1024px - 1279px (Desktop lg)"| TabletLayout[Barre Gauche + Lecteur Central + Volet Droit en Tiroir Drawer]
-    ScreenSize -->|"< 1024px (Mobile & Tablette)"| MobileLayout[Plein Cadre + Bouton Menu Burger + Tiroir Drawer sous la vidéo]
-```
-
-* **Écrans mobiles et tablettes (< 1024px) :**
-  * La barre latérale gauche disparaît au profit d'un bouton burger discret en haut à gauche qui ouvre un tiroir coulissant (`Sheet`).
-  * Le panneau latéral droit (membres et carte salon) est accessible via un bouton dédié sous la vidéo ouvrant un tiroir inférieur (`Drawer`).
-  * Les réglages fins de volume sont masqués sur mobile pour laisser place aux boutons physiques de l'appareil.
+- **Sur ordinateur :** Barre latérale à gauche, lecteur au centre et panneau des membres à droite.
+- **Sur mobile et tablette :**
+  - La barre de navigation gauche se range derrière un bouton menu discret en haut à gauche.
+  - Le panneau des membres s'ouvre d'un geste sous la vidéo via un tiroir coulissant.
+  - Le curseur de volume est masqué pour utiliser directement les boutons physiques du smartphone.
