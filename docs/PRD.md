@@ -9,46 +9,39 @@
 ## 1. Vision & Objectif
 
 ### 1.1. Le problème
-Regarder une vidéo à distance avec des amis est souvent pénible :
-- Il faut installer des extensions de navigateur qui buggent ou demandent trop de permissions.
-- Il faut créer un compte obligatoire avant même de pouvoir tester.
-- La vidéo finit toujours par se décaler de plusieurs secondes à cause des variations de connexion.
-- Les plateformes gratuites existantes sont polluées de publicités.
+Regarder une vidéo à distance avec quelqu'un est souvent pénible :
+- **Le décompte "3, 2, 1, Play" :** Le faire au micro sur Discord ou WhatsApp ne marche jamais et crée des échos ou du retard.
+- **La pause casse tout :** Dès qu'une personne met pause ou a un ralentissement de connexion, tout le monde est décalé.
+- **Les extensions ne marchent pas sur mobile :** Les outils existants imposent une extension de navigateur inutilisable sur smartphone ou tablette.
+- **Trop de contraintes :** La plupart des sites imposent une création de compte ou polluent l'écran de bannières publicitaires.
 
 ### 1.2. La solution : SYNK
-SYNK est un site web simple et rapide qui permet de regarder des vidéos ensemble en temps réel.
-On colle un lien, on partage l'URL à ses amis, et la lecture se synchronise pour tout le monde directement dans le navigateur, sans inscription et sans publicité.
-
-### 1.3. Ce qui fait la différence
-- **Zéro friction :** Un salon se crée en 1 clic. Aucun compte requis.
-- **Synchronisation fluide :** La vidéo reste calée automatiquement entre tous les écrans (moins de 200 ms d'écart).
-- **Sobre et efficace :** Une interface sombre et épurée centrée sur la vidéo et le chat.
+Un site web instantané, sans inscription et sans publicité :
+1. On colle le lien d'une vidéo (YouTube, Twitch, etc.).
+2. On envoie le lien du salon à ses amis.
+3. Tout le monde regarde la vidéo calée à la même seconde, sur ordinateur comme sur téléphone.
 
 ---
 
-## 2. Utilisateurs Cibles
+## 2. Utilisateur Cible
 
-1. **Amis et proches :** Regarder YouTube, Twitch ou des séries ensemble à distance tout en discutant.
-2. **Groupes et collègues :** Écouter de la musique ou suivre une présentation en même temps.
-3. **Portfolio :** Présenter un projet propre et bien structuré avec du temps réel moderne (WebSockets, FastAPI, React, Redis).
+Toute personne souhaitant partager un moment vidéo à distance (amis, couples, proches) sans avoir à installer d'application ni créer de compte.
 
 ---
 
-## 3. Périmètre du Projet
+## 3. Fonctionnalités
 
-### 3.1. Inclus dans la version actuelle (MVP)
-- **Salons instantanés :** Création en 1 clic avec code unique, fermeture automatique après 10 minutes d'inactivité.
-- **Utilisation sans compte :** Un simple pseudo suffit, avec clé secrète d'hôte conservée dans le navigateur.
-- **Lecteur synchronisé :** Play, Pause et avance rapide pour tous sur YouTube, Twitch, Vimeo et vidéos directes (.mp4, .m3u8).
-- **Recalage automatique :** Les nouveaux arrivants se calent directement à la bonne seconde, avec bouton "Rattraper" en cas de ralentissement réseau.
-- **Contrôle de la salle :** Choix entre Mode Hôte (seul le créateur contrôle) et Mode Libre (tout le monde contrôle).
-- **Passation d'hôte :** Si l'hôte quitte la salle, un autre membre prend automatiquement le relais.
-- **Chat et membres :** Messages textuels en direct et indicateur de ping.
+### 3.1. Ce que fait l'application
+- **Salons instantanés :** Création en 1 clic avec un code unique. Le salon se ferme tout seul après 10 minutes d'inactivité.
+- **Zéro inscription :** Un simple pseudo suffit. Le créateur du salon conserve automatiquement ses droits d'administration.
+- **Lecteur synchronisé :** Play, Pause et déplacement dans la vidéo pour tous les participants sur YouTube, Twitch, Vimeo et liens directs (.mp4).
+- **Recalage automatique :** Si un ami rejoint en cours de route ou si sa connexion ralentit, la vidéo se recale automatiquement à la bonne seconde. Un bouton "Rattraper" apparaît si le retard est trop important.
+- **Gestion des droits :** L'hôte peut verrouiller les contrôles (lui seul gère la lecture) ou laisser la salle en mode libre. Si l'hôte s'en va, un autre membre prend le relais.
+- **Chat textuel :** Messagerie intégrée pour discuter pendant la vidéo, avec affichage du ping.
 
-### 3.2. Prévu pour les prochaines versions (V2)
-- Comptes utilisateurs et historique des salons.
-- Playlist partagée (file d'attente de vidéos).
-- Salons vocaux.
+### 3.2. Pistes d'amélioration
+- **File d'attente (playlist) :** Pouvoir ajouter plusieurs vidéos à la suite sans recoller un lien à chaque fois.
+- **Sous-titres :** Meilleure détection des pistes de sous-titres selon la plateforme.
 
 ---
 
@@ -56,18 +49,17 @@ On colle un lien, on partage l'URL à ses amis, et la lecture se synchronise pou
 
 | Situation | Ce qui doit se passer | Comportement du système |
 | :--- | :--- | :--- |
-| **Arrivée d'un participant** | Il doit voir la vidéo à la bonne seconde sans couper les autres. | Le serveur lui envoie la position exacte et l'état de lecture. |
-| **Tout petit décalage (< 0.5s)** | Décalage normal imperceptible. | On ne force aucun saut pour préserver le confort audio. |
-| **Décalage moyen (0.5s à 2s)** | La vidéo doit se recoller discrètement. | Le lecteur s'aligne automatiquement sur la bonne seconde. |
-| **Gros retard réseau (> 2s)** | L'utilisateur a pris du retard. | Un bouton discret "Rattraper" apparaît pour se recaler en 1 clic. |
-| **L'hôte quitte le salon** | La salle ne doit pas rester bloquée. | Le rôle d'hôte est automatiquement confié au membre le plus ancien. |
-| **Salon vide** | Ne pas encombrer la mémoire du serveur. | Le salon s'efface après 10 minutes d'inactivité. |
+| **Arrivée en cours de vidéo** | La personne doit rejoindre sans couper les autres. | Le serveur lui donne immédiatement la bonne seconde et l'état de lecture. |
+| **Micro-décalage (< 0.5s)** | Différence minime normale. | Aucun saut forcé pour ne pas saccader le son. |
+| **Décalage moyen (0.5s à 2s)** | Recalage nécessaire. | Le lecteur réaligne la vidéo de manière transparente. |
+| **Gros retard réseau (> 2s)** | La connexion de l'utilisateur a décroché. | Un bouton "Rattraper" apparaît pour se remettre à niveau en un clic. |
+| **Départ de l'hôte** | Le salon ne doit pas être bloqué. | Les droits d'hôte sont transférés au membre actif suivant. |
+| **Salon vide** | Libérer la mémoire du serveur. | Le salon est automatiquement supprimé après 10 minutes sans participant. |
 
 ---
 
-## 5. Critères de Validation
+## 5. Critères de Réussite
 
-- **Synchronisation :** Moins de 200 ms d'écart entre les écrans sur une connexion standard.
-- **Vitesse :** Chargement de la page d'accueil sous 1 seconde.
-- **Fiabilité :** 100% des tests validés sur le backend.
-- **Compatibilité :** Affichage fluide sur mobile, tablette et ordinateur.
+- **Synchronisation :** Moins de 200 ms d'écart entre les participants.
+- **Instantané :** Prise en main immédiate en moins de 10 secondes.
+- **Multiplateforme :** Fonctionne aussi bien sur mobile que sur grand écran.
