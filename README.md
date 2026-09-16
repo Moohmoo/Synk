@@ -113,9 +113,8 @@ cd front && npm run build
 For developers looking for deep architectural details, algorithmic formulas, and internal specs, check out the [`/docs`](./docs) folder:
 
 - [Product Requirements Document (PRD)](./docs/PRD.md) – Product vision, scope, and user flows.
-- [UI/UX Flows & Design System](./docs/ui-ux-flows.md) – Layout philosophy, color tokens, and mobile experience.
-- [Technical Specifications](./docs/tech-specs.md) – Architectural decisions, benchmarks, and data schemas.
-- [Frontend Architecture](./docs/front-architecture.md) – Directory structure, routing, and state management.
+- [Interface & Design](./docs/ui-ux-flows.md) – Layout structure, color palette, and mobile experience.
+- [Architecture](./docs/architecture.md) – Full-stack structure, tech choices, and Redis data model.
 - [Core Sync Algorithm](./docs/core-sync-algorithm.md) – Clock synchronization math, ping handling, and state machines.
 
 ## Contributing
