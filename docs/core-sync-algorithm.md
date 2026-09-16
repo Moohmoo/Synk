@@ -22,7 +22,7 @@ Pour que deux machines calculent exactement la même seconde de lecture, elles d
 
 **Mécanisme de compensation :**
 1. Le navigateur émet régulièrement un ping WebSocket vers le backend.
-2. Le serveur répond immédiatement avec son horodatage précis ($T_{\text{server}}$).
+2. Le serveur répond immédiatement avec son horodatage précis (heure du serveur).
 3. Le navigateur mesure le temps d'aller-retour réseau et en déduit son écart d'horloge (`serverTimeOffset`).
 4. **Résultat :** Le client sait exactement combien de millisecondes ajouter ou soustraire pour s'aligner sur l'heure du serveur.
 
@@ -45,7 +45,7 @@ Lorsqu'un utilisateur autorisé clique sur **Play** (par exemple à la seconde `
 
 Dès réception de la notification de lecture, chaque navigateur invité calcule instantanément la position cible :
 
-$$\text{Position cible} = \text{current\_time} + (\text{Heure serveur actuelle} - \text{last\_updated\_at})$$
+> **Position cible** = `current_time` + (`Heure serveur actuelle` - `last_updated_at`)
 
 Même si le message a mis 40 millisecondes à transiter sur le réseau, l'invité sait que la vidéo a démarré depuis 40 ms. Son lecteur s'aligne immédiatement à `0.04s` et lance la lecture.
 
