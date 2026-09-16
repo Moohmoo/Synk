@@ -17,7 +17,7 @@ Regarder une vidéo à distance avec quelqu'un est souvent pénible :
 
 ### 1.2. La solution : SYNK
 Un site web instantané, sans inscription et sans publicité :
-1. On colle le lien d'une vidéo (YouTube, Twitch, etc.).
+1. On colle le lien d'une vidéo YouTube.
 2. On envoie le lien du salon à ses amis.
 3. Tout le monde regarde la vidéo calée à la même seconde, sur ordinateur comme sur téléphone.
 
@@ -31,17 +31,17 @@ Toute personne souhaitant partager un moment vidéo à distance (amis, couples, 
 
 ## 3. Fonctionnalités
 
-### 3.1. Ce que fait l'application
-- **Salons instantanés :** Création en 1 clic avec un code unique. Le salon se ferme tout seul après 10 minutes d'inactivité.
-- **Zéro inscription :** Un simple pseudo suffit. Le créateur du salon conserve automatiquement ses droits d'administration.
-- **Lecteur synchronisé :** Play, Pause et déplacement dans la vidéo pour tous les participants sur YouTube, Twitch, Vimeo et liens directs (.mp4).
-- **Recalage automatique :** Si un ami rejoint en cours de route ou si sa connexion ralentit, la vidéo se recale automatiquement à la bonne seconde. Un bouton "Rattraper" apparaît si le retard est trop important.
-- **Gestion des droits :** L'hôte peut verrouiller les contrôles (lui seul gère la lecture) ou laisser la salle en mode libre. Si l'hôte s'en va, un autre membre prend le relais.
-- **Chat textuel :** Messagerie intégrée pour discuter pendant la vidéo, avec affichage du ping.
+### 3.1. Ce que fait l'application (MVP)
+- **Salons instantanés :** Création en 1 clic avec un code unique. Le salon s'autodétruit après 10 minutes d'inactivité.
+- **Zéro inscription :** Un simple pseudo suffit. Le créateur conserve automatiquement ses droits d'hôte dans son navigateur.
+- **Lecteur synchronisé :** Play, Pause et déplacement dans la vidéo pour tous les participants sur YouTube.
+- **Recalage automatique :** Si un ami rejoint en cours de route ou si sa connexion ralentit, la vidéo se recale automatiquement à la bonne seconde. Un bouton "Rattraper" apparaît si le retard dépasse 2 secondes.
+- **Gestion des droits :** L'hôte peut verrouiller les commandes (lui seul gère la lecture) ou laisser la salle en mode libre. Si l'hôte part, un autre membre prend automatiquement le relais.
+- **Présence en direct :** Compteur et liste des membres connectés avec affichage du ping de chacun.
 
 ### 3.2. Pistes d'amélioration
-- **File d'attente (playlist) :** Pouvoir ajouter plusieurs vidéos à la suite sans recoller un lien à chaque fois.
-- **Sous-titres :** Meilleure détection des pistes de sous-titres selon la plateforme.
+- **File d'attente (playlist) :** Pouvoir ajouter plusieurs vidéos à la suite sans devoir recoller un lien à chaque fois.
+- **Nouvelles plateformes :** Ajouter le support de Twitch et des flux vidéo directs (.mp4).
 
 ---
 
