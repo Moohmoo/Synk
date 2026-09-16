@@ -2,6 +2,7 @@ import { useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { GITHUB_REPO_URL } from "@/lib/constants";
 
 export interface RightSidebarProps {
   children?: React.ReactNode;
@@ -26,12 +27,12 @@ export function RightSidebar({ children, className }: RightSidebarProps) {
           {t("app.name")} {t("app.version")}
         </span>
         <a
-          href="https://github.com"
+          href={GITHUB_REPO_URL}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
         >
-          <span>GitHub</span>
+          <span>{t("nav.github")}</span>
           <ExternalLink className="w-3 h-3" />
         </a>
       </aside>
@@ -58,12 +59,12 @@ export function RightSidebar({ children, className }: RightSidebarProps) {
           {t("app.name")} {t("app.version")}
         </span>
         <a
-          href="https://github.com"
+          href={GITHUB_REPO_URL}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
         >
-          <span>GitHub</span>
+          <span>{t("nav.github")}</span>
           <ExternalLink className="w-3 h-3" />
         </a>
       </footer>
