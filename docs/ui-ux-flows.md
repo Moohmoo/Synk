@@ -1,105 +1,105 @@
 # Interface & Design : SYNK
 
-> **Version :** 1.0.0-beta  
-> **Style :** Épuré et sombre  
-> **Auteur :** Mohmo
+> **Version:** 1.0.0-beta  
+> **Style:** Clean and dark  
+> **Author:** Mohmo
 
 ---
 
-## 1. Principes de Design
+## 1. Design Principles
 
-L'interface de SYNK est pensée pour être discrète et fonctionnelle, afin de laisser toute la place à la vidéo :
+SYNK's interface is designed to stay minimal and functional, keeping full focus on the video:
 
-- **Priorité à la vidéo :** Les boutons et contrôles s'effacent automatiquement après 3 secondes de lecture pour ne pas gêner le visionnage.
-- **Lisibilité :** Un fond très sombre avec une touche de couleur vive (Cyan) pour repérer immédiatement les actions importantes.
-- **Légèreté :** Une mise en page directe, sans fioritures ni animations superflues, garantissant un affichage instantané.
+- **Video-first:** Buttons and player controls automatically fade out after 3 seconds of playback to avoid visual distraction.
+- **Clear contrast:** Deep black backdrop with a bright Cyan accent to highlight interactive elements immediately.
+- **Lightweight:** Direct layout with zero clutter or heavy animations, ensuring instant loading.
 
 ---
 
-## 2. Couleurs
+## 2. Color Palette
 
-| Rôle | Couleur | Utilisation |
+| Role | Color | Usage |
 | :--- | :--- | :--- |
-| **Fond global** | Noir (`#000000`) | Arrière-plan général et fond du lecteur vidéo. |
-| **Surfaces & Cartes** | Gris foncé (`#09090b` / `#18181b`) | Conteneur principal, volet latéral et tiroirs. |
-| **Couleur active (Cyan)** | Cyan (`#0ac8b9`) | Boutons d'action, barre de lecture et logo. |
-| **Texte principal** | Blanc (`#f4f4f5`) | Titres et éléments actifs. |
-| **Texte secondaire** | Gris clair (`#a1a1aa`) | Horodatages, labels et descriptions. |
+| **Global Background** | Black (`#000000`) | Main canvas backdrop and video player frame. |
+| **Surfaces & Cards** | Dark Grey (`#09090b` / `#18181b`) | Main container card, sidebars, and drawer sheets. |
+| **Accent Color (Cyan)** | Cyan (`#0ac8b9`) | Primary action buttons, playback progress bar, and logo. |
+| **Primary Text** | White (`#f4f4f5`) | Headings and active elements. |
+| **Secondary Text** | Light Grey (`#a1a1aa`) | Timestamps, labels, and muted text. |
 
 ---
 
-## 3. Typographie
+## 3. Typography
 
-- **Titres et interface :** `Inter` pour une lecture claire sur tous les écrans.
-- **Chiffres et codes :** `Geist Mono` pour aligner les temps de lecture (`04:12 / 10:00`), les codes de salon (`#k8F2mX`) et le ping réseau (`18ms`).
+- **Headings & UI:** `Inter` for clean readability across all device screens.
+- **Numbers & Codes:** `Geist Mono` for fixed-width alignment of video timestamps (`04:12 / 10:00`), room codes (`#k8F2mX`), and network ping (`18ms`).
 
 ---
 
-## 4. Organisation des Pages
+## 4. Page Layouts
 
-### 4.1. Page d'Accueil (`/`)
+### 4.1. Home Page (`/`)
 
-Sur grand écran, l'écran d'accueil présente la barre latérale à gauche et le module de connexion au centre :
+On desktop screens, the landing page features the left navigation sidebar and the central connection module:
 
 ```text
 +-----------------------------------------------------------------------------------------+
-| BARRE GAUCHE (Desktop)   |                    CANVAS PRINCIPAL                          |
+| LEFT SIDEBAR (Desktop)   |                    MAIN CANVAS                               |
 |                          |                                                              |
 | [Logo] SYNK              |                                                              |
-|                          |                     Lancer une session                       |
-| NAVIGATION               |            Créez un salon instantané et synchronisez         |
-| - Accueil                |                     vos vidéos en temps réel.                |
+|                          |                      Start a Session                         |
+| NAVIGATION               |             Create an instant room and synchronize           |
+| - Home                   |                     your videos in real time.                |
 |                          |                                                              |
-|                          |                  [ Créer un salon | Rejoindre ]              |
+|                          |                  [ Create a Room | Join ]                    |
 |                          |                                                              |
 |                          |          ┌───────────────────────────────────┬───────────┐   |
-|                          |          │  Entrez votre pseudo...           │  CRÉER    │   |
+|                          |          │  Enter your username...           │  CREATE   │   |
 |                          |          └───────────────────────────────────┴───────────┘   |
 |                          |                                                              |
-| PARAMÈTRES               |              [YouTube]  [Twitch: Soon]  [Direct: Soon]       |
+| SETTINGS                 |              [YouTube]  [Twitch: Soon]  [Direct: Soon]       |
 | [FR / EN]                |                                                              |
 +-----------------------------------------------------------------------------------------+
 ```
 
-- **Un seul champ de saisie :** Sert à la fois à entrer son pseudo en mode création ou à coller un code en mode rejoindre.
-- **Bascule instantanée :** Passage d'un clic entre "Créer" et "Rejoindre".
+- **Single input field:** Serves to enter a username in create mode or paste an invitation code in join mode.
+- **Instant toggle:** Switch between "Create" and "Join" with a single click.
 
 ---
 
-### 4.2. Salon de Visionnage (`/room/:roomId`)
+### 4.2. Watch Room (`/room/:roomId`)
 
-Sur grand écran, la page s'articule en trois parties :
+On desktop screens, the watch room is organized into three distinct areas:
 
 ```text
 +-----------------------------------------------------------------------------------------+
-| BARRE GAUCHE   |                       CANVAS VIDÉO                     | PANNEAU DROIT |
+| LEFT SIDEBAR   |                       VIDEO CANVAS                     | RIGHT PANEL   |
 |                |                                                        |               |
-| [Logo] SYNK    |  ┌──────────────────────────────────────────────────┐  | [Membres] Chat|
+| [Logo] SYNK    |  ┌──────────────────────────────────────────────────┐  | [Members] Chat|
 |                |  │                                                  │  |───────────────|
-| NAVIGATION     |  │                 Lecteur Vidéo 16:9               │  | Membres (2)   |
-| - Accueil      |  │                (ou Dropzone si vide)             │  | - Alice (Hôte)|
+| NAVIGATION     |  │                 16:9 Video Player                │  | Members (2)   |
+| - Home         |  │                (or Dropzone if empty)            │  | - Alice (Host)|
 |                |  │                                                  │  | - Bob         |
 |                |  │ [Play] [04:12 / 10:00] [─────|─────] [Vol] [Max] │  |               |
 |                |  └──────────────────────────────────────────────────┘  |               |
 |                |                                                        |               |
-|                |  Point Vert LIVE  Titre de la vidéo    [CONTRÔLE HÔTE] │───────────────|
+|                |  Green Dot LIVE   Video title          [HOST CONTROL]  │───────────────|
 |                |  ────────────────────────────────────────────────────  | Wifi 18ms     |
-| PARAMÈTRES     |  [RÉGLAGES]  File d'attente (Soon)                     | #k8F2mX       |
-| [FR / EN]      |  Option de verrouillage de la salle                    | [ Inviter ]   |
+| SETTINGS       |  [SETTINGS]  Playlist (Soon)                           | #k8F2mX       |
+| [FR / EN]      |  Room control lock toggle                              | [ Invite ]    |
 +-----------------------------------------------------------------------------------------+
 ```
 
-- **Au centre :** Le lecteur vidéo avec commandes en transparence (play, pause, timeline, volume, plein écran) et les informations du média juste en dessous.
-- **À droite :** La liste des participants connectés avec leur statut, et en bas le code du salon avec le ping et le bouton pour copier le lien d'invitation.
+- **Center:** The 16:9 video player with floating overlay controls (play, pause, timeline, volume, fullscreen) and media info right underneath.
+- **Right:** The connected member list with live statuses, and a bottom card showing room code, ping, and an invite copy button.
 
 ---
 
-## 5. Adaptation Mobile
+## 5. Mobile Adaptation
 
-L'interface s'adapte automatiquement sans encombrer les petits écrans :
+The layout adapts responsively to small screens without clutter:
 
-- **Sur ordinateur :** Barre latérale à gauche, lecteur au centre et panneau des membres à droite.
-- **Sur mobile et tablette :**
-  - La barre de navigation gauche se range derrière un bouton menu discret en haut à gauche.
-  - Le panneau des membres s'ouvre d'un geste sous la vidéo via un tiroir coulissant.
-  - Le curseur de volume est masqué pour utiliser directement les boutons physiques du smartphone.
+- **Desktop:** Left sidebar, center player, and fixed right panel.
+- **Mobile & Tablet:**
+  - The left navigation sidebar collapses behind a compact burger menu button in the top-left corner.
+  - The member panel opens via an upward-sliding bottom sheet (`Drawer`) right below the video.
+  - The volume slider is hidden to prioritize device hardware volume buttons.

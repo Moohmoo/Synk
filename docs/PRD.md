@@ -1,65 +1,65 @@
 # PRD : SYNK
 
-> **Version :** 1.0.0-beta  
-> **Statut :** MVP  
-> **Auteur :** Mohmo
+> **Version:** 1.0.0-beta  
+> **Status:** MVP  
+> **Author:** Mohmo
 
 ---
 
-## 1. Vision & Objectif
+## 1. Vision & Purpose
 
-### 1.1. Le problème
-Regarder une vidéo à distance avec quelqu'un est souvent pénible :
-- **Le décompte "3, 2, 1, Play" :** Le faire au micro sur Discord ou WhatsApp ne marche jamais et crée des échos ou du retard.
-- **La pause casse tout :** Dès qu'une personne met pause ou a un ralentissement de connexion, tout le monde est décalé.
-- **Les extensions ne marchent pas sur mobile :** Les outils existants imposent une extension de navigateur inutilisable sur smartphone ou tablette.
-- **Trop de contraintes :** La plupart des sites imposent une création de compte ou polluent l'écran de bannières publicitaires.
+### 1.1. The Problem
+Watching videos together remotely is often frustrating:
+- **The "3, 2, 1, Play" countdown:** Counting down over microphone on Discord or WhatsApp never works and causes echo or lag.
+- **Pausing ruins everything:** As soon as someone pauses or has a connection hiccup, everyone gets desynchronized.
+- **Extensions don't work on mobile:** Existing tools require browser extensions that are impossible to use on smartphones or tablets.
+- **Too many friction points:** Most websites force user sign-up or clutter the screen with pop-up ads.
 
-### 1.2. La solution : SYNK
-Un site web instantané, sans inscription et sans publicité :
-1. On colle le lien d'une vidéo YouTube.
-2. On envoie le lien du salon à ses amis.
-3. Tout le monde regarde la vidéo calée à la même seconde, sur ordinateur comme sur téléphone.
-
----
-
-## 2. Utilisateur Cible
-
-Toute personne souhaitant partager un moment vidéo à distance (amis, couples, proches) sans avoir à installer d'application ni créer de compte.
+### 1.2. The Solution: SYNK
+An instant, zero-account, ad-free web app:
+1. Paste a video link (YouTube).
+2. Share the room link with friends.
+3. Everyone watches the video aligned to the exact same second, on laptop or phone.
 
 ---
 
-## 3. Fonctionnalités
+## 2. Target Audience
 
-### 3.1. Ce que fait l'application (MVP)
-- **Salons instantanés :** Création en 1 clic avec un code unique. Le salon s'autodétruit après 10 minutes d'inactivité.
-- **Zéro inscription :** Un simple pseudo suffit. Le créateur conserve automatiquement ses droits d'hôte dans son navigateur.
-- **Lecteur synchronisé :** Play, Pause et déplacement dans la vidéo pour tous les participants sur YouTube.
-- **Recalage automatique :** Si un ami rejoint en cours de route ou si sa connexion ralentit, la vidéo se recale automatiquement à la bonne seconde. Un bouton "Rattraper" apparaît si le retard dépasse 2 secondes.
-- **Gestion des droits :** L'hôte peut verrouiller les commandes (lui seul gère la lecture) ou laisser la salle en mode libre. Si l'hôte part, un autre membre prend automatiquement le relais.
-- **Présence en direct :** Compteur et liste des membres connectés avec affichage du ping de chacun.
-
-### 3.2. Pistes d'amélioration
-- **File d'attente (playlist) :** Pouvoir ajouter plusieurs vidéos à la suite sans devoir recoller un lien à chaque fois.
-- **Nouveaux flux :** Ajouter d'autres sources et formats vidéo.
+Anyone who wants to share a video moment remotely (friends, couples, families) without having to install an app or create an account.
 
 ---
 
-## 4. Règles de Fonctionnement
+## 3. Features
 
-| Situation | Ce qui doit se passer | Comportement du système |
+### 3.1. What the App Does (MVP)
+- **Instant rooms:** 1-click room creation with a unique code. The room automatically deletes itself after 10 minutes of inactivity.
+- **Zero sign-up:** A simple username is all you need. The room creator automatically keeps host permissions in their browser.
+- **Synchronized player:** Play, pause, and seek for all participants on YouTube.
+- **Automatic realignment:** If a friend joins late or their connection lags, the player automatically catches up to the right second. A "Catch Up" button appears if lag exceeds 2 seconds.
+- **Room permissions:** The host can lock controls (host-only playback) or leave the room in free mode. If the host leaves, another member automatically becomes host.
+- **Live presence:** Participant counter and list with real-time ping indicator for each user.
+
+### 3.2. Future Improvements
+- **Queue / Playlist:** Add multiple videos in advance without having to paste a link every time.
+- **New streams:** Support additional video sources and formats.
+
+---
+
+## 4. Rules & Edge Cases
+
+| Scenario | What Should Happen | System Behavior |
 | :--- | :--- | :--- |
-| **Arrivée en cours de vidéo** | La personne doit rejoindre sans couper les autres. | Le serveur lui donne immédiatement la bonne seconde et l'état de lecture. |
-| **Micro-décalage (< 0.5s)** | Différence minime normale. | Aucun saut forcé pour ne pas saccader le son. |
-| **Décalage moyen (0.5s à 2s)** | Recalage nécessaire. | Le lecteur réaligne la vidéo de manière transparente. |
-| **Gros retard réseau (> 2s)** | La connexion de l'utilisateur a décroché. | Un bouton "Rattraper" apparaît pour se remettre à niveau en un clic. |
-| **Départ de l'hôte** | Le salon ne doit pas être bloqué. | Les droits d'hôte sont transférés au membre actif suivant. |
-| **Salon vide** | Libérer la mémoire du serveur. | Le salon est automatiquement supprimé après 10 minutes sans participant. |
+| **Joining mid-video** | Join without interrupting others. | Server immediately sends current playback position and state. |
+| **Tiny drift (< 0.5s)** | Normal unnoticeable variation. | No forced seek to keep audio smooth and uninterrupted. |
+| **Moderate drift (0.5s to 2s)** | Realignment needed. | Player quietly realigns video to the target second. |
+| **Heavy network lag (> 2s)** | User fell behind. | A "Catch Up" button appears to resync in one click. |
+| **Host leaves** | Room should not stay locked. | Host permissions automatically transfer to the next active member. |
+| **Empty room** | Free up server memory. | Room is automatically deleted after 10 minutes with zero users. |
 
 ---
 
-## 5. Critères de Réussite
+## 5. Success Criteria
 
-- **Synchronisation :** Moins de 200 ms d'écart entre les participants.
-- **Instantané :** Prise en main immédiate en moins de 10 secondes.
-- **Multiplateforme :** Fonctionne aussi bien sur mobile que sur grand écran.
+- **Synchronization:** Less than 200ms drift between participants on a standard connection.
+- **Instant:** Room ready to use in under 10 seconds.
+- **Cross-platform:** Runs smoothly on phones, tablets, and desktops.

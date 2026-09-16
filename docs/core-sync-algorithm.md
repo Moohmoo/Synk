@@ -1,106 +1,106 @@
-# Synchronisation Temps Réel : SYNK
+# Real-Time Synchronization : SYNK
 
-> **Version :** 1.0.0-beta  
-> **Composant :** Moteur de lecture et recalage temporel  
-> **Auteur :** Mohmo
-
----
-
-## 1. Principe Fondamental : Décentraliser la Lecture
-
-Retransmettre le flux vidéo en continu depuis le serveur (comme un partage d'écran) exigerait une bande passante considérable et saturerait l'infrastructure.
-
-**L'approche SYNK :**
-* Chaque client charge et lit le média directement à la source (YouTube).
-* Le backend FastAPI n'achemine aucune image : il agit comme un **arbitre temporel léger** qui synchronise l'état de lecture via WebSocket.
+> **Version:** 1.0.0-beta  
+> **Component:** Playback engine and clock drift compensation  
+> **Author:** Mohmo
 
 ---
 
-## 2. Étape 1 : Alignement des Horloges (Compensation du Décalage)
+## 1. Core Principle: Decentralized Playback
 
-Pour que deux machines calculent exactement la même seconde de lecture, elles doivent partager une référence temporelle commune. Si l'horloge système d'un utilisateur retarde de 2 secondes, son calcul sera faussé.
+Streaming video frames continuously from the server (like a Discord screen share) would demand massive network bandwidth and overload backend servers.
 
-**Mécanisme de compensation :**
-1. Le navigateur émet régulièrement un ping WebSocket vers le backend.
-2. Le serveur répond immédiatement avec son horodatage précis (heure du serveur).
-3. Le navigateur mesure le temps d'aller-retour réseau et en déduit son écart d'horloge (`serverTimeOffset`).
-4. **Résultat :** Le client sait exactement combien de millisecondes ajouter ou soustraire pour s'aligner sur l'heure du serveur.
+**The SYNK Approach:**
+* Each client loads and plays the video directly from the source (YouTube).
+* The FastAPI backend transmits zero video frames: it acts purely as a **lightweight time referee** that synchronizes playback state over WebSockets.
 
 ---
 
-## 3. Étape 2 : Déclenchement de la Lecture & Persistance Redis
+## 2. Step 1: Clock Alignment (Offset Compensation)
 
-Lorsqu'un utilisateur autorisé clique sur **Play** (par exemple à la seconde `0:00`) :
+For two machines to calculate the exact same playback second, they must share a common time reference. If a user's system clock is 2 seconds behind, their playback calculation will be wrong by 2 seconds.
 
-1. Le client émet l'événement WebSocket `player_play` vers FastAPI.
-2. FastAPI valide les permissions (mode de contrôle de la salle) et enregistre l'état dans Redis :
-   * `current_time : 0.0` (position de départ)
-   * `is_playing : true` (état de lecture)
-   * `last_updated_at : 1772450100.0` (horodatage serveur de l'action)
-3. FastAPI diffuse immédiatement cet événement (`room_playback_sync`) à tous les participants du salon.
-
----
-
-## 4. Étape 3 : Calcul de la Position Côté Client
-
-Dès réception de la notification de lecture, chaque navigateur invité calcule instantanément la position cible :
-
-> **Position cible** = `current_time` + (`Heure serveur actuelle` - `last_updated_at`)
-
-Même si le message a mis 40 millisecondes à transiter sur le réseau, l'invité sait que la vidéo a démarré depuis 40 ms. Son lecteur s'aligne immédiatement à `0.04s` et lance la lecture.
+**Offset Compensation Mechanism:**
+1. The browser regularly sends a WebSocket ping to the backend.
+2. The server immediately replies with its exact timestamp.
+3. The browser measures round-trip network time and calculates its local clock offset (`serverTimeOffset`).
+4. **Result:** The client knows precisely how many milliseconds to add or subtract to match the server clock, regardless of the user's local operating system settings.
 
 ---
 
-## 5. Étape 4 : Gestion de la Dérive Réseau (Politique des 3 Seuils)
+## 3. Step 2: Play Trigger & Redis Persistence
 
-Pendant le visionnage, des variations de débit réseau ou la mise en veille d'un onglet peuvent créer un décalage entre la vidéo locale et la position de référence.
+When an authorized user clicks **Play** (for example, at second `0:00`):
 
-Pour éviter les coupures audio saccadées, le lecteur applique trois paliers de correction :
+1. The client emits the WebSocket event `player_play` to FastAPI.
+2. FastAPI validates room permissions (host-locked vs. free mode) and writes the state to Redis:
+   * `current_time: 0.0` (starting position)
+   * `is_playing: true` (playback status)
+   * `last_updated_at: 1772450100.0` (exact server timestamp of the action)
+3. FastAPI immediately broadcasts this event (`room_playback_sync`) to all room participants.
+
+---
+
+## 4. Step 3: Client-Side Position Calculation
+
+Upon receiving the playback notification, each guest browser calculates the target position instantly:
+
+> **Target Position** = `current_time` + (`Current Server Time` - `last_updated_at`)
+
+Even if the network packet took 40 milliseconds to travel across the internet, the guest knows the video has already been playing for 40 ms. The player immediately seeks to `0.04s` and starts playing.
+
+---
+
+## 5. Step 4: Network Drift Handling (3 Thresholds)
+
+During a watch session, network fluctuations or background tab throttling can cause local video playback to drift away from the reference time.
+
+To avoid stuttering audio from continuous seeking, the player applies a 3-tier correction policy:
 
 ```text
                0.5s                           2.0s
-────────────────┼──────────────────────────────┼────────────────────────► (Écart constaté)
-   ZONE VERTE   │         ZONE JAUNE           │        ZONE ROUGE
-  Lecture douce │      Recalage discret        │    Bouton "Rattraper"
-  (Aucun saut)  │ (video.currentTime = target) │    (Action manuelle)
+────────────────┼──────────────────────────────┼────────────────────────► (Detected Drift)
+   GREEN ZONE   │         YELLOW ZONE          │        RED ZONE
+  Smooth Play   │         Quiet Seek           │    "Catch Up" Button
+  (Zero seek)   │ (video.currentTime = target) │    (Manual action)
 ```
 
-1. **Écart inférieur à 0.5s (Zone verte) :**
-   * Tolérance normale absorbant les micro-variations de buffer.
-   * La vidéo continue de jouer sans saut pour préserver le confort d'écoute.
-2. **Écart entre 0.5s et 2.0s (Zone jaune) :**
-   * Décalage modéré perceptible.
-   * Le lecteur force discrètement le réalignement (`video.currentTime = target`) sans interrompre la lecture.
-3. **Écart supérieur à 2.0s (Zone rouge) :**
-   * Retard important suite à un gel de connexion ou une veille prolongée de l'onglet.
-   * Un bouton contextuel **"Rattraper"** apparaît pour permettre à l'utilisateur de se recaler d'un clic.
+1. **Drift under 0.5s (Green Zone):**
+   * Normal imperceptible buffer variation.
+   * No seek is triggered to keep sound smooth and uninterrupted.
+2. **Drift between 0.5s and 2.0s (Yellow Zone):**
+   * Moderate noticeable desync.
+   * The player quietly realigns the video element (`video.currentTime = target`) without stopping playback.
+3. **Drift over 2.0s (Red Zone):**
+   * Severe lag from a network drop or a sleeping background tab.
+   * A cyan **"Catch Up"** button appears over the timeline, allowing the user to realign in one click.
 
 ---
 
-## 6. Diagramme de Séquence Technique
+## 6. Technical Sequence Diagram
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Host as Hôte (Client A)
-    actor Guest as Invité (Client B)
-    participant FastAPI as Backend FastAPI
-    participant Redis as Base Redis
+    actor Host as Host (Client A)
+    actor Guest as Guest (Client B)
+    participant FastAPI as FastAPI Backend
+    participant Redis as Redis Store
 
-    Note over Guest,FastAPI: 1. Alignement de l'horloge
-    Guest->>FastAPI: Ping WebSocket (Horodatage T0)
-    FastAPI-->>Guest: Pong (Horodatage T_server)
-    Guest->>Guest: Calcul de serverTimeOffset
+    Note over Guest,FastAPI: 1. Clock alignment
+    Guest->>FastAPI: WebSocket ping (Local timestamp T0)
+    FastAPI-->>Guest: Pong (Server timestamp T_server)
+    Guest->>Guest: Calculate clock offset (serverTimeOffset)
 
-    Note over Host,Redis: 2. Déclenchement de la lecture
+    Note over Host,Redis: 2. Playback trigger
     Host->>FastAPI: WebSocket emit: player_play (Position: 0:00)
-    FastAPI->>Redis: Sauvegarde {is_playing: true, current_time: 0.0, timestamp: T}
+    FastAPI->>Redis: Save {is_playing: true, current_time: 0.0, timestamp: T}
     FastAPI-->>Host: WebSocket broadcast: room_playback_sync
     FastAPI-->>Guest: WebSocket broadcast: room_playback_sync
 
-    Note over Guest,FastAPI: 3. Recalage local et lecture
-    Host->>Host: Démarrage de la lecture
-    Guest->>Guest: Calcul du temps écoulé depuis T (avec serverTimeOffset)
-    Guest->>Guest: Alignement à la seconde exacte et lecture
-    Note over Host,Guest: Décalage constaté inférieur à 200 ms
+    Note over Guest,FastAPI: 3. Local calculation & alignment
+    Host->>Host: Start YouTube playback
+    Guest->>Guest: Calculate elapsed time since T (using serverTimeOffset)
+    Guest->>Guest: Seek to target second and start playback
+    Note over Host,Guest: Drift maintained under 200 ms
 ```
