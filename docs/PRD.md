@@ -41,7 +41,7 @@ Toute personne souhaitant partager un moment vidéo à distance (amis, couples, 
 
 ### 3.2. Pistes d'amélioration
 - **File d'attente (playlist) :** Pouvoir ajouter plusieurs vidéos à la suite sans devoir recoller un lien à chaque fois.
-- **Nouvelles plateformes :** Ajouter le support de Twitch et des flux vidéo directs (.mp4).
+- **Nouveaux flux :** Ajouter d'autres sources et formats vidéo.
 
 ---
 
