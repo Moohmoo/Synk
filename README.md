@@ -1,5 +1,5 @@
 <h1 align="center">
-  <img src="./front/public/favicon.svg" width="32" height="32" alt="Synk" /> Synk
+  <sub><img src="./front/public/favicon.svg" width="32" height="32" alt="Synk" /></sub> Synk
 </h1>
 
 <p align="center">
