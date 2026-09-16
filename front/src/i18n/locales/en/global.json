@@ -55,7 +55,7 @@
       "generic": "An unexpected error occurred."
     }
   },
-  "platforms": {
+  "common": {
     "comingSoon": "Coming soon"
   }
 }

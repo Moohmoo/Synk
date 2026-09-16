@@ -118,7 +118,7 @@ export function MetaSection({
               </div>
             </TooltipTrigger>
             <TooltipContent side="top" sideOffset={6}>
-              {t("platforms.comingSoon", { ns: "global", defaultValue: "Bientôt disponible" })}
+              {t("common.comingSoon", { ns: "global", defaultValue: "Bientôt disponible" })}
             </TooltipContent>
           </Tooltip>
         </TabsList>

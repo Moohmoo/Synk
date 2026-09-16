@@ -100,7 +100,7 @@ export function PlatformBadges({ className = "", maxVisible = 4 }: PlatformBadge
               <Tooltip>
                 <TooltipTrigger asChild>{badgeElement}</TooltipTrigger>
                 <TooltipContent side="top" sideOffset={6}>
-                  {t("platforms.comingSoon")}
+                  {t("common.comingSoon")}
                 </TooltipContent>
               </Tooltip>
             )}

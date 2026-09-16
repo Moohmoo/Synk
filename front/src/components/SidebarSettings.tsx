@@ -16,7 +16,8 @@ export interface SidebarSettingsProps {
  */
 export function SidebarSettings({ isCollapsed = false, className }: SidebarSettingsProps) {
   const { t } = useTranslation("global");
-  const settingsTooltip = `${t("nav.settings")} (${t("platforms.comingSoon")})`;
+  const comingSoonText = t("common.comingSoon");
+  const ariaLabel = `${t("nav.settings")} (${comingSoonText})`;
 
   if (isCollapsed) {
     return (
@@ -29,14 +30,14 @@ export function SidebarSettings({ isCollapsed = false, className }: SidebarSetti
                 type="button"
                 disabled
                 className="flex items-center justify-center w-10 h-10 rounded-md text-zinc-600 opacity-40 pointer-events-none transition-colors"
-                aria-label={settingsTooltip}
+                aria-label={ariaLabel}
               >
                 <Settings className="w-4 h-4" />
               </button>
             </span>
           </TooltipTrigger>
           <TooltipContent side="right" sideOffset={10}>
-            {settingsTooltip}
+            {comingSoonText}
           </TooltipContent>
         </Tooltip>
       </div>
@@ -53,14 +54,14 @@ export function SidebarSettings({ isCollapsed = false, className }: SidebarSetti
               type="button"
               disabled
               className="p-1.5 rounded-md text-zinc-600 opacity-40 pointer-events-none transition-colors"
-              aria-label={settingsTooltip}
+              aria-label={ariaLabel}
             >
               <Settings className="w-3.5 h-3.5" />
             </button>
           </span>
         </TooltipTrigger>
         <TooltipContent side="top">
-          {settingsTooltip}
+          {comingSoonText}
         </TooltipContent>
       </Tooltip>
     </div>
