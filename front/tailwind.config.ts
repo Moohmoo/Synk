@@ -13,11 +13,10 @@ const config: Config = {
         mono: ["Geist Mono", "monospace"],
       },
       colors: {
-        riot: {
-          bg: "#0a0a0c",
-          panel: "#141417",
-          teal: "#0ac8b9",
-          orange: "#ff4655",
+        primary: {
+          DEFAULT: "#0ac8b9",
+          hover: "#09b3a5",
+          glow: "rgba(10, 200, 185, 0.4)",
         },
       },
       letterSpacing: {

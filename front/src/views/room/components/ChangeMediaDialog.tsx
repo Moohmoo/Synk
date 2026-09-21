@@ -30,10 +30,10 @@ export function ChangeMediaDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[calc(100%-2rem)] sm:max-w-xl bg-[#141417]/95 border-white/10 border-l-[3px] border-l-[#0ac8b9] backdrop-blur-xl p-4 sm:p-6 rounded-sm shadow-2xl">
+      <DialogContent className="w-[calc(100%-2rem)] sm:max-w-xl bg-[#141417]/95 border-white/10 border-l-[3px] border-l-primary backdrop-blur-xl p-4 sm:p-6 rounded-sm shadow-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-sm font-mono tracking-wider text-white">
-            <Link2 className="w-4 h-4 text-[#0ac8b9]" />
+            <Link2 className="w-4 h-4 text-primary" />
             <span>{t("header.changeMediaTitle")}</span>
           </DialogTitle>
           <DialogDescription className="text-xs text-zinc-400 font-sans">

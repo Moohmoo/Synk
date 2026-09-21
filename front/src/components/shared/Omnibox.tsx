@@ -69,7 +69,7 @@ export const Omnibox = forwardRef<HTMLInputElement, OmniboxProps>(
           className="w-full flex items-center bg-zinc-800/80 border border-white/10 rounded-lg p-1.5 backdrop-blur-md focus-within:border-white/20 transition-all"
         >
           {badge && (
-            <div className="h-7 flex items-center gap-1.5 bg-zinc-700/60 text-[#0ac8b9] border border-[#0ac8b9]/30 px-2.5 rounded-md text-xs font-mono font-semibold shrink-0 ml-1">
+            <div className="h-7 flex items-center gap-1.5 bg-zinc-700/60 text-primary border border-primary/30 px-2.5 rounded-md text-xs font-mono font-semibold shrink-0 ml-1">
               <span>{badge.text}</span>
               {badge.onRemove && (
                 <button
@@ -100,7 +100,7 @@ export const Omnibox = forwardRef<HTMLInputElement, OmniboxProps>(
           <button
             type="submit"
             disabled={isLoading || disabled || submitDisabled}
-            className={`h-9 px-4 sm:px-6 bg-[#0ac8b9] text-[#09090b] text-xs font-bold rounded-md hover:bg-[#0ac8b9]/90 transition-all shadow-[0_0_15px_rgba(10,200,185,0.2)] flex-shrink-0 cursor-pointer flex items-center justify-center ${
+            className={`h-9 px-4 sm:px-6 bg-primary text-[#09090b] text-xs font-bold rounded-md hover:bg-primary-hover transition-all shadow-[0_0_15px_rgba(10,200,185,0.2)] flex-shrink-0 cursor-pointer flex items-center justify-center ${
               isLoading || disabled || submitDisabled ? "opacity-70 cursor-not-allowed" : "active:translate-y-[1px]"
             }`}
           >

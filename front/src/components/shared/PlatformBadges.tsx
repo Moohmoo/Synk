@@ -44,7 +44,7 @@ const PLATFORMS: PlatformItem[] = [
   {
     name: "Direct (HLS)",
     icon: Radio,
-    brandColor: "text-[#0ac8b9]",
+    brandColor: "text-primary",
     isSupported: false,
   },
 ];

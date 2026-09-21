@@ -8,7 +8,7 @@
   }
 
   body {
-    @apply bg-[#09090b] text-zinc-100 font-sans antialiased selection:bg-[#0ac8b9] selection:text-black;
+    @apply bg-[#09090b] text-zinc-100 font-sans antialiased selection:bg-primary selection:text-black;
   }
 
   /* Évite le flash blanc natif de l'iframe lors de l'éviction de texture GPU en arrière-plan */

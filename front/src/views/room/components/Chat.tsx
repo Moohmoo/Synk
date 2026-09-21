@@ -74,7 +74,7 @@ export function Chat({
           disabled={isChatDisabled}
           placeholder={t("hub.chatPlaceholder")}
           maxLength={500}
-          className="flex-1 h-8 px-2.5 bg-black/50 border border-white/10 rounded-sm text-xs font-mono text-zinc-200 placeholder:text-zinc-500 focus:outline-none focus:border-[#0ac8b9]/50 transition-colors"
+          className="flex-1 h-8 px-2.5 bg-black/50 border border-white/10 rounded-sm text-xs font-mono text-zinc-200 placeholder:text-zinc-500 focus:outline-none focus:border-primary/50 transition-colors"
         />
         <Button
           type="submit"

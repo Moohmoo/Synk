@@ -1,6 +1,7 @@
-import { Omnibox, PlatformBadges } from "@/components/shared";
+import { Omnibox, PlatformBadges, AmbientGlow } from "@/components/shared";
 import { Heading } from "./components/Heading";
 import { ModeToggle } from "./components/ModeToggle";
+import { ActiveSessionPill } from "./components/ActiveSessionPill";
 import { useHome } from "@/hooks/useHome";
 
 /**
@@ -11,7 +12,13 @@ export function HomeView() {
   const home = useHome();
 
   return (
-    <div className="relative flex-1 flex flex-col items-center justify-center w-full max-w-full px-4 sm:px-6 md:px-12 py-10 animate-fade-in">
+    <div className="relative flex-1 flex flex-col items-center justify-center w-full max-w-full px-4 sm:px-6 md:px-12 py-10 animate-fade-in overflow-hidden">
+      {/* Halo lumineux d'ambiance central réutilisable */}
+      <AmbientGlow variant="center" />
+
+      {/* Pill discrète de reprise de salon en cours (si session active) */}
+      <ActiveSessionPill />
+
       {/* Formulaire central */}
       <div className="relative z-10 flex flex-col items-center w-full -translate-y-8 sm:-translate-y-12">
         <Heading mode={home.mode} />

@@ -7,7 +7,7 @@ export function Skeleton() {
       {/* Cadre vidéo 16:9 */}
       <div className="w-full aspect-video bg-black flex items-center justify-center">
         <div className="w-12 h-12 rounded-full bg-white/[0.04] border border-white/10 flex items-center justify-center">
-          <div className="w-5 h-5 border-2 border-[#0ac8b9]/40 border-t-transparent rounded-full animate-spin" />
+          <div className="w-5 h-5 border-2 border-primary/40 border-t-transparent rounded-full animate-spin" />
         </div>
       </div>
 
