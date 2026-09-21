@@ -36,7 +36,7 @@ export function Heading({ mode }: HeadingProps) {
               isActive ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"
             )}
           >
-            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-zinc-100 mb-2.5">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight bg-gradient-to-b from-white via-zinc-100 to-zinc-400 bg-clip-text text-transparent mb-2.5">
               {t(titleKey)}
             </h1>
             <p className="text-sm font-normal text-zinc-400 mb-8 max-w-sm text-center leading-relaxed">
