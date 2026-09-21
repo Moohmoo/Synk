@@ -61,8 +61,8 @@
   "activeSession": {
     "live": "En direct",
     "room": "Salon #{{roomId}}",
-    "participant": "{{count}} participant",
-    "participants": "{{count}} participants",
+    "participant": "{{count}} en ligne",
+    "participants": "{{count}} en ligne",
     "resume": "Reprendre",
     "dismiss": "Ignorer la session"
   }

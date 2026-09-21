@@ -61,8 +61,8 @@
   "activeSession": {
     "live": "Live",
     "room": "Room #{{roomId}}",
-    "participant": "{{count}} participant",
-    "participants": "{{count}} participants",
+    "participant": "{{count}} online",
+    "participants": "{{count}} online",
     "resume": "Resume",
     "dismiss": "Dismiss session"
   }
