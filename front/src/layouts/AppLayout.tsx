@@ -28,17 +28,25 @@ export function AppLayout() {
 
       {/* Tiroir mobile/tablette (< lg) */}
       <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-        <SheetContent side="left" className="w-64 p-4 pt-6 bg-zinc-950/90 backdrop-blur-xl border-r border-white/5 flex flex-col">
-          <SheetHeader className="mb-6 px-2">
+        <SheetContent
+          side="left"
+          className="w-64 p-4 pt-6 bg-zinc-950/90 backdrop-blur-xl border-r border-white/5 flex flex-col overflow-hidden"
+        >
+          <AmbientGlow variant="left" />
+
+          <SheetHeader className="mb-6 px-2 relative z-10">
             <SheetTitle>
               <Logo onClick={() => setMobileMenuOpen(false)} />
             </SheetTitle>
           </SheetHeader>
-          <LeftNavContent onItemClick={() => setMobileMenuOpen(false)} />
 
-          {/* Préférences globales et langue en bas du tiroir mobile */}
-          <div className="mt-auto border-t border-white/5 pt-3">
-            <SidebarSettings isCollapsed={false} />
+          <div className="relative z-10 flex-1 flex flex-col min-h-0">
+            <LeftNavContent onItemClick={() => setMobileMenuOpen(false)} />
+
+            {/* Préférences globales et langue en bas du tiroir mobile */}
+            <div className="mt-auto border-t border-white/5 pt-3">
+              <SidebarSettings isCollapsed={false} />
+            </div>
           </div>
         </SheetContent>
       </Sheet>

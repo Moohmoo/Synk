@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 export interface AmbientGlowProps {
   className?: string;
   disabled?: boolean;
-  variant?: "sides" | "center";
+  variant?: "sides" | "center" | "left" | "right";
 }
 
 interface GlowSideProps {
@@ -71,13 +71,16 @@ export function AmbientGlow({
     return <CenterGlow className={className} />;
   }
 
+  const showLeft = variant === "sides" || variant === "left";
+  const showRight = variant === "sides" || variant === "right";
+
   return (
     <div
       aria-hidden="true"
       className={cn("absolute inset-0 pointer-events-none select-none z-0 overflow-hidden", className)}
     >
-      <GlowSide side="left" />
-      <GlowSide side="right" />
+      {showLeft && <GlowSide side="left" />}
+      {showRight && <GlowSide side="right" />}
 
       {/* Texture de bruit pour atténuer l'effet de bandes (banding) */}
       <div
