@@ -44,7 +44,7 @@ export function AppLayout() {
       </Sheet>
 
       {/* Conteneur principal */}
-      <div className="flex-1 w-full flex flex-col relative z-20 bg-zinc-900 overflow-hidden lg:mt-4 lg:mr-4 lg:rounded-t-2xl lg:border-t lg:border-x lg:border-white/5">
+      <div className="flex-1 w-full flex flex-col relative z-20 bg-zinc-900/90 lg:bg-zinc-900 backdrop-blur-xl overflow-hidden lg:mt-4 lg:mr-4 lg:rounded-t-2xl lg:border-t lg:border-x lg:border-white/5">
         {/* Bouton de menu mobile (< lg) */}
         <button
           type="button"

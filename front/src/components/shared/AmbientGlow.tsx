@@ -11,14 +11,17 @@ interface GlowSideProps {
 }
 
 /**
- * Halo central diffus projeté subtilement sous le formulaire d'accueil.
+ * Halo central diffus projeté sous le formulaire d'accueil, calibré pour chaque taille d'écran.
  */
 function CenterGlow({ className }: { className?: string }) {
   return (
     <div
       aria-hidden="true"
       className={cn(
-        "pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[520px] sm:w-[680px] h-[360px] sm:h-[440px] rounded-full bg-primary/[0.07] blur-[120px] sm:blur-[140px] select-none",
+        "pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 " +
+          "w-[280px] h-[220px] rounded-full bg-primary/[0.12] blur-[60px] " +
+          "sm:w-[520px] sm:h-[360px] sm:bg-primary/[0.08] sm:blur-[110px] " +
+          "lg:w-[680px] lg:h-[440px] lg:blur-[140px] select-none",
         className
       )}
     />
@@ -38,16 +41,16 @@ function GlowSide({ side }: GlowSideProps) {
   const cyanGradient = `radial-gradient(ellipse 100% 75% at ${originX} 38%, rgba(8, 145, 178, 0.6) 0%, rgba(10, 200, 185, 0.25) 40%, transparent 80%)`;
 
   return (
-    <div className={cn("absolute top-0 h-full w-[540px] overflow-hidden pointer-events-none", sideAlign)}>
+    <div className={cn("absolute top-0 h-full w-[280px] sm:w-[540px] overflow-hidden pointer-events-none", sideAlign)}>
       {/* 1. Halo supérieur : Bleu Nuit */}
       <div
-        className={cn("absolute top-0 w-[480px] h-[55%] blur-[72px]", sideAlign)}
+        className={cn("absolute top-0 w-[240px] sm:w-[480px] h-[55%] blur-[48px] sm:blur-[72px]", sideAlign)}
         style={{ background: blueGradient }}
       />
 
       {/* 2. Halo médian : Cyan sombre et diffus */}
       <div
-        className={cn("absolute top-[18%] w-[520px] h-[68%] blur-[76px]", sideAlign)}
+        className={cn("absolute top-[18%] w-[260px] sm:w-[520px] h-[68%] blur-[52px] sm:blur-[76px]", sideAlign)}
         style={{ background: cyanGradient }}
       />
     </div>
