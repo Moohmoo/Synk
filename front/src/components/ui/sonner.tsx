@@ -25,7 +25,7 @@ export const Toaster = ({ ...props }: ToasterProps) => {
       icons={{
         success: <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />,
         error: <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />,
-        info: <Info className="w-4 h-4 text-cyan-400 shrink-0" />,
+        info: <Info className="w-4 h-4 text-primary shrink-0" />,
         warning: <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />,
       }}
       toastOptions={{
@@ -35,7 +35,7 @@ export const Toaster = ({ ...props }: ToasterProps) => {
           title: "text-zinc-100 font-medium text-xs",
           description: "text-zinc-400 text-[11px] mt-0.5",
           actionButton:
-            "group-[.toast]:bg-[#0ac8b9] group-[.toast]:text-zinc-950 group-[.toast]:font-semibold group-[.toast]:rounded-sm px-2.5 py-1 text-xs hover:group-[.toast]:bg-[#0ac8b9]/90 transition-colors",
+            "group-[.toast]:bg-primary group-[.toast]:text-zinc-950 group-[.toast]:font-semibold group-[.toast]:rounded-sm px-2.5 py-1 text-xs hover:group-[.toast]:bg-primary-hover transition-colors",
           cancelButton:
             "group-[.toast]:bg-zinc-800 group-[.toast]:text-zinc-300 group-[.toast]:rounded-sm px-2.5 py-1 text-xs hover:group-[.toast]:bg-zinc-700 transition-colors",
         },

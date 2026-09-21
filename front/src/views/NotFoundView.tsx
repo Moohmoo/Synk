@@ -21,7 +21,7 @@ export function NotFoundView({ code = "404", title, description }: NotFoundViewP
       {/* Conteneur principal rehaussé au centre optique du halo (symétrie avec HomeView) */}
       <div className="relative z-10 flex flex-col items-center text-center max-w-md w-full -translate-y-8 sm:-translate-y-12">
         {/* Capsule iconique sobre */}
-        <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-zinc-800/80 border border-white/10 mb-4 text-[#0ac8b9] shadow-sm">
+        <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-zinc-800/80 border border-white/10 mb-4 text-primary shadow-sm">
           <Compass className="w-5 h-5" />
         </div>
 

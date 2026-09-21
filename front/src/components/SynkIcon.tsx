@@ -25,7 +25,7 @@ export function SynkIcon({
       aria-hidden="true"
     >
       {/* Coins extérieurs */}
-      <g fill="#0ac8b9" className="transition-opacity duration-200">
+      <g className="fill-primary transition-opacity duration-200">
         <path d="M2 13V6L6 2H13V6H6V13H2Z" />
         <path d="M19 2H26L30 6V13H26V6H19V2Z" />
         <path d="M30 19V26L26 30H19V26H26V19H30Z" />

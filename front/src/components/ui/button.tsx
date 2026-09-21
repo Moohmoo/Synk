@@ -9,9 +9,9 @@ const buttonVariants = cva(
     variants: {
       variant: {
         primary:
-          "bg-[#0ac8b9] hover:bg-[#0ac8b9]/90 text-[#09090b] font-bold border border-transparent shadow-[0_0_16px_rgba(10,200,185,0.25)] hover:shadow-[0_0_24px_rgba(10,200,185,0.45)] active:translate-y-[1px]",
+          "bg-primary hover:bg-primary-hover text-[#09090b] font-bold border border-transparent shadow-[0_0_16px_rgba(10,200,185,0.25)] hover:shadow-[0_0_24px_rgba(10,200,185,0.45)] active:translate-y-[1px]",
         teal:
-          "bg-[#0ac8b9]/15 hover:bg-[#0ac8b9]/25 text-[#0ac8b9] border border-[#0ac8b9]/30 hover:border-[#0ac8b9]/50 active:translate-y-[1px]",
+          "bg-primary/15 hover:bg-primary/25 text-primary border border-primary/30 hover:border-primary/50 active:translate-y-[1px]",
         secondary:
           "bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 border border-white/5 hover:border-white/10 active:translate-y-[1px]",
         outline:
@@ -19,7 +19,7 @@ const buttonVariants = cva(
         ghost:
           "text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.04] active:translate-y-[1px]",
         destructive:
-          "bg-[#ff4655]/15 hover:bg-[#ff4655]/25 text-[#ff4655] border border-[#ff4655]/30 active:translate-y-[1px]",
+          "bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 active:translate-y-[1px]",
       },
       size: {
         default: "h-10 px-5 py-2",

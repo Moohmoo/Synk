@@ -60,7 +60,7 @@ export interface AvatarPalette {
 }
 
 export const AVATAR_COLOR_PALETTES: AvatarPalette[] = [
-  { bg: "bg-cyan-500/15", text: "text-[#0ac8b9]", border: "border-[#0ac8b9]/30" },
+  { bg: "bg-primary/15", text: "text-primary", border: "border-primary/30" },
   { bg: "bg-violet-500/15", text: "text-violet-400", border: "border-violet-500/30" },
   { bg: "bg-emerald-500/15", text: "text-emerald-400", border: "border-emerald-500/30" },
   { bg: "bg-amber-500/15", text: "text-amber-400", border: "border-amber-500/30" },

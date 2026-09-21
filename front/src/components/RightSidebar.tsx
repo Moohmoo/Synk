@@ -15,28 +15,7 @@ export function RightSidebar({ children, className }: RightSidebarProps) {
   const isRoom = location.pathname.startsWith("/room/");
 
   if (!isRoom) {
-    return (
-      <aside
-        className={cn(
-          "hidden sm:flex items-center gap-6 fixed bottom-4 right-8 z-20 select-none text-xs text-zinc-500",
-          className
-        )}
-      >
-        <div id="right-sidebar-slot" className="hidden" />
-        <span className="text-[11px] font-mono text-zinc-500 tracking-tight">
-          {t("app.name")} {t("app.version")}
-        </span>
-        <a
-          href={GITHUB_REPO_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
-        >
-          <span>{t("nav.github")}</span>
-          <ExternalLink className="w-3 h-3" />
-        </a>
-      </aside>
-    );
+    return <aside className="hidden" id="right-sidebar-slot" />;
   }
 
   return (
