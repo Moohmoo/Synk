@@ -77,9 +77,9 @@ docker compose logs -f
 ```
 
 **Open in your browser:**
-- 🌐 **Web App:** [http://localhost:3000](http://localhost:3000)
-- ⚙️ **Backend API:** [http://localhost:8000](http://localhost:8000)
-- 📖 **API Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
+- **Web App:** [http://localhost:3000](http://localhost:3000)
+- **Backend API:** [http://localhost:8000](http://localhost:8000)
+- **API Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
 
 ---
 
