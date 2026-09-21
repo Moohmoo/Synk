@@ -57,5 +57,13 @@
   },
   "common": {
     "comingSoon": "Bientôt disponible"
+  },
+  "activeSession": {
+    "live": "En direct",
+    "room": "Salon #{{roomId}}",
+    "participant": "{{count}} participant",
+    "participants": "{{count}} participants",
+    "resume": "Reprendre",
+    "dismiss": "Ignorer la session"
   }
 }

@@ -57,5 +57,13 @@
   },
   "common": {
     "comingSoon": "Coming soon"
+  },
+  "activeSession": {
+    "live": "Live",
+    "room": "Room #{{roomId}}",
+    "participant": "{{count}} participant",
+    "participants": "{{count}} participants",
+    "resume": "Resume",
+    "dismiss": "Dismiss session"
   }
 }

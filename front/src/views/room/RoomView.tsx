@@ -37,17 +37,21 @@ export function RoomView() {
   const [mediaUrlInput, setMediaUrlInput] = useState("");
   const [isChangeMediaOpen, setIsChangeMediaOpen] = useState(false);
 
-  // Vérification HTTP non-bloquante : détection anticipée si le salon a expiré
+  // Vérification HTTP non-bloquante et mémorisation de session active
   useEffect(() => {
+    sessionManager.setActiveRoom(roomId, username);
     roomApi
       .checkRoom(roomId)
       .then((res) => {
-        if (!res.exists) setRoomNotFound(true);
+        if (!res.exists) {
+          sessionManager.clearActiveRoom();
+          setRoomNotFound(true);
+        }
       })
       .catch(() => {
         // En cas d'erreur HTTP transitoire, le WebSocket prend le relais
       });
-  }, [roomId]);
+  }, [roomId, username]);
 
   // Synchronisation temps réel via WebSocket (incluant chat et participants)
   const {

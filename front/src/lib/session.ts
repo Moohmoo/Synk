@@ -9,11 +9,18 @@ export interface RoomSession {
   userId: string | null;
 }
 
+export interface ActiveRoomSession {
+  roomId: string;
+  username: string;
+  joinedAt: number;
+}
+
 const STORAGE_KEYS = {
   username: (roomId: string) => `synk_username_${roomId}`,
   token: (roomId: string) => `synk_host_token_${roomId}`,
   userId: (roomId: string) => `synk_user_id_${roomId}`,
   lastUsername: "synk_last_username",
+  activeRoom: "synk_active_room",
 } as const;
 
 export const sessionManager = {
@@ -74,5 +81,44 @@ export const sessionManager = {
    */
   setLastUsername(username: string): void {
     localStorage.setItem(STORAGE_KEYS.lastUsername, username);
+  },
+
+  /**
+   * Récupère la session de salon active en cours (expire après 2h, TTL Redis).
+   */
+  getActiveRoom(): ActiveRoomSession | null {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.activeRoom);
+      if (!raw) return null;
+      const data = JSON.parse(raw) as ActiveRoomSession;
+      if (!data.roomId || !data.joinedAt) return null;
+      if (Date.now() - data.joinedAt > 7200 * 1000) {
+        localStorage.removeItem(STORAGE_KEYS.activeRoom);
+        return null;
+      }
+      return data;
+    } catch {
+      localStorage.removeItem(STORAGE_KEYS.activeRoom);
+      return null;
+    }
+  },
+
+  /**
+   * Enregistre le salon actuellement actif.
+   */
+  setActiveRoom(roomId: string, username: string): void {
+    const data: ActiveRoomSession = {
+      roomId: roomId.trim(),
+      username: username.trim(),
+      joinedAt: Date.now(),
+    };
+    localStorage.setItem(STORAGE_KEYS.activeRoom, JSON.stringify(data));
+  },
+
+  /**
+   * Supprime le salon actif mémorisé.
+   */
+  clearActiveRoom(): void {
+    localStorage.removeItem(STORAGE_KEYS.activeRoom);
   },
 };
