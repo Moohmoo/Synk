@@ -3,10 +3,26 @@ import { cn } from "@/lib/utils";
 export interface AmbientGlowProps {
   className?: string;
   disabled?: boolean;
+  variant?: "sides" | "center";
 }
 
 interface GlowSideProps {
   side: "left" | "right";
+}
+
+/**
+ * Halo central diffus projeté subtilement sous le formulaire d'accueil.
+ */
+function CenterGlow({ className }: { className?: string }) {
+  return (
+    <div
+      aria-hidden="true"
+      className={cn(
+        "pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[520px] sm:w-[680px] h-[360px] sm:h-[440px] rounded-full bg-primary/[0.07] blur-[120px] sm:blur-[140px] select-none",
+        className
+      )}
+    />
+  );
 }
 
 /**
@@ -39,10 +55,18 @@ function GlowSide({ side }: GlowSideProps) {
 }
 
 /**
- * Lueur d'ambiance d'arrière-plan avec dégradés latéraux symétriques.
+ * Lueur d'ambiance d'arrière-plan (latérale ou centrale).
  */
-export function AmbientGlow({ className, disabled = false }: AmbientGlowProps) {
+export function AmbientGlow({
+  className,
+  disabled = false,
+  variant = "sides",
+}: AmbientGlowProps) {
   if (disabled) return null;
+
+  if (variant === "center") {
+    return <CenterGlow className={className} />;
+  }
 
   return (
     <div
